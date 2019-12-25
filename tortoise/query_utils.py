@@ -6,11 +6,14 @@ from pypika.terms import Criterion
 
 from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
+from tortoise.functions import OuterRef, Subquery
 
 
-def _process_filter_kwarg(model, key, value) -> Tuple[Criterion, Optional[Tuple[Table, Criterion]]]:
+def _process_filter_kwarg(model, table_stack: List[Table], key, value) -> \
+    Tuple[Criterion, Optional[Tuple[Table, Criterion]]]:
+
     join = None
-    table = model._meta.basetable
+    table = table_stack[-1]
 
     if value is None and f"{key}__isnull" in model._meta.filters:
         param = model._meta.get_filter(f"{key}__isnull")
@@ -29,12 +32,22 @@ def _process_filter_kwarg(model, key, value) -> Tuple[Criterion, Optional[Tuple[
         criterion = param["operator"](getattr(param["table"], param["field"]), value)
     else:
         field_object = model._meta.fields_map[param["field"]]
-        encoded_value = (
-            param["value_encoder"](value, model, field_object)
-            if param.get("value_encoder")
-            else model._meta.db.executor_class._field_to_db(field_object, value, model)
-        )
+
+        if isinstance(value, OuterRef):
+            outer_table = table_stack[-2]
+            encoded_value = outer_table[value.ref_name]
+
+        elif isinstance(value, Subquery):
+            encoded_value = value.get_query(table_stack)
+
+        elif param.get("value_encoder"):
+            encoded_value = param["value_encoder"](value, model, field_object)
+
+        else:
+            encoded_value = model._meta.db.executor_class._field_to_db(field_object, value, model)
+
         criterion = param["operator"](table[param["source_field"]], encoded_value)
+
     return criterion, join
 
 
@@ -206,7 +219,7 @@ class Q:
     def negate(self) -> None:
         self._is_negated = not self._is_negated
 
-    def _resolve_nested_filter(self, model, key, value) -> QueryModifier:
+    def _resolve_nested_filter(self, model, table_stack: List[Table], key, value) -> QueryModifier:
         table = model._meta.basetable
 
         related_field_name = key.split("__")[0]
@@ -214,17 +227,19 @@ class Q:
         required_joins = _get_joins_for_related_field(table, related_field, related_field_name)
         modifier = Q(**{"__".join(key.split("__")[1:]): value}).resolve(
             model=related_field.model_class,
+            table_stack=table_stack + [table],
             annotations=self._annotations,
             custom_filters=self._custom_filters,
         )
 
         return QueryModifier(joins=required_joins) & modifier
 
-    def _resolve_custom_kwarg(self, model, key, value) -> QueryModifier:
+    def _resolve_custom_kwarg(self, model, table_stack: List[Table], key, value) -> QueryModifier:
         having_info = self._custom_filters[key]
         annotation = self._annotations[having_info["field"]]
-        annotation_info = annotation.resolve(model)
+        annotation_info = annotation.resolve(model=model, table_stack=table_stack)
         operator = having_info["operator"]
+
         overridden_operator = model._meta.db.executor_class.get_overridden_filter_func(
             filter_func=operator
         )
@@ -236,11 +251,11 @@ class Q:
             modifier = QueryModifier(where_criterion=operator(annotation_info["field"], value))
         return modifier
 
-    def _resolve_regular_kwarg(self, model, key, value) -> QueryModifier:
+    def _resolve_regular_kwarg(self, model, table_stack: List[Table], key, value) -> QueryModifier:
         if key not in model._meta.filters and key.split("__")[0] in model._meta.fetch_fields:
-            modifier = self._resolve_nested_filter(model, key, value)
+            modifier = self._resolve_nested_filter(model, table_stack, key, value)
         else:
-            criterion, join = _process_filter_kwarg(model, key, value)
+            criterion, join = _process_filter_kwarg(model, table_stack, key, value)
             joins = [join] if join else []
             modifier = QueryModifier(where_criterion=criterion, joins=joins)
         return modifier
@@ -273,14 +288,14 @@ class Q:
             raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
         return filter_key, filter_value
 
-    def _resolve_kwargs(self, model) -> QueryModifier:
+    def _resolve_kwargs(self, model, table_stack: List[Table]) -> QueryModifier:
         modifier = QueryModifier()
         for raw_key, raw_value in self.filters.items():
             key, value = self._get_actual_filter_params(model, raw_key, raw_value)
             if key in self._custom_filters:
-                filter_modifier = self._resolve_custom_kwarg(model, key, value)
+                filter_modifier = self._resolve_custom_kwarg(model, table_stack, key, value)
             else:
-                filter_modifier = self._resolve_regular_kwarg(model, key, value)
+                filter_modifier = self._resolve_regular_kwarg(model, table_stack, key, value)
 
             if self.join_type == self.AND:
                 modifier &= filter_modifier
@@ -290,10 +305,10 @@ class Q:
             modifier = ~modifier
         return modifier
 
-    def _resolve_children(self, model) -> QueryModifier:
+    def _resolve_children(self, model, table_stack: List[Table]) -> QueryModifier:
         modifier = QueryModifier()
         for node in self.children:
-            node_modifier = node.resolve(model, self._annotations, self._custom_filters)
+            node_modifier = node.resolve(model, table_stack, self._annotations, self._custom_filters)
             if self.join_type == self.AND:
                 modifier &= node_modifier
             else:
@@ -303,12 +318,12 @@ class Q:
             modifier = ~modifier
         return modifier
 
-    def resolve(self, model, annotations, custom_filters) -> QueryModifier:
+    def resolve(self, model, table_stack: List[Table], annotations, custom_filters) -> QueryModifier:
         self._annotations = annotations
         self._custom_filters = custom_filters
         if self.filters:
-            return self._resolve_kwargs(model)
-        return self._resolve_children(model)
+            return self._resolve_kwargs(model, table_stack)
+        return self._resolve_children(model, table_stack)
 
 
 class Prefetch:

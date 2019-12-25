@@ -17,7 +17,7 @@ from typing import (
     Union,
 )
 
-from pypika import JoinType, Order, Table
+from pypika import JoinType, Order, Table, EmptyCriterion
 from pypika.functions import Count
 from pypika.queries import QueryBuilder
 from typing_extensions import Protocol
@@ -25,8 +25,9 @@ from typing_extensions import Protocol
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
 from tortoise.fields.relational import ForeignKeyFieldInstance, OneToOneFieldInstance
-from tortoise.functions import Function
-from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
+from tortoise.functions import Annotation
+from tortoise.query_utils import \
+    Prefetch, Q, QueryModifier, _get_joins_for_related_field, EmptyCriterion as TortoiseEmptyCriterion
 
 # Empty placeholder - Should never be edited.
 QUERY: QueryBuilder = QueryBuilder()
@@ -54,16 +55,20 @@ class AwaitableQuery(Generic[MODEL]):
         self._db: BaseDBAsyncClient = None  # type: ignore
         self.capabilities: Capabilities = model._meta.db.capabilities
 
-    def resolve_filters(self, model, q_objects, annotations, custom_filters) -> None:
+    def resolve_filters(self, model, table_stack: List[Table], q_objects, annotations, custom_filters) -> None:
         modifier = QueryModifier()
         for node in q_objects:
-            modifier &= node.resolve(model, annotations, custom_filters)
+            modifier &= node.resolve(model, table_stack + [self.model._meta.basetable], annotations, custom_filters)
 
         where_criterion, joins, having_criterion = modifier.get_query_modifiers()
         for join in joins:
             if join[0] not in self._joined_tables:
                 self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
                 self._joined_tables.append(join[0])
+
+        if not isinstance(where_criterion, (EmptyCriterion, TortoiseEmptyCriterion)):
+            if not self.query._validate_table(where_criterion):
+                self.query._foreign_table = True
 
         self.query._wheres = where_criterion
         self.query._havings = having_criterion
@@ -94,7 +99,7 @@ class AwaitableQuery(Generic[MODEL]):
                 )
             elif field_name in annotations:
                 annotation = annotations[field_name]
-                annotation_info = annotation.resolve(self.model)
+                annotation_info = annotation.resolve([self.model])
                 self.query = self.query.orderby(annotation_info["field"], order=ordering[1])
             else:
                 field_object = self.model._meta.fields_map.get(field_name)
@@ -111,7 +116,17 @@ class AwaitableQuery(Generic[MODEL]):
 
                 self.query = self.query.orderby(field, order=ordering[1])
 
-    def _make_query(self) -> None:
+    def create_base_query(self, alias):
+        if alias is None:
+            return copy(self.model._meta.basequery)
+        else:
+            table = Table(self.model._meta.table, alias=alias)
+            return self.model._meta.db.query_class.from_(table)
+
+    def create_base_query_all_fields(self, alias):
+        return self.create_base_query(alias).select(*self.model._meta.db_fields)
+
+    def _make_query(self, table_stack: List[Table], alias=None) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def _execute(self):
@@ -153,7 +168,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._orderings: List[Tuple[str, Any]] = []
         self._q_objects: List[Q] = []
         self._distinct: bool = False
-        self._annotations: Dict[str, Function] = {}
+        self._annotations: Dict[str, Annotation] = {}
         self._having: Dict[str, Any] = {}
         self._custom_filters: Dict[str, dict] = {}
 
@@ -281,8 +296,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         queryset = self._clone()
         for key, annotation in kwargs.items():
-            if not isinstance(annotation, Function):
-                raise TypeError("value is expected to be Function instance")
+            if not isinstance(annotation, Annotation):
+                raise TypeError("value is expected to be Annotation instance")
             queryset._annotations[key] = annotation
             from tortoise.models import get_filters_for_field
 
@@ -463,7 +478,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         if self._db is None:
             self._db = self.model._meta.db  # type: ignore
-        self._make_query()
+        self._make_query(table_stack=[])
         return await self._db.executor_class(model=self.model, db=self._db).execute_explain(
             self.query
         )
@@ -477,26 +492,34 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._db = _db
         return queryset
 
-    def _resolve_annotate(self) -> None:
+    def _resolve_annotate(self, table_stack: List[Table]) -> None:
         if not self._annotations:
             return
+
         table = self.model._meta.basetable
+        resolve_table_stack = table_stack + [table]
+        annotation_info_map = {
+            key: annotation.resolve(self.model, resolve_table_stack) for key, annotation in self._annotations.items()
+        }
+
         if any(
-            annotation.resolve(self.model)["field"].is_aggregate
-            for annotation in self._annotations.values()
+            annotation_info["field"].is_aggregate
+            for annotation_info in annotation_info_map.values()
         ):
             self.query = self.query.groupby(table.id)
-        for key, annotation in self._annotations.items():
-            annotation_info = annotation.resolve(self.model)
+
+        for key, annotation_info in annotation_info_map.items():
             for join in annotation_info["joins"]:
                 self._join_table_by_field(*join)
             self.query._select_other(annotation_info["field"].as_(key))
 
-    def _make_query(self) -> None:
-        self.query = copy(self.model._meta.basequery_all_fields)
-        self._resolve_annotate()
+    def _make_query(self, table_stack: List[Table], alias=None) -> None:
+        self.query = self.create_base_query_all_fields(alias)
+
+        self._resolve_annotate(table_stack=table_stack)
         self.resolve_filters(
             model=self.model,
+            table_stack=table_stack,
             q_objects=self._q_objects,
             annotations=self._annotations,
             custom_filters=self._custom_filters,
@@ -512,7 +535,7 @@ class QuerySet(AwaitableQuery[MODEL]):
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
         if self._db is None:
             self._db = self.model._meta.db  # type: ignore
-        self._make_query()
+        self._make_query(table_stack=[])
         return self._execute().__await__()
 
     async def __aiter__(self) -> AsyncIterator[MODEL]:
@@ -550,11 +573,12 @@ class UpdateQuery(AwaitableQuery):
         self.custom_filters = custom_filters
         self._db = db
 
-    def _make_query(self) -> None:
+    def _make_query(self, table_stack: List[Table], alias=None) -> None:
         table = self.model._meta.basetable
         self.query = self._db.query_class.update(table)
         self.resolve_filters(
             model=self.model,
+            table_stack=table_stack,
             q_objects=self.q_objects,
             annotations=self.annotations,
             custom_filters=self.custom_filters,
@@ -584,7 +608,7 @@ class UpdateQuery(AwaitableQuery):
     def __await__(self) -> Generator[Any, None, None]:
         if self._db is None:
             self._db = self.model._meta.db  # type: ignore
-        self._make_query()
+        self._make_query(table_stack=[])
         return self._execute().__await__()
 
     async def _execute(self) -> None:
@@ -601,10 +625,11 @@ class DeleteQuery(AwaitableQuery):
         self.custom_filters = custom_filters
         self._db = db
 
-    def _make_query(self) -> None:
-        self.query = copy(self.model._meta.basequery)
+    def _make_query(self, table_stack: List[Table], alias=None) -> None:
+        self.query = self.create_base_query(alias)
         self.resolve_filters(
             model=self.model,
+            table_stack=table_stack,
             q_objects=self.q_objects,
             annotations=self.annotations,
             custom_filters=self.custom_filters,
@@ -614,7 +639,7 @@ class DeleteQuery(AwaitableQuery):
     def __await__(self) -> Generator[Any, None, None]:
         if self._db is None:
             self._db = self.model._meta.db  # type: ignore
-        self._make_query()
+        self._make_query(table_stack=[])
         return self._execute().__await__()
 
     async def _execute(self) -> None:
@@ -631,10 +656,11 @@ class CountQuery(AwaitableQuery):
         self.custom_filters = custom_filters
         self._db = db
 
-    def _make_query(self) -> None:
+    def _make_query(self, table_stack: List[Table], alias=None) -> None:
         self.query = copy(self.model._meta.basequery)
         self.resolve_filters(
             model=self.model,
+            table_stack=table_stack,
             q_objects=self.q_objects,
             annotations=self.annotations,
             custom_filters=self.custom_filters,
@@ -644,7 +670,7 @@ class CountQuery(AwaitableQuery):
     def __await__(self) -> Generator[Any, None, int]:
         if self._db is None:
             self._db = self.model._meta.db  # type: ignore
-        self._make_query()
+        self._make_query(table_stack=[])
         return self._execute().__await__()
 
     async def _execute(self) -> int:
@@ -689,7 +715,7 @@ class FieldSelectQuery(AwaitableQuery):
             forwarded_fields="__".join(forwarded_fields_split[1:]),
         )
 
-    def add_field_to_select_query(self, field, return_as) -> None:
+    def add_field_to_select_query(self, field, return_as, table_stack: List[Table]) -> None:
         table = self.model._meta.basetable
         if field in self.model._meta.fields_db_projection:
             db_field = self.model._meta.fields_db_projection[field]
@@ -704,7 +730,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         if field in self.annotations:
             annotation = self.annotations[field]
-            annotation_info = annotation.resolve(self.model)
+            annotation_info = annotation.resolve(self.model, table_stack + [table])
             self.query._select_other(annotation_info["field"].as_(return_as))
             return
 
@@ -787,13 +813,14 @@ class ValuesListQuery(FieldSelectQuery):
         self.flat = flat
         self._db = db
 
-    def _make_query(self) -> None:
-        self.query = copy(self.model._meta.basequery)
+    def _make_query(self, table_stack: List[Table], alias=None) -> None:
+        self.query = self.create_base_query(alias)
         for positional_number, field in self.fields.items():
-            self.add_field_to_select_query(field, positional_number)
+            self.add_field_to_select_query(field, positional_number, table_stack)
 
         self.resolve_filters(
             model=self.model,
+            table_stack=table_stack,
             q_objects=self.q_objects,
             annotations=self.annotations,
             custom_filters=self.custom_filters,
@@ -809,7 +836,7 @@ class ValuesListQuery(FieldSelectQuery):
     def __await__(self) -> Generator[Any, None, List[Any]]:
         if self._db is None:
             self._db = self.model._meta.db  # type: ignore
-        self._make_query()
+        self._make_query(table_stack=[])
         return self._execute().__await__()  # pylint: disable=E1101
 
     async def __aiter__(self) -> AsyncIterator[Any]:
@@ -866,13 +893,14 @@ class ValuesQuery(FieldSelectQuery):
         self.q_objects = q_objects
         self._db = db
 
-    def _make_query(self) -> None:
-        self.query = copy(self.model._meta.basequery)
+    def _make_query(self, table_stack: List[Table], alias=None) -> None:
+        self.query = self.create_base_query(alias)
         for return_as, field in self.fields_for_select.items():
-            self.add_field_to_select_query(field, return_as)
+            self.add_field_to_select_query(field, return_as, table_stack)
 
         self.resolve_filters(
             model=self.model,
+            table_stack=table_stack,
             q_objects=self.q_objects,
             annotations=self.annotations,
             custom_filters=self.custom_filters,
@@ -888,7 +916,7 @@ class ValuesQuery(FieldSelectQuery):
     def __await__(self) -> Generator[Any, None, List[dict]]:
         if self._db is None:
             self._db = self.model._meta.db  # type: ignore
-        self._make_query()
+        self._make_query(table_stack=[])
         return self._execute().__await__()  # pylint: disable=E1101
 
     async def __aiter__(self) -> AsyncIterator[dict]:

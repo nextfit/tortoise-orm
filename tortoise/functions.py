@@ -1,6 +1,6 @@
-from typing import Any
+from typing import Any, List
 
-from pypika import functions
+from pypika import functions, Query, Table
 from pypika.terms import AggregateFunction
 from pypika.terms import Function as BaseFunction
 
@@ -11,7 +11,33 @@ from tortoise.exceptions import ConfigurationError
 ##############################################################################
 
 
-class Function:
+class Annotation:
+    def resolve(self, model, table_stack: List[Table]) -> dict:
+        raise NotImplementedError
+
+
+class Subquery(Annotation):
+    __slots__ = ("_queryset", )
+
+    def __init__(self, queryset):
+        self._queryset = queryset
+
+    def resolve(self, model, table_stack: List[Table]) -> dict:
+        return {"joins": [], "field": self.get_query(table_stack)}
+
+    def get_query(self, table_stack: List[Table]) -> Query:
+        self._queryset._make_query(table_stack=table_stack)
+        return self._queryset.query
+
+
+class OuterRef:
+    __slots__ = ("ref_name", )
+
+    def __init__(self, ref_name):
+        self.ref_name = ref_name
+
+
+class Function(Annotation):
     __slots__ = ("field", "field_object", "default_values")
 
     database_func = BaseFunction
@@ -58,7 +84,7 @@ class Function:
         function["joins"].append(join)
         return function
 
-    def resolve(self, model) -> dict:
+    def resolve(self, model, table_stack: List[Table]) -> dict:
         function = self._resolve_field_for_model(model, self.field, *self.default_values)
         function["joins"] = reversed(function["joins"])
         return function
