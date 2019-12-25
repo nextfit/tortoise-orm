@@ -22,12 +22,15 @@ class Subquery(Annotation):
     def __init__(self, queryset):
         self._queryset = queryset
 
-    def resolve(self, model, table_stack: List[Table]) -> dict:
+    def resolve(self, model, table_stack: List[Table], alias=None) -> dict:
         return {"joins": [], "field": self.get_query(table_stack)}
 
-    def get_query(self, table_stack: List[Table]) -> Query:
-        self._queryset._make_query(table_stack=table_stack)
+    def get_query(self, table_stack: List[Table], alias=None) -> Query:
+        self._queryset._make_query(table_stack=table_stack, alias=alias)
         return self._queryset.query
+
+    def __str__(self):
+        return f"Subquery({self._queryset})"
 
 
 class OuterRef:
@@ -35,6 +38,9 @@ class OuterRef:
 
     def __init__(self, ref_name):
         self.ref_name = ref_name
+
+    def __str__(self):
+        return f"OuterRef(\"{self.ref_name}\")"
 
 
 class Function(Annotation):

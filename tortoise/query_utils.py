@@ -38,7 +38,7 @@ def _process_filter_kwarg(model, table_stack: List[Table], key, value) -> \
             encoded_value = outer_table[value.ref_name]
 
         elif isinstance(value, Subquery):
-            encoded_value = value.get_query(table_stack)
+            encoded_value = value.get_query(table_stack, "U{}".format(len(table_stack)-1))
 
         elif param.get("value_encoder"):
             encoded_value = param["value_encoder"](value, model, field_object)
@@ -227,7 +227,7 @@ class Q:
         required_joins = _get_joins_for_related_field(table, related_field, related_field_name)
         modifier = Q(**{"__".join(key.split("__")[1:]): value}).resolve(
             model=related_field.model_class,
-            table_stack=table_stack + [table],
+            table_stack=table_stack,
             annotations=self._annotations,
             custom_filters=self._custom_filters,
         )

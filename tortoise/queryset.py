@@ -58,7 +58,7 @@ class AwaitableQuery(Generic[MODEL]):
     def resolve_filters(self, model, table_stack: List[Table], q_objects, annotations, custom_filters) -> None:
         modifier = QueryModifier()
         for node in q_objects:
-            modifier &= node.resolve(model, table_stack + [self.model._meta.basetable], annotations, custom_filters)
+            modifier &= node.resolve(model, table_stack, annotations, custom_filters)
 
         where_criterion, joins, having_criterion = modifier.get_query_modifiers()
         for join in joins:
@@ -497,9 +497,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             return
 
         table = self.model._meta.basetable
-        resolve_table_stack = table_stack + [table]
         annotation_info_map = {
-            key: annotation.resolve(self.model, resolve_table_stack) for key, annotation in self._annotations.items()
+            key: annotation.resolve(self.model, table_stack) for key, annotation in self._annotations.items()
         }
 
         if any(
@@ -516,10 +515,11 @@ class QuerySet(AwaitableQuery[MODEL]):
     def _make_query(self, table_stack: List[Table], alias=None) -> None:
         self.query = self.create_base_query_all_fields(alias)
 
-        self._resolve_annotate(table_stack=table_stack)
+        this_table_stack = table_stack + [self.query._from[-1]]
+        self._resolve_annotate(table_stack=this_table_stack)
         self.resolve_filters(
             model=self.model,
-            table_stack=table_stack,
+            table_stack=this_table_stack,
             q_objects=self._q_objects,
             annotations=self._annotations,
             custom_filters=self._custom_filters,
@@ -576,9 +576,11 @@ class UpdateQuery(AwaitableQuery):
     def _make_query(self, table_stack: List[Table], alias=None) -> None:
         table = self.model._meta.basetable
         self.query = self._db.query_class.update(table)
+        this_table_stack = table_stack + [self.query._from[-1]]
+
         self.resolve_filters(
             model=self.model,
-            table_stack=table_stack,
+            table_stack=this_table_stack,
             q_objects=self.q_objects,
             annotations=self.annotations,
             custom_filters=self.custom_filters,
@@ -627,9 +629,11 @@ class DeleteQuery(AwaitableQuery):
 
     def _make_query(self, table_stack: List[Table], alias=None) -> None:
         self.query = self.create_base_query(alias)
+        this_table_stack = table_stack + [self.query._from[-1]]
+
         self.resolve_filters(
             model=self.model,
-            table_stack=table_stack,
+            table_stack=this_table_stack,
             q_objects=self.q_objects,
             annotations=self.annotations,
             custom_filters=self.custom_filters,
@@ -716,7 +720,7 @@ class FieldSelectQuery(AwaitableQuery):
         )
 
     def add_field_to_select_query(self, field, return_as, table_stack: List[Table]) -> None:
-        table = self.model._meta.basetable
+        table = table_stack[-1]
         if field in self.model._meta.fields_db_projection:
             db_field = self.model._meta.fields_db_projection[field]
             self.query._select_field(getattr(table, db_field).as_(return_as))
@@ -730,7 +734,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         if field in self.annotations:
             annotation = self.annotations[field]
-            annotation_info = annotation.resolve(self.model, table_stack + [table])
+            annotation_info = annotation.resolve(self.model, table_stack)
             self.query._select_other(annotation_info["field"].as_(return_as))
             return
 
@@ -815,12 +819,14 @@ class ValuesListQuery(FieldSelectQuery):
 
     def _make_query(self, table_stack: List[Table], alias=None) -> None:
         self.query = self.create_base_query(alias)
+        this_table_stack = table_stack + [self.query._from[-1]]
+
         for positional_number, field in self.fields.items():
-            self.add_field_to_select_query(field, positional_number, table_stack)
+            self.add_field_to_select_query(field, positional_number, this_table_stack)
 
         self.resolve_filters(
             model=self.model,
-            table_stack=table_stack,
+            table_stack=this_table_stack,
             q_objects=self.q_objects,
             annotations=self.annotations,
             custom_filters=self.custom_filters,
@@ -895,12 +901,14 @@ class ValuesQuery(FieldSelectQuery):
 
     def _make_query(self, table_stack: List[Table], alias=None) -> None:
         self.query = self.create_base_query(alias)
+        this_table_stack = table_stack + [self.query._from[-1]]
+
         for return_as, field in self.fields_for_select.items():
-            self.add_field_to_select_query(field, return_as, table_stack)
+            self.add_field_to_select_query(field, return_as, this_table_stack)
 
         self.resolve_filters(
             model=self.model,
-            table_stack=table_stack,
+            table_stack=this_table_stack,
             q_objects=self.q_objects,
             annotations=self.annotations,
             custom_filters=self.custom_filters,
