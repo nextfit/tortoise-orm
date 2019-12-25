@@ -288,6 +288,7 @@ class BaseExecutor:
             for node in related_query._q_objects:
                 modifier &= node.resolve(
                     model=related_query.model,
+                    table_stack=[related_query_table],
                     annotations=related_query._annotations,
                     custom_filters=related_query._custom_filters,
                 )
