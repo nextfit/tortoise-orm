@@ -496,7 +496,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         if not self._annotations:
             return
 
-        table = self.model._meta.basetable
+        table = table_stack[-1]
         annotation_info_map = {
             key: annotation.resolve(self.model, table_stack) for key, annotation in self._annotations.items()
         }
