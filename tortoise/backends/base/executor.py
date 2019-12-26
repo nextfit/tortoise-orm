@@ -7,10 +7,12 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Ty
 
 from pypika import JoinType, Parameter, Table
 
+from tortoise.context import QueryContext
 from tortoise.exceptions import OperationalError
 from tortoise.fields.base import Field
 from tortoise.fields.relational import ManyToManyFieldInstance
 from tortoise.query_utils import QueryModifier
+
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -287,8 +289,7 @@ class BaseExecutor:
             modifier = QueryModifier()
             for node in related_query._q_objects:
                 modifier &= node.resolve(
-                    model=related_query.model,
-                    table_stack=[related_query_table],
+                    context=QueryContext().push(related_query.model, related_query_table),
                     annotations=related_query._annotations,
                     custom_filters=related_query._custom_filters,
                 )

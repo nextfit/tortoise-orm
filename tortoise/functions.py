@@ -4,6 +4,7 @@ from pypika import functions, Query, Table
 from pypika.terms import AggregateFunction
 from pypika.terms import Function as BaseFunction
 
+from tortoise.context import QueryContext
 from tortoise.exceptions import ConfigurationError
 
 ##############################################################################
@@ -12,7 +13,7 @@ from tortoise.exceptions import ConfigurationError
 
 
 class Annotation:
-    def resolve(self, model, table_stack: List[Table], alias=None) -> dict:
+    def resolve(self, context: QueryContext, alias=None) -> dict:
         raise NotImplementedError
 
 
@@ -22,11 +23,11 @@ class Subquery(Annotation):
     def __init__(self, queryset):
         self._queryset = queryset
 
-    def resolve(self, model, table_stack: List[Table], alias=None) -> dict:
-        return {"joins": [], "field": self.get_query(table_stack)}
+    def resolve(self, context: QueryContext, alias=None) -> dict:
+        return {"joins": [], "field": self.get_query(context)}
 
-    def get_query(self, table_stack: List[Table], alias=None) -> Query:
-        self._queryset._make_query(table_stack=table_stack, alias=alias)
+    def get_query(self, context: QueryContext, alias=None) -> Query:
+        self._queryset._make_query(context=context, alias=alias)
         return self._queryset.query
 
     def __str__(self):
@@ -90,7 +91,8 @@ class Function(Annotation):
         function["joins"].append(join)
         return function
 
-    def resolve(self, model, table_stack: List[Table]) -> dict:
+    def resolve(self, context: QueryContext, alias=None) -> dict:
+        model = context.stack[-1].model
         function = self._resolve_field_for_model(model, self.field, *self.default_values)
         function["joins"] = reversed(function["joins"])
         return function
