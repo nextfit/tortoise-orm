@@ -12,7 +12,7 @@ from tortoise.exceptions import ConfigurationError
 
 
 class Annotation:
-    def resolve(self, model, table_stack: List[Table]) -> dict:
+    def resolve(self, model, table_stack: List[Table], alias=None) -> dict:
         raise NotImplementedError
 
 

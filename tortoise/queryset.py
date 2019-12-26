@@ -55,10 +55,10 @@ class AwaitableQuery(Generic[MODEL]):
         self._db: BaseDBAsyncClient = None  # type: ignore
         self.capabilities: Capabilities = model._meta.db.capabilities
 
-    def resolve_filters(self, model, table_stack: List[Table], q_objects, annotations, custom_filters) -> None:
+    def resolve_filters(self, table_stack: List[Table], q_objects, annotations, custom_filters) -> None:
         modifier = QueryModifier()
         for node in q_objects:
-            modifier &= node.resolve(model, table_stack, annotations, custom_filters)
+            modifier &= node.resolve(self.model, table_stack, annotations, custom_filters)
 
         where_criterion, joins, having_criterion = modifier.get_query_modifiers()
         for join in joins:
@@ -518,7 +518,6 @@ class QuerySet(AwaitableQuery[MODEL]):
         this_table_stack = table_stack + [self.query._from[-1]]
         self._resolve_annotate(table_stack=this_table_stack)
         self.resolve_filters(
-            model=self.model,
             table_stack=this_table_stack,
             q_objects=self._q_objects,
             annotations=self._annotations,
@@ -579,7 +578,6 @@ class UpdateQuery(AwaitableQuery):
         this_table_stack = table_stack + [self.query._from[-1]]
 
         self.resolve_filters(
-            model=self.model,
             table_stack=this_table_stack,
             q_objects=self.q_objects,
             annotations=self.annotations,
@@ -632,7 +630,6 @@ class DeleteQuery(AwaitableQuery):
         this_table_stack = table_stack + [self.query._from[-1]]
 
         self.resolve_filters(
-            model=self.model,
             table_stack=this_table_stack,
             q_objects=self.q_objects,
             annotations=self.annotations,
@@ -663,7 +660,6 @@ class CountQuery(AwaitableQuery):
     def _make_query(self, table_stack: List[Table], alias=None) -> None:
         self.query = copy(self.model._meta.basequery)
         self.resolve_filters(
-            model=self.model,
             table_stack=table_stack,
             q_objects=self.q_objects,
             annotations=self.annotations,
@@ -825,7 +821,6 @@ class ValuesListQuery(FieldSelectQuery):
             self.add_field_to_select_query(field, positional_number, this_table_stack)
 
         self.resolve_filters(
-            model=self.model,
             table_stack=this_table_stack,
             q_objects=self.q_objects,
             annotations=self.annotations,
@@ -907,7 +902,6 @@ class ValuesQuery(FieldSelectQuery):
             self.add_field_to_select_query(field, return_as, this_table_stack)
 
         self.resolve_filters(
-            model=self.model,
             table_stack=this_table_stack,
             q_objects=self.q_objects,
             annotations=self.annotations,
