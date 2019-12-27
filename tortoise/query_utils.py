@@ -36,7 +36,8 @@ class QueryModifier:
                 _and(other.where_criterion, other.having_criterion),
             )
             return QueryModifier(
-                joins=self.joins + other.joins, having_criterion=result_having_criterion
+                joins=self.joins + other.joins,
+                having_criterion=result_having_criterion
             )
         if self.where_criterion and other.where_criterion:
             return QueryModifier(
