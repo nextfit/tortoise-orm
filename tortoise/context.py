@@ -1,8 +1,9 @@
 
-from typing import List, Type
+from typing import List, Type, TypeVar
 from pypika import Table
 
-from tortoise.models import MODEL
+
+MODEL = TypeVar("MODEL", bound="Model")
 
 
 class QueryContextItem:

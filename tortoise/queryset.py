@@ -100,7 +100,7 @@ class AwaitableQuery(Generic[MODEL]):
                 )
             elif field_name in annotations:
                 annotation = annotations[field_name]
-                annotation_info = annotation.resolve([self.model])
+                annotation_info = annotation.resolve(QueryContext().push(self.model, self.model._meta.basetable))
                 self.query = self.query.orderby(annotation_info["field"], order=ordering[1])
             else:
                 field_object = self.model._meta.fields_map.get(field_name)
