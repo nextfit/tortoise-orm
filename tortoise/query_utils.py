@@ -10,10 +10,63 @@ from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstan
 from tortoise.functions import OuterRef, Subquery
 
 
-def _process_filter_kwarg(context: QueryContext, key, value) -> \
-    Tuple[Criterion, Optional[Tuple[Table, Criterion]]]:
+class QueryModifier:
+    def __init__(
+        self,
+        where_criterion: Optional[Criterion] = None,
+        joins: Optional[List[Tuple[Criterion, Criterion]]] = None,
+        having_criterion: Optional[Criterion] = None,
+    ) -> None:
+        self.where_criterion: Criterion = where_criterion or EmptyCriterion()
+        self.joins = joins if joins else []
+        self.having_criterion: Criterion = having_criterion or EmptyCriterion()
 
-    join = None
+    def __and__(self, other: "QueryModifier") -> "QueryModifier":
+        return QueryModifier(
+            where_criterion=_and(self.where_criterion, other.where_criterion),
+            joins=self.joins + other.joins,
+            having_criterion=_and(self.having_criterion, other.having_criterion),
+        )
+
+    def __or__(self, other: "QueryModifier") -> "QueryModifier":
+        if self.having_criterion or other.having_criterion:
+            # TODO: This could be optimized?
+            result_having_criterion = _or(
+                _and(self.where_criterion, self.having_criterion),
+                _and(other.where_criterion, other.having_criterion),
+            )
+            return QueryModifier(
+                joins=self.joins + other.joins, having_criterion=result_having_criterion
+            )
+        if self.where_criterion and other.where_criterion:
+            return QueryModifier(
+                where_criterion=self.where_criterion | other.where_criterion,
+                joins=self.joins + other.joins,
+            )
+        else:
+            return QueryModifier(
+                where_criterion=self.where_criterion or other.where_criterion,
+                joins=self.joins + other.joins,
+            )
+
+    def __invert__(self) -> "QueryModifier":
+        if not self.where_criterion and not self.having_criterion:
+            return QueryModifier(joins=self.joins)
+        if self.having_criterion:
+            # TODO: This could be optimized?
+            return QueryModifier(
+                joins=self.joins,
+                having_criterion=_and(self.where_criterion, self.having_criterion).negate(),
+            )
+        return QueryModifier(where_criterion=self.where_criterion.negate(), joins=self.joins)
+
+    def get_query_modifiers(self) -> Tuple[Criterion, List[Tuple[Table, Criterion]], Criterion]:
+        return self.where_criterion, self.joins, self.having_criterion
+
+
+def _process_filter_kwarg(context: QueryContext, key, value) -> QueryModifier:
+
+    joins = []
 
     context_item = context.stack[-1]
     model = context_item.model
@@ -27,13 +80,23 @@ def _process_filter_kwarg(context: QueryContext, key, value) -> \
 
     pk_db_field = model._meta.db_pk_field
     if param.get("table"):
-        join = (
+        joins.append((
             param["table"],
             table[pk_db_field] == getattr(param["table"], param["backward_key"]),
-        )
-        if param.get("value_encoder"):
-            value = param["value_encoder"](value, model)
-        criterion = param["operator"](getattr(param["table"], param["field"]), value)
+        ))
+
+        if isinstance(value, OuterRef):
+            outer_table = context.stack[-2].table
+            encoded_value = outer_table[value.ref_name]
+
+        elif param.get("value_encoder"):
+            encoded_value = param["value_encoder"](value, model)
+
+        else:
+            encoded_value = value
+
+        encoded_key = getattr(param["table"], param["field"])
+
     else:
         field_object = model._meta.fields_map[param["field"]]
 
@@ -50,9 +113,10 @@ def _process_filter_kwarg(context: QueryContext, key, value) -> \
         else:
             encoded_value = model._meta.db.executor_class._field_to_db(field_object, value, model)
 
-        criterion = param["operator"](table[param["source_field"]], encoded_value)
+        encoded_key = table[param["source_field"]]
 
-    return criterion, join
+    criterion = param["operator"](encoded_key, encoded_value)
+    return QueryModifier(where_criterion=criterion, joins=joins)
 
 
 def _get_joins_for_related_field(
@@ -121,59 +185,6 @@ def _or(left: Criterion, right: Criterion):
         return left
     return left | right
 
-
-class QueryModifier:
-    def __init__(
-        self,
-        where_criterion: Optional[Criterion] = None,
-        joins: Optional[List[Tuple[Criterion, Criterion]]] = None,
-        having_criterion: Optional[Criterion] = None,
-    ) -> None:
-        self.where_criterion: Criterion = where_criterion or EmptyCriterion()
-        self.joins = joins if joins else []
-        self.having_criterion: Criterion = having_criterion or EmptyCriterion()
-
-    def __and__(self, other: "QueryModifier") -> "QueryModifier":
-        return QueryModifier(
-            where_criterion=_and(self.where_criterion, other.where_criterion),
-            joins=self.joins + other.joins,
-            having_criterion=_and(self.having_criterion, other.having_criterion),
-        )
-
-    def __or__(self, other: "QueryModifier") -> "QueryModifier":
-        if self.having_criterion or other.having_criterion:
-            # TODO: This could be optimized?
-            result_having_criterion = _or(
-                _and(self.where_criterion, self.having_criterion),
-                _and(other.where_criterion, other.having_criterion),
-            )
-            return QueryModifier(
-                joins=self.joins + other.joins, having_criterion=result_having_criterion
-            )
-        if self.where_criterion and other.where_criterion:
-            return QueryModifier(
-                where_criterion=self.where_criterion | other.where_criterion,
-                joins=self.joins + other.joins,
-            )
-        else:
-            return QueryModifier(
-                where_criterion=self.where_criterion or other.where_criterion,
-                joins=self.joins + other.joins,
-            )
-
-    def __invert__(self) -> "QueryModifier":
-        if not self.where_criterion and not self.having_criterion:
-            return QueryModifier(joins=self.joins)
-        if self.having_criterion:
-            # TODO: This could be optimized?
-            return QueryModifier(
-                joins=self.joins,
-                having_criterion=_and(self.where_criterion, self.having_criterion).negate(),
-            )
-        return QueryModifier(where_criterion=self.where_criterion.negate(), joins=self.joins)
-
-    def get_query_modifiers(self) -> Tuple[Criterion, List[Tuple[Table, Criterion]], Criterion]:
-        return self.where_criterion, self.joins, self.having_criterion
 
 
 class Q:
@@ -266,12 +277,9 @@ class Q:
     def _resolve_regular_kwarg(self, context: QueryContext, key, value) -> QueryModifier:
         model = context.stack[-1].model
         if key not in model._meta.filters and key.split("__")[0] in model._meta.fetch_fields:
-            modifier = self._resolve_nested_filter(context, key, value)
+            return self._resolve_nested_filter(context, key, value)
         else:
-            criterion, join = _process_filter_kwarg(context, key, value)
-            joins = [join] if join else []
-            modifier = QueryModifier(where_criterion=criterion, joins=joins)
-        return modifier
+            return _process_filter_kwarg(context, key, value)
 
     def _get_actual_filter_params(self, context: QueryContext, key, value) -> Tuple[str, Any]:
         model = context.stack[-1].model

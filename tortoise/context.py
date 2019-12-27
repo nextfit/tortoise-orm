@@ -1,6 +1,12 @@
 
+from typing import List, Type
+from pypika import Table
+
+from tortoise.models import MODEL
+
+
 class QueryContextItem:
-    def __init__(self, model, table):
+    def __init__(self, model: Type[MODEL], table: Table):
         self.model = model
         self.table = table
 
