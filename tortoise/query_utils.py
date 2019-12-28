@@ -7,117 +7,21 @@ from pypika.terms import Criterion
 from tortoise.context import QueryContext
 from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
-from tortoise.functions import OuterRef, Subquery
-
-
-class QueryModifier:
-    def __init__(
-        self,
-        where_criterion: Optional[Criterion] = None,
-        joins: Optional[List[Tuple[Criterion, Criterion]]] = None,
-        having_criterion: Optional[Criterion] = None,
-    ) -> None:
-        self.where_criterion: Criterion = where_criterion or EmptyCriterion()
-        self.joins = joins if joins else []
-        self.having_criterion: Criterion = having_criterion or EmptyCriterion()
-
-    def __and__(self, other: "QueryModifier") -> "QueryModifier":
-        return QueryModifier(
-            where_criterion=_and(self.where_criterion, other.where_criterion),
-            joins=self.joins + other.joins,
-            having_criterion=_and(self.having_criterion, other.having_criterion),
-        )
-
-    def __or__(self, other: "QueryModifier") -> "QueryModifier":
-        if self.having_criterion or other.having_criterion:
-            # TODO: This could be optimized?
-            result_having_criterion = _or(
-                _and(self.where_criterion, self.having_criterion),
-                _and(other.where_criterion, other.having_criterion),
-            )
-            return QueryModifier(
-                joins=self.joins + other.joins,
-                having_criterion=result_having_criterion
-            )
-        if self.where_criterion and other.where_criterion:
-            return QueryModifier(
-                where_criterion=self.where_criterion | other.where_criterion,
-                joins=self.joins + other.joins,
-            )
-        else:
-            return QueryModifier(
-                where_criterion=self.where_criterion or other.where_criterion,
-                joins=self.joins + other.joins,
-            )
-
-    def __invert__(self) -> "QueryModifier":
-        if not self.where_criterion and not self.having_criterion:
-            return QueryModifier(joins=self.joins)
-        if self.having_criterion:
-            # TODO: This could be optimized?
-            return QueryModifier(
-                joins=self.joins,
-                having_criterion=_and(self.where_criterion, self.having_criterion).negate(),
-            )
-        return QueryModifier(where_criterion=self.where_criterion.negate(), joins=self.joins)
-
-    def get_query_modifiers(self) -> Tuple[Criterion, List[Tuple[Table, Criterion]], Criterion]:
-        return self.where_criterion, self.joins, self.having_criterion
+from tortoise.filters import FieldFilter, QueryModifier
 
 
 def _process_filter_kwarg(context: QueryContext, key, value) -> QueryModifier:
 
-    joins = []
-
     context_item = context.stack[-1]
     model = context_item.model
-    table = context_item.table
 
     if value is None and f"{key}__isnull" in model._meta.filters:
-        param = model._meta.get_filter(f"{key}__isnull")
+        field_filter = model._meta.get_filter(f"{key}__isnull")
         value = True
     else:
-        param = model._meta.get_filter(key)
+        field_filter = model._meta.get_filter(key)
 
-    pk_db_field = model._meta.db_pk_field
-    if param.get("table"):
-        joins.append((
-            param["table"],
-            table[pk_db_field] == getattr(param["table"], param["backward_key"]),
-        ))
-
-        if isinstance(value, OuterRef):
-            outer_table = context.stack[-2].table
-            encoded_value = outer_table[value.ref_name]
-
-        elif param.get("value_encoder"):
-            encoded_value = param["value_encoder"](value, model)
-
-        else:
-            encoded_value = value
-
-        encoded_key = getattr(param["table"], param["field"])
-
-    else:
-        field_object = model._meta.fields_map[param["field"]]
-
-        if isinstance(value, OuterRef):
-            outer_table = context.stack[-2].table
-            encoded_value = outer_table[value.ref_name]
-
-        elif isinstance(value, Subquery):
-            encoded_value = value.get_query(context, "U{}".format(len(context.stack)-1))
-
-        elif param.get("value_encoder"):
-            encoded_value = param["value_encoder"](value, model, field_object)
-
-        else:
-            encoded_value = model._meta.db.executor_class._field_to_db(field_object, value, model)
-
-        encoded_key = table[param["source_field"]]
-
-    criterion = param["operator"](encoded_key, encoded_value)
-    return QueryModifier(where_criterion=criterion, joins=joins)
+    return field_filter(context, value)
 
 
 def _get_joins_for_related_field(
@@ -164,30 +68,6 @@ def _get_joins_for_related_field(
     return required_joins
 
 
-class EmptyCriterion(Criterion):  # type: ignore
-    def __or__(self, other):
-        return other
-
-    def __and__(self, other):
-        return other
-
-    def __bool__(self):
-        return False
-
-
-def _and(left: Criterion, right: Criterion):
-    if left and not right:
-        return left
-    return left & right
-
-
-def _or(left: Criterion, right: Criterion):
-    if left and not right:
-        return left
-    return left | right
-
-
-
 class Q:
     __slots__ = (
         "children",
@@ -215,7 +95,7 @@ class Q:
         self.join_type = join_type
         self._is_negated = False
         self._annotations: Dict[str, Any] = {}
-        self._custom_filters: Dict[str, Dict[str, Any]] = {}
+        self._custom_filters: Dict[str, FieldFilter] = {}
 
     def __and__(self, other) -> "Q":
         if not isinstance(other, Q):
@@ -259,9 +139,9 @@ class Q:
 
     def _resolve_custom_kwarg(self, context: QueryContext, key, value) -> QueryModifier:
         having_info = self._custom_filters[key]
-        annotation = self._annotations[having_info["field"]]
+        annotation = self._annotations[having_info.field_name]
         annotation_info = annotation.resolve(context=context)
-        operator = having_info["operator"]
+        operator = having_info.opr
 
         model = context.stack[-1].model
         overridden_operator = model._meta.db.executor_class.get_overridden_filter_func(

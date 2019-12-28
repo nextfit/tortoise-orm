@@ -17,7 +17,7 @@ from tortoise.fields.relational import (
     OneToOneFieldInstance,
     ReverseRelation,
 )
-from tortoise.filters import get_filters_for_field
+from tortoise.filters import get_filters_for_field, FieldFilter
 from tortoise.queryset import QuerySet, QuerySetSingle
 from tortoise.transactions import current_transaction_map
 
@@ -125,8 +125,8 @@ class MetaInfo:
         self.fetch_fields: Set[str] = set()
         self.fields_db_projection: Dict[str, str] = {}
         self.fields_db_projection_reverse: Dict[str, str] = {}
-        self._filters: Dict[str, Dict[str, dict]] = {}
-        self.filters: Dict[str, dict] = {}
+        self._filters: Dict[str, FieldFilter] = {}
+        self.filters: Dict[str, FieldFilter] = {}
         self.fields_map: Dict[str, Field] = {}
         self._inited: bool = False
         self.default_connection: Optional[str] = None
@@ -172,7 +172,7 @@ class MetaInfo:
         except KeyError:
             raise ConfigurationError("No DB associated to model")
 
-    def get_filter(self, key: str) -> dict:
+    def get_filter(self, key: str) -> FieldFilter:
         return self.filters[key]
 
     def finalise_pk(self) -> None:
@@ -317,11 +317,11 @@ class MetaInfo:
         get_overridden_filter_func = self.db.executor_class.get_overridden_filter_func
         for key, filter_info in self._filters.items():
             overridden_operator = get_overridden_filter_func(
-                filter_func=filter_info["operator"]  # type: ignore
+                filter_func=filter_info.opr  # type: ignore
             )
             if overridden_operator:
                 filter_info = copy(filter_info)
-                filter_info["operator"] = overridden_operator  # type: ignore
+                filter_info.opr = overridden_operator  # type: ignore
             self.filters[key] = filter_info
 
 
@@ -331,7 +331,7 @@ class ModelMeta(type):
     def __new__(mcs, name: str, bases, attrs: dict, *args, **kwargs):
         fields_db_projection: Dict[str, str] = {}
         fields_map: Dict[str, Field] = {}
-        filters: Dict[str, Dict[str, dict]] = {}
+        filters: Dict[str, FieldFilter] = {}
         fk_fields: Set[str] = set()
         m2m_fields: Set[str] = set()
         o2o_fields: Set[str] = set()

@@ -1,12 +1,187 @@
+
 import operator
 from functools import partial
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Tuple
 
-from pypika import Table, functions
+from pypika import Table, functions, Criterion
 from pypika.enums import SqlTypes
 
+from tortoise.context import QueryContext
 from tortoise.fields import Field
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
+from tortoise.functions import OuterRef, Subquery
+
+
+class EmptyCriterion(Criterion):  # type: ignore
+    def __or__(self, other):
+        return other
+
+    def __and__(self, other):
+        return other
+
+    def __bool__(self):
+        return False
+
+
+def _and(left: Criterion, right: Criterion):
+    if left and not right:
+        return left
+    return left & right
+
+
+def _or(left: Criterion, right: Criterion):
+    if left and not right:
+        return left
+    return left | right
+
+
+class QueryModifier:
+    def __init__(
+        self,
+        where_criterion: Optional[Criterion] = None,
+        joins: Optional[List[Tuple[Criterion, Criterion]]] = None,
+        having_criterion: Optional[Criterion] = None,
+    ) -> None:
+        self.where_criterion: Criterion = where_criterion or EmptyCriterion()
+        self.joins = joins if joins else []
+        self.having_criterion: Criterion = having_criterion or EmptyCriterion()
+
+    def __and__(self, other: "QueryModifier") -> "QueryModifier":
+        return QueryModifier(
+            where_criterion=_and(self.where_criterion, other.where_criterion),
+            joins=self.joins + other.joins,
+            having_criterion=_and(self.having_criterion, other.having_criterion),
+        )
+
+    def __or__(self, other: "QueryModifier") -> "QueryModifier":
+        if self.having_criterion or other.having_criterion:
+            # TODO: This could be optimized?
+            result_having_criterion = _or(
+                _and(self.where_criterion, self.having_criterion),
+                _and(other.where_criterion, other.having_criterion),
+            )
+            return QueryModifier(
+                joins=self.joins + other.joins,
+                having_criterion=result_having_criterion
+            )
+        if self.where_criterion and other.where_criterion:
+            return QueryModifier(
+                where_criterion=self.where_criterion | other.where_criterion,
+                joins=self.joins + other.joins,
+            )
+        else:
+            return QueryModifier(
+                where_criterion=self.where_criterion or other.where_criterion,
+                joins=self.joins + other.joins,
+            )
+
+    def __invert__(self) -> "QueryModifier":
+        if not self.where_criterion and not self.having_criterion:
+            return QueryModifier(joins=self.joins)
+        if self.having_criterion:
+            # TODO: This could be optimized?
+            return QueryModifier(
+                joins=self.joins,
+                having_criterion=_and(self.where_criterion, self.having_criterion).negate(),
+            )
+        return QueryModifier(where_criterion=self.where_criterion.negate(), joins=self.joins)
+
+    def get_query_modifiers(self) -> Tuple[Criterion, List[Tuple[Table, Criterion]], Criterion]:
+        return self.where_criterion, self.joins, self.having_criterion
+
+
+class FieldFilter:
+    def __init__(self, field_name: str, field: Optional[Field]):
+        self.field_name = field_name
+        self.field = field
+
+    def __call__(self, context: QueryContext, value) -> QueryModifier:
+        raise NotImplementedError()
+
+
+class BaseFieldFilter(FieldFilter):
+    def __init__(self, field_name: str, field: Optional[Field], source_field: str, opr, value_encoder=None):
+        super().__init__(field.model_field_name if field_name == "pk" and field else field_name, field)
+        self.source_field = source_field
+
+        self.opr = opr
+        self.value_encoder = value_encoder
+
+    def __call__(self, context: QueryContext, value) -> QueryModifier:
+        context_item = context.stack[-1]
+        model = context_item.model
+        table = context_item.table
+
+        field_object = model._meta.fields_map[self.field_name]
+
+        if isinstance(value, OuterRef):
+            outer_table = context.stack[-2].table
+            encoded_value = outer_table[value.ref_name]
+
+        elif isinstance(value, Subquery):
+            encoded_value = value.get_query(context, "U{}".format(len(context.stack)-1))
+
+        elif self.value_encoder:
+            encoded_value = self.value_encoder(value, model, field_object)
+
+        else:
+            encoded_value = model._meta.db.executor_class._field_to_db(field_object, value, model)
+
+        encoded_key = table[self.source_field]
+        criterion = self.opr(encoded_key, encoded_value)
+        return QueryModifier(where_criterion=criterion, joins=[])
+
+
+class RelationFilter(FieldFilter):
+    def __init__(self, field_name: str, field: Optional[Field], opr,
+        value_encoder, table, backward_key):
+
+        self.field_name = field_name
+        self.field = field
+        self.source_field = None
+
+        self.opr = opr
+        self.value_encoder = value_encoder
+
+        self.table = table
+        self.backward_key = backward_key
+
+    def __call__(self, context: QueryContext, value) -> QueryModifier:
+        context_item = context.stack[-1]
+        model = context_item.model
+        table = context_item.table
+
+        pk_db_field = model._meta.db_pk_field
+        joins = [(
+            self.table,
+            table[pk_db_field] == getattr(self.table, self.backward_key),
+        )]
+
+        if isinstance(value, OuterRef):
+            outer_table = context.stack[-2].table
+            encoded_value = outer_table[value.ref_name]
+
+        elif self.value_encoder:
+            encoded_value = self.value_encoder(value, model)
+
+        else:
+            encoded_value = value
+
+        encoded_key = getattr(self.table, self.field_name)
+        criterion = self.opr(encoded_key, encoded_value)
+        return QueryModifier(where_criterion=criterion, joins=joins)
+
+
+class BackwardFKFilter(RelationFilter):
+    def __init__(self, field: Optional[Field], opr, value_encoder):
+        super().__init__(field.model_class._meta.pk_attr, field, opr, value_encoder,
+            Table(field.model_class._meta.table), field.relation_field)
+
+
+class ManyToManyRelationFilter(RelationFilter):
+    def __init__(self, field: Optional[Field], opr, value_encoder):
+        super().__init__(field.forward_key, field, opr, value_encoder,
+            Table(field.through), field.backward_key)
 
 
 def list_encoder(values, instance, field: Field):
@@ -87,179 +262,57 @@ def insensitive_ends_with(field, value):
     )
 
 
-def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> Dict[str, dict]:
+def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> Dict[str, FieldFilter]:
     target_table_pk = field.model_class._meta.pk
     return {
-        field_name: {
-            "field": field.forward_key,
-            "backward_key": field.backward_key,
-            "operator": operator.eq,
-            "table": Table(field.through),
-            "value_encoder": target_table_pk.to_db_value,
-        },
-        f"{field_name}__not": {
-            "field": field.forward_key,
-            "backward_key": field.backward_key,
-            "operator": not_equal,
-            "table": Table(field.through),
-            "value_encoder": target_table_pk.to_db_value,
-        },
-        f"{field_name}__in": {
-            "field": field.forward_key,
-            "backward_key": field.backward_key,
-            "operator": is_in,
-            "table": Table(field.through),
-            "value_encoder": partial(related_list_encoder, field=target_table_pk),
-        },
-        f"{field_name}__not_in": {
-            "field": field.forward_key,
-            "backward_key": field.backward_key,
-            "operator": not_in,
-            "table": Table(field.through),
-            "value_encoder": partial(related_list_encoder, field=target_table_pk),
-        },
+        field_name: ManyToManyRelationFilter(field, operator.eq, target_table_pk.to_db_value),
+        f"{field_name}__not": ManyToManyRelationFilter(field, not_equal, target_table_pk.to_db_value),
+        f"{field_name}__in": ManyToManyRelationFilter(field, is_in,
+            partial(related_list_encoder, field=target_table_pk)),
+
+        f"{field_name}__not_in": ManyToManyRelationFilter(field, not_in,
+            partial(related_list_encoder, field=target_table_pk)),
     }
 
 
-def get_backward_fk_filters(field_name: str, field: BackwardFKRelation) -> Dict[str, dict]:
+def get_backward_fk_filters(field_name: str, field: BackwardFKRelation) -> Dict[str, FieldFilter]:
     target_table_pk = field.model_class._meta.pk
     return {
-        field_name: {
-            "field": "id",
-            "backward_key": field.relation_field,
-            "operator": operator.eq,
-            "table": Table(field.model_class._meta.table),
-            "value_encoder": target_table_pk.to_db_value,
-        },
-        f"{field_name}__not": {
-            "field": "id",
-            "backward_key": field.relation_field,
-            "operator": not_equal,
-            "table": Table(field.model_class._meta.table),
-            "value_encoder": target_table_pk.to_db_value,
-        },
-        f"{field_name}__in": {
-            "field": "id",
-            "backward_key": field.relation_field,
-            "operator": is_in,
-            "table": Table(field.model_class._meta.table),
-            "value_encoder": partial(related_list_encoder, field=target_table_pk),
-        },
-        f"{field_name}__not_in": {
-            "field": "id",
-            "backward_key": field.relation_field,
-            "operator": not_in,
-            "table": Table(field.model_class._meta.table),
-            "value_encoder": partial(related_list_encoder, field=target_table_pk),
-        },
+        field_name: BackwardFKFilter(field, operator.eq, target_table_pk.to_db_value),
+        f"{field_name}__not": BackwardFKFilter(field, not_equal, target_table_pk.to_db_value),
+        f"{field_name}__in": BackwardFKFilter(field, is_in, partial(related_list_encoder, field=target_table_pk)),
+        f"{field_name}__not_in": BackwardFKFilter(field, not_in, partial(related_list_encoder, field=target_table_pk)),
     }
 
 
-def get_filters_for_field(
-    field_name: str, field: Optional[Field], source_field: str
-) -> Dict[str, dict]:
+def get_filters_for_field(field_name: str, field: Optional[Field], source_field: str) -> Dict[str, FieldFilter]:
+
     if isinstance(field, ManyToManyFieldInstance):
         return get_m2m_filters(field_name, field)
     if isinstance(field, BackwardFKRelation):
         return get_backward_fk_filters(field_name, field)
-    actual_field_name = field_name
-    if field_name == "pk" and field:
-        actual_field_name = field.model_field_name
+
     return {
-        field_name: {
-            "field": actual_field_name,
-            "source_field": source_field,
-            "operator": operator.eq,
-        },
-        f"{field_name}__not": {
-            "field": actual_field_name,
-            "source_field": source_field,
-            "operator": not_equal,
-        },
-        f"{field_name}__in": {
-            "field": actual_field_name,
-            "source_field": source_field,
-            "operator": is_in,
-            "value_encoder": list_encoder,
-        },
-        f"{field_name}__not_in": {
-            "field": actual_field_name,
-            "source_field": source_field,
-            "operator": not_in,
-            "value_encoder": list_encoder,
-        },
-        f"{field_name}__isnull": {
-            "field": actual_field_name,
-            "source_field": source_field,
-            "operator": is_null,
-            "value_encoder": bool_encoder,
-        },
-        f"{field_name}__not_isnull": {
-            "field": actual_field_name,
-            "source_field": source_field,
-            "operator": not_null,
-            "value_encoder": bool_encoder,
-        },
-        f"{field_name}__gte": {
-            "field": actual_field_name,
-            "source_field": source_field,
-            "operator": operator.ge,
-        },
-        f"{field_name}__lte": {
-            "field": actual_field_name,
-            "source_field": source_field,
-            "operator": operator.le,
-        },
-        f"{field_name}__gt": {
-            "field": actual_field_name,
-            "source_field": source_field,
-            "operator": operator.gt,
-        },
-        f"{field_name}__lt": {
-            "field": actual_field_name,
-            "source_field": source_field,
-            "operator": operator.lt,
-        },
-        f"{field_name}__contains": {
-            "field": actual_field_name,
-            "source_field": source_field,
-            "operator": contains,
-            "value_encoder": string_encoder,
-        },
-        f"{field_name}__startswith": {
-            "field": actual_field_name,
-            "source_field": source_field,
-            "operator": starts_with,
-            "value_encoder": string_encoder,
-        },
-        f"{field_name}__endswith": {
-            "field": actual_field_name,
-            "source_field": source_field,
-            "operator": ends_with,
-            "value_encoder": string_encoder,
-        },
-        f"{field_name}__iexact": {
-            "field": actual_field_name,
-            "source_field": source_field,
-            "operator": insensitive_exact,
-            "value_encoder": string_encoder,
-        },
-        f"{field_name}__icontains": {
-            "field": actual_field_name,
-            "source_field": source_field,
-            "operator": insensitive_contains,
-            "value_encoder": string_encoder,
-        },
-        f"{field_name}__istartswith": {
-            "field": actual_field_name,
-            "source_field": source_field,
-            "operator": insensitive_starts_with,
-            "value_encoder": string_encoder,
-        },
-        f"{field_name}__iendswith": {
-            "field": actual_field_name,
-            "source_field": source_field,
-            "operator": insensitive_ends_with,
-            "value_encoder": string_encoder,
-        },
+        field_name: BaseFieldFilter(field_name, field, source_field, operator.eq, None),
+        f"{field_name}__not": BaseFieldFilter(field_name, field, source_field, not_equal, None),
+        f"{field_name}__in": BaseFieldFilter(field_name, field, source_field, is_in, list_encoder),
+        f"{field_name}__not_in": BaseFieldFilter(field_name, field, source_field, not_in, list_encoder),
+        f"{field_name}__isnull": BaseFieldFilter(field_name, field, source_field, is_null, bool_encoder),
+        f"{field_name}__not_isnull": BaseFieldFilter(field_name, field, source_field, not_null, bool_encoder),
+        f"{field_name}__gte": BaseFieldFilter(field_name, field, source_field, operator.ge, None),
+        f"{field_name}__lte": BaseFieldFilter(field_name, field, source_field, operator.le, None),
+        f"{field_name}__gt": BaseFieldFilter(field_name, field, source_field, operator.gt, None),
+        f"{field_name}__lt": BaseFieldFilter(field_name, field, source_field, operator.lt, None),
+        f"{field_name}__contains": BaseFieldFilter(field_name, field, source_field, contains, string_encoder),
+        f"{field_name}__startswith": BaseFieldFilter(field_name, field, source_field, starts_with, string_encoder),
+        f"{field_name}__endswith": BaseFieldFilter(field_name, field, source_field, ends_with, string_encoder),
+        f"{field_name}__iexact": BaseFieldFilter(field_name, field, source_field, insensitive_exact, string_encoder),
+        f"{field_name}__icontains": BaseFieldFilter(field_name, field, source_field,
+            insensitive_contains, string_encoder),
+
+        f"{field_name}__istartswith": BaseFieldFilter(field_name, field, source_field,
+            insensitive_starts_with, string_encoder),
+
+        f"{field_name}__iendswith": BaseFieldFilter(field_name, field, source_field,
+            insensitive_ends_with, string_encoder),
     }

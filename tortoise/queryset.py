@@ -26,9 +26,10 @@ from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.context import QueryContext
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
 from tortoise.fields.relational import ForeignKeyFieldInstance, OneToOneFieldInstance
+from tortoise.filters import FieldFilter, EmptyCriterion as TortoiseEmptyCriterion
 from tortoise.functions import Annotation
 from tortoise.query_utils import \
-    Prefetch, Q, QueryModifier, _get_joins_for_related_field, EmptyCriterion as TortoiseEmptyCriterion
+    Prefetch, Q, QueryModifier, _get_joins_for_related_field
 
 # Empty placeholder - Should never be edited.
 QUERY: QueryBuilder = QueryBuilder()
@@ -171,7 +172,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._distinct: bool = False
         self._annotations: Dict[str, Annotation] = {}
         self._having: Dict[str, Any] = {}
-        self._custom_filters: Dict[str, dict] = {}
+        self._custom_filters: Dict[str, FieldFilter] = {}
 
     def _clone(self) -> "QuerySet[MODEL]":
         queryset = QuerySet.__new__(QuerySet)
