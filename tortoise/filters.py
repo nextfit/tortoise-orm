@@ -91,9 +91,12 @@ class QueryModifier:
 
 
 class FieldFilter:
-    def __init__(self, field_name: str, field: Optional[Field]):
+    def __init__(self, field_name: str, field: Optional[Field], opr, value_encoder):
         self.field_name = field_name
         self.field = field
+
+        self.opr = opr
+        self.value_encoder = value_encoder
 
     def __call__(self, context: QueryContext, value) -> QueryModifier:
         raise NotImplementedError()
@@ -101,11 +104,14 @@ class FieldFilter:
 
 class BaseFieldFilter(FieldFilter):
     def __init__(self, field_name: str, field: Optional[Field], source_field: str, opr, value_encoder=None):
-        super().__init__(field.model_field_name if field_name == "pk" and field else field_name, field)
-        self.source_field = source_field
+        super().__init__(
+            field.model_field_name if field_name == "pk" and field else field_name,
+            field,
+            opr,
+            value_encoder
+        )
 
-        self.opr = opr
-        self.value_encoder = value_encoder
+        self.source_field = source_field
 
     def __call__(self, context: QueryContext, value) -> QueryModifier:
         context_item = context.stack[-1]
@@ -119,7 +125,7 @@ class BaseFieldFilter(FieldFilter):
             encoded_value = outer_table[value.ref_name]
 
         elif isinstance(value, Subquery):
-            encoded_value = value.get_query(context, "U{}".format(len(context.stack)-1))
+            encoded_value = value.get_query(context, "U{}".format(len(context.stack)))
 
         elif self.value_encoder:
             encoded_value = self.value_encoder(value, model, field_object)
@@ -133,15 +139,8 @@ class BaseFieldFilter(FieldFilter):
 
 
 class RelationFilter(FieldFilter):
-    def __init__(self, field_name: str, field: Optional[Field], opr,
-        value_encoder, table, backward_key):
-
-        self.field_name = field_name
-        self.field = field
-        self.source_field = None
-
-        self.opr = opr
-        self.value_encoder = value_encoder
+    def __init__(self, field_name: str, field: Optional[Field], opr, value_encoder, table, backward_key):
+        super().__init__(field_name, field, opr, value_encoder)
 
         self.table = table
         self.backward_key = backward_key
@@ -167,7 +166,7 @@ class RelationFilter(FieldFilter):
         else:
             encoded_value = value
 
-        encoded_key = getattr(self.table, self.field_name)
+        encoded_key = self.table[self.field_name]
         criterion = self.opr(encoded_key, encoded_value)
         return QueryModifier(where_criterion=criterion, joins=joins)
 
@@ -190,10 +189,7 @@ def list_encoder(values, instance, field: Field):
 
 
 def related_list_encoder(values, instance, field: Field):
-    return [
-        field.to_db_value(element.pk if hasattr(element, "pk") else element, instance)
-        for element in values
-    ]
+    return [field.to_db_value(getattr(element, "pk", element), instance) for element in values]
 
 
 def bool_encoder(value, *args):

@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from pypika import Table
 from pypika.terms import Criterion
@@ -8,25 +8,20 @@ from tortoise.context import QueryContext
 from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
 from tortoise.filters import FieldFilter, QueryModifier
+from tortoise.functions import OuterRef
 
 
 def _process_filter_kwarg(context: QueryContext, key, value) -> QueryModifier:
-
     context_item = context.stack[-1]
     model = context_item.model
 
     if value is None and f"{key}__isnull" in model._meta.filters:
-        field_filter = model._meta.get_filter(f"{key}__isnull")
-        value = True
+        return model._meta.get_filter(f"{key}__isnull")(context, True)
     else:
-        field_filter = model._meta.get_filter(key)
-
-    return field_filter(context, value)
+        return model._meta.get_filter(key)(context, value)
 
 
-def _get_joins_for_related_field(
-    table, related_field, related_field_name
-) -> List[Tuple[Table, Criterion]]:
+def _get_joins_for_related_field(table, related_field, related_field_name) -> List[Tuple[Table, Criterion]]:
     required_joins = []
 
     table_pk = related_field.model._meta.db_pk_field
@@ -48,6 +43,7 @@ def _get_joins_for_related_field(
                 == getattr(related_table, related_table_pk),
             )
         )
+
     elif isinstance(related_field, BackwardFKRelation):
         related_table = related_field.model_class._meta.basetable
         required_joins.append(
@@ -56,6 +52,7 @@ def _get_joins_for_related_field(
                 getattr(table, table_pk) == getattr(related_table, related_field.relation_field),
             )
         )
+
     else:
         related_table = related_field.model_class._meta.basetable
         required_joins.append(
@@ -65,6 +62,7 @@ def _get_joins_for_related_field(
                 == getattr(table, f"{related_field_name}_id"),
             )
         )
+
     return required_joins
 
 
@@ -86,12 +84,16 @@ class Q:
             newarg = Q(join_type=join_type, **kwargs)
             args = (newarg,) + args
             kwargs = {}
+
         if not all(isinstance(node, Q) for node in args):
             raise OperationalError("All ordered arguments must be Q nodes")
+
         self.children: Tuple[Q, ...] = args
-        self.filters: Dict[str, Any] = kwargs
+        self.filters: Dict[str, FieldFilter] = kwargs
+
         if join_type not in {self.AND, self.OR}:
             raise OperationalError("join_type must be AND or OR")
+
         self.join_type = join_type
         self._is_negated = False
         self._annotations: Dict[str, Any] = {}
@@ -144,15 +146,16 @@ class Q:
         operator = having_info.opr
 
         model = context.stack[-1].model
-        overridden_operator = model._meta.db.executor_class.get_overridden_filter_func(
-            filter_func=operator
-        )
+        overridden_operator = model._meta.db.executor_class.get_overridden_filter_func(filter_func=operator)
+
         if overridden_operator:
             operator = overridden_operator
+
         if annotation_info["field"].is_aggregate:
             modifier = QueryModifier(having_criterion=operator(annotation_info["field"], value))
         else:
             modifier = QueryModifier(where_criterion=operator(annotation_info["field"], value))
+
         return modifier
 
     def _resolve_regular_kwarg(self, context: QueryContext, key, value) -> QueryModifier:
@@ -162,31 +165,19 @@ class Q:
         else:
             return _process_filter_kwarg(context, key, value)
 
-    def _get_actual_filter_params(self, context: QueryContext, key, value) -> Tuple[str, Any]:
-        model = context.stack[-1].model
+    def _get_actual_key(self, model: "Model", key: str) -> str:
         if key in model._meta.fk_fields or key in model._meta.o2o_fields:
-            field_object = model._meta.fields_map[key]
-            filter_key = field_object.source_field
-            if hasattr(value, "pk"):
-                filter_value = value.pk
-            else:
-                filter_value = value
+            return model._meta.fields_map[key].source_field
 
         elif key in model._meta.m2m_fields:
-            filter_key = key
-
-            if hasattr(value, "pk"):
-                filter_value = value.pk
-            else:
-                filter_value = value
+            return key
 
         elif (
             key.split("__")[0] in model._meta.fetch_fields
             or key in self._custom_filters
             or key in model._meta.filters
         ):
-            filter_key = key
-            filter_value = value
+            return key
 
         else:
             allowed = sorted(
@@ -194,12 +185,22 @@ class Q:
             )
             raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
 
-        return filter_key, filter_value
+    def _get_actual_value(self, context: QueryContext, value):
+        if isinstance(value, OuterRef):
+            return OuterRef(self._get_actual_key(context.stack[-2].model, value.ref_name))
+
+        elif hasattr(value, "pk"):
+            return value.pk
+
+        else:
+            return value
 
     def _resolve_kwargs(self, context: QueryContext) -> QueryModifier:
         modifier = QueryModifier()
         for raw_key, raw_value in self.filters.items():
-            key, value = self._get_actual_filter_params(context, raw_key, raw_value)
+            key = self._get_actual_key(context.stack[-1].model, raw_key)
+            value = self._get_actual_value(context, raw_value)
+
             if key in self._custom_filters:
                 filter_modifier = self._resolve_custom_kwarg(context, key, value)
             else:
@@ -209,8 +210,10 @@ class Q:
                 modifier &= filter_modifier
             else:
                 modifier |= filter_modifier
+
         if self._is_negated:
             modifier = ~modifier
+
         return modifier
 
     def _resolve_children(self, context: QueryContext) -> QueryModifier:
@@ -249,12 +252,15 @@ class Prefetch:
             raise OperationalError(
                 f"relation {first_level_field} for {queryset.model._meta.table} not found"
             )
+
         forwarded_prefetch = "__".join(relation_split[1:])
         if forwarded_prefetch:
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()
+
             queryset._prefetch_map[first_level_field].add(
                 Prefetch(forwarded_prefetch, self.queryset)
             )
+
         else:
             queryset._prefetch_queries[first_level_field] = self.queryset
