@@ -89,6 +89,7 @@ class AwaitableQuery(Generic[MODEL]):
                 raise FieldError(
                     "Filtering by relation is not possible. Filter by nested field of related model"
                 )
+
             if field_name.split("__")[0] in model._meta.fetch_fields:
                 related_field_name = field_name.split("__")[0]
                 related_field = model._meta.fields_map[related_field_name]
@@ -98,10 +99,12 @@ class AwaitableQuery(Generic[MODEL]):
                     [("__".join(field_name.split("__")[1:]), ordering[1])],
                     {},
                 )
+
             elif field_name in annotations:
                 annotation = annotations[field_name]
                 annotation_info = annotation.resolve(QueryContext().push(self.model, self.model._meta.basetable))
-                self.query = self.query.orderby(annotation_info["field"], order=ordering[1])
+                self.query = self.query.orderby(annotation_info.field, order=ordering[1])
+
             else:
                 field_object = self.model._meta.fields_map.get(field_name)
                 if not field_object:
@@ -511,16 +514,16 @@ class QuerySet(AwaitableQuery[MODEL]):
         }
 
         if any(
-            annotation_info["field"].is_aggregate
+            annotation_info.field.is_aggregate
             for annotation_info in annotation_info_map.values()
         ):
             table = context.stack[-1].table
             self.query = self.query.groupby(table.id)
 
         for key, annotation_info in annotation_info_map.items():
-            for join in annotation_info["joins"]:
+            for join in annotation_info.joins:
                 self._join_table_by_field(*join)
-            self.query._select_other(annotation_info["field"].as_(key))
+            self.query._select_other(annotation_info.field.as_(key))
 
     def _make_query(self, context: QueryContext, alias=None) -> None:
         self.query = self.create_base_query_all_fields(alias)
@@ -746,7 +749,7 @@ class FieldSelectQuery(AwaitableQuery):
         if field in self.annotations:
             annotation = self.annotations[field]
             annotation_info = annotation.resolve(context=context)
-            self.query._select_other(annotation_info["field"].as_(return_as))
+            self.query._select_other(annotation_info.field.as_(return_as))
             return
 
         field_split = field.split("__")

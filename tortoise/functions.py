@@ -1,7 +1,7 @@
 from typing import Any, List
 
 from pypika import functions, Query, Table
-from pypika.terms import AggregateFunction
+from pypika.terms import AggregateFunction, Term
 from pypika.terms import Function as BaseFunction
 
 from tortoise.context import QueryContext
@@ -12,9 +12,15 @@ from tortoise.exceptions import ConfigurationError
 ##############################################################################
 
 
+class AnnotationInfo:
+    def __init__(self, field: Term, joins: List):
+        self.field = field
+        self.joins = joins
+
+
 class Annotation:
-    def resolve(self, context: QueryContext, alias=None) -> dict:
-        raise NotImplementedError
+    def resolve(self, context: QueryContext, alias=None) -> AnnotationInfo:
+        raise NotImplementedError()
 
 
 class Subquery(Annotation):
@@ -23,12 +29,9 @@ class Subquery(Annotation):
     def __init__(self, queryset):
         self._queryset = queryset
 
-    def resolve(self, context: QueryContext, alias=None) -> dict:
-        return {"joins": [], "field": self.get_query(context)}
-
-    def get_query(self, context: QueryContext, alias=None) -> Query:
+    def resolve(self, context: QueryContext, alias=None) -> AnnotationInfo:
         self._queryset._make_query(context=context, alias=alias)
-        return self._queryset.query
+        return AnnotationInfo(self._queryset.query, [])
 
     def __str__(self):
         return f"Subquery({self._queryset})"
@@ -56,7 +59,7 @@ class Function(Annotation):
         self.field_object: Any = None
         self.default_values = default_values
 
-    def _resolve_field_for_model(self, model, field: str, *default_values) -> dict:
+    def _resolve_field_for_model(self, model, field: str, *default_values) -> AnnotationInfo:
         field_split = field.split("__")
         if not field_split[1:]:
             function_joins = []
@@ -79,23 +82,24 @@ class Function(Annotation):
                             field = func(self.field_object, field)
 
             function_field = self.database_func(field, *default_values)
-            return {"joins": function_joins, "field": function_field}
+            return AnnotationInfo(function_field, function_joins)
 
         if field_split[0] not in model._meta.fetch_fields:
             raise ConfigurationError(f"{field} not resolvable")
+
         related_field = model._meta.fields_map[field_split[0]]
         join = (model._meta.basetable, field_split[0], related_field)
-        function = self._resolve_field_for_model(
+        annotation_info = self._resolve_field_for_model(
             related_field.model_class, "__".join(field_split[1:]), *default_values
         )
-        function["joins"].append(join)
-        return function
+        annotation_info.joins.append(join)
+        return annotation_info
 
-    def resolve(self, context: QueryContext, alias=None) -> dict:
+    def resolve(self, context: QueryContext, alias=None) -> AnnotationInfo:
         model = context.stack[-1].model
-        function = self._resolve_field_for_model(model, self.field, *self.default_values)
-        function["joins"] = reversed(function["joins"])
-        return function
+        annotation_info = self._resolve_field_for_model(model, self.field, *self.default_values)
+        annotation_info.joins = reversed(annotation_info.joins)
+        return annotation_info
 
 
 class Aggregate(Function):

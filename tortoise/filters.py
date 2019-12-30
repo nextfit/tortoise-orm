@@ -117,12 +117,16 @@ class BaseFieldFilter(FieldFilter):
 
         field_object = model._meta.fields_map[self.field_name]
 
+        joins = []
+
         if isinstance(value, OuterRef):
             outer_table = context.stack[-2].table
             encoded_value = outer_table[value.ref_name]
 
         elif isinstance(value, Subquery):
-            encoded_value = value.get_query(context, "U{}".format(len(context.stack)))
+            annotation_info = value.resolve(context, "U{}".format(len(context.stack)))
+            encoded_value = annotation_info.field
+            joins.extend(annotation_info.joins)
 
         elif self.value_encoder:
             encoded_value = self.value_encoder(value, model, field_object)
@@ -132,7 +136,7 @@ class BaseFieldFilter(FieldFilter):
 
         encoded_key = table[self.source_field]
         criterion = self.opr(encoded_key, encoded_value)
-        return QueryModifier(where_criterion=criterion, joins=[])
+        return QueryModifier(where_criterion=criterion, joins=joins)
 
 
 class RelationFilter(FieldFilter):

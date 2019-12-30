@@ -151,10 +151,10 @@ class Q:
         if overridden_operator:
             operator = overridden_operator
 
-        if annotation_info["field"].is_aggregate:
-            modifier = QueryModifier(having_criterion=operator(annotation_info["field"], value))
+        if annotation_info.field.is_aggregate:
+            modifier = QueryModifier(having_criterion=operator(annotation_info.field, value))
         else:
-            modifier = QueryModifier(where_criterion=operator(annotation_info["field"], value))
+            modifier = QueryModifier(where_criterion=operator(annotation_info.field, value))
 
         return modifier
 

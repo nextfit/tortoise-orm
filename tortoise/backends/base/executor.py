@@ -286,9 +286,7 @@ class BaseExecutor:
         )
 
         if related_query._q_objects:
-
             modifier = QueryModifier()
-
             context = QueryContext().push(
                 related_query.model,
                 related_query_table,
