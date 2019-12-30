@@ -280,17 +280,25 @@ class BaseExecutor:
             related_query.query.join(subquery)
             .on(getattr(subquery, field_object.forward_key) == related_query_table[related_pk_field])
             .select(
-                getattr(subquery, field_object.backward_key).as_("_backward_relation_key"),
+                getattr(subquery, field_object.backward_key),
                 *[related_query_table[field].as_(field) for field in related_query.fields],
             )
         )
 
         if related_query._q_objects:
-            joined_tables: List[Table] = []
+
             modifier = QueryModifier()
+
+            context = QueryContext().push(
+                related_query.model,
+                related_query_table,
+                { field_object.through: through_table.as_(subquery.alias) }
+            )
+
+            joined_tables: List[Table] = []
             for node in related_query._q_objects:
                 modifier &= node.resolve(
-                    context=QueryContext().push(related_query.model, related_query_table),
+                    context=context,
                     annotations=related_query._annotations,
                     custom_filters=related_query._custom_filters,
                 )

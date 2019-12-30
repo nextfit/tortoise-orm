@@ -154,8 +154,25 @@ class RelationFilter(FieldFilter):
         )]
 
         if isinstance(value, OuterRef):
-            outer_table = context.stack[-2].table
-            encoded_value = outer_table[value.ref_name]
+            outer_context_item = context.stack[-2]
+            outer_model = outer_context_item.model
+            outer_table = outer_context_item.table
+
+            outer_field = outer_model._meta.fields_map[value.ref_name]
+
+            if isinstance(outer_field, ManyToManyFieldInstance):
+                if outer_field.through in outer_context_item.through_tables:
+                    outer_through_table = outer_context_item.through_tables[outer_field.through]
+                    encoded_value = outer_through_table[outer_field.forward_key]
+
+                else:
+                    raise NotImplementedError()
+
+            elif isinstance(outer_field, BackwardFKRelation):
+                raise NotImplementedError()
+
+            else:
+                encoded_value = outer_table[value.ref_name]
 
         elif self.value_encoder:
             encoded_value = self.value_encoder(value, model)
