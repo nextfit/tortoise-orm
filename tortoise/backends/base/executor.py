@@ -268,8 +268,8 @@ class BaseExecutor:
         subquery = (
             self.db.query_class.from_(through_table)
             .select(
-                through_table[field_object.backward_key].as_("_backward_relation_key"),
-                through_table[field_object.forward_key].as_("_forward_relation_key"),
+                through_table[field_object.backward_key],
+                through_table[field_object.forward_key],
             )
             .where(through_table[field_object.backward_key].isin(instance_id_set))
         )
@@ -278,9 +278,9 @@ class BaseExecutor:
         related_pk_field = related_query.model._meta.db_pk_field
         query = (
             related_query.query.join(subquery)
-            .on(subquery._forward_relation_key == related_query_table[related_pk_field])
+            .on(getattr(subquery, field_object.forward_key) == related_query_table[related_pk_field])
             .select(
-                subquery._backward_relation_key.as_("_backward_relation_key"),
+                getattr(subquery, field_object.backward_key).as_("_backward_relation_key"),
                 *[related_query_table[field].as_(field) for field in related_query.fields],
             )
         )
@@ -309,7 +309,7 @@ class BaseExecutor:
         _, raw_results = await self.db.execute_query(query.get_sql())
         relations = {
             (
-                self.model._meta.pk.to_python_value(e["_backward_relation_key"]),
+                self.model._meta.pk.to_python_value(e[field_object.backward_key]),
                 field_object.model_class._meta.pk.to_python_value(e[related_pk_field]),
             )
             for e in raw_results
