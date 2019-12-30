@@ -169,7 +169,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._limit: Optional[int] = None
         self._offset: Optional[int] = None
         self._filter_kwargs: Dict[str, Any] = {}
-        self._orderings: List[Tuple[str, Any]] = []
+        self._orderings: List[Tuple[str, Order]] = \
+            self._parse_orderings(*model._meta.ordering) if model._meta.ordering else []
+
         self._q_objects: List[Q] = []
         self._distinct: bool = False
         self._annotations: Dict[str, Annotation] = {}
@@ -236,17 +238,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         return self._filter_or_exclude(negate=True, *args, **kwargs)
 
-    def order_by(self, *orderings: str) -> "QuerySet[MODEL]":
-        """
-        Accept args to filter by in format like this:
-
-        .. code-block:: python3
-
-            .order_by('name', '-tournament__name')
-
-        Supports ordering by related models too.
-        """
-        queryset = self._clone()
+    def _parse_orderings(self, *orderings: str) -> List[Tuple[str, Order]]:
         new_ordering = []
         for ordering in orderings:
             order_type = Order.asc
@@ -262,7 +254,21 @@ class QuerySet(AwaitableQuery[MODEL]):
             ):
                 raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
             new_ordering.append((field_name, order_type))
-        queryset._orderings = new_ordering
+
+        return new_ordering
+
+    def order_by(self, *orderings: str) -> "QuerySet[MODEL]":
+        """
+        Accept args to filter by in format like this:
+
+        .. code-block:: python3
+
+            .order_by('name', '-tournament__name')
+
+        Supports ordering by related models too.
+        """
+        queryset = self._clone()
+        queryset._orderings = self._parse_orderings(*orderings)
         return queryset
 
     def limit(self, limit: int) -> "QuerySet[MODEL]":

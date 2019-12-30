@@ -2,7 +2,7 @@ from copy import copy, deepcopy
 from functools import partial
 from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar
 
-from pypika import Query, Table
+from pypika import Query, Table, Order
 
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import ConfigurationError, OperationalError
@@ -77,6 +77,7 @@ class MetaInfo:
     __slots__ = (
         "abstract",
         "table",
+        "ordering",
         "app",
         "fields",
         "db_fields",
@@ -112,6 +113,7 @@ class MetaInfo:
     def __init__(self, meta) -> None:
         self.abstract: bool = getattr(meta, "abstract", False)
         self.table: str = getattr(meta, "table", "")
+        self.ordering: List[Tuple[str, Order]] = getattr(meta, "ordering", None)
         self.app: Optional[str] = getattr(meta, "app", None)
         self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
         self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")
