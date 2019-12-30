@@ -86,9 +86,6 @@ class QueryModifier:
             )
         return QueryModifier(where_criterion=self.where_criterion.negate(), joins=self.joins)
 
-    def get_query_modifiers(self) -> Tuple[Criterion, List[Tuple[Table, Criterion]], Criterion]:
-        return self.where_criterion, self.joins, self.having_criterion
-
 
 class FieldFilter:
     def __init__(self, field_name: str, field: Optional[Field], opr, value_encoder):

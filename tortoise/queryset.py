@@ -62,18 +62,17 @@ class AwaitableQuery(Generic[MODEL]):
         for node in q_objects:
             modifier &= node.resolve(context, annotations, custom_filters)
 
-        where_criterion, joins, having_criterion = modifier.get_query_modifiers()
-        for join in joins:
+        for join in modifier.joins:
             if join[0] not in self._joined_tables:
                 self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
                 self._joined_tables.append(join[0])
 
-        if not isinstance(where_criterion, (EmptyCriterion, TortoiseEmptyCriterion)):
-            if not self.query._validate_table(where_criterion):
+        if not isinstance(modifier.where_criterion, (EmptyCriterion, TortoiseEmptyCriterion)):
+            if not self.query._validate_table(modifier.where_criterion):
                 self.query._foreign_table = True
 
-        self.query._wheres = where_criterion
-        self.query._havings = having_criterion
+        self.query._wheres = modifier.where_criterion
+        self.query._havings = modifier.having_criterion
 
     def _join_table_by_field(self, table, related_field_name, related_field) -> None:
         joins = _get_joins_for_related_field(table, related_field, related_field_name)
