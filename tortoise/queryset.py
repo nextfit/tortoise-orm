@@ -735,6 +735,10 @@ class FieldSelectQuery(AwaitableQuery):
 
     def add_field_to_select_query(self, context: QueryContext, field, return_as) -> None:
         table = context.stack[-1].table
+
+        if field == "pk":
+            field = self.model._meta.pk_attr
+
         if field in self.model._meta.fields_db_projection:
             db_field = self.model._meta.fields_db_projection[field]
             self.query._select_field(getattr(table, db_field).as_(return_as))
