@@ -1,6 +1,7 @@
+from dataclasses import dataclass
 from typing import Any, List
 
-from pypika import functions, Query, Table
+from pypika import functions
 from pypika.terms import AggregateFunction, Term
 from pypika.terms import Function as BaseFunction
 
@@ -12,10 +13,10 @@ from tortoise.exceptions import ConfigurationError
 ##############################################################################
 
 
+@dataclass
 class AnnotationInfo:
-    def __init__(self, field: Term, joins: List):
-        self.field = field
-        self.joins = joins
+    field: Term
+    joins: List
 
 
 class Annotation:
