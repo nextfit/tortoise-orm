@@ -1,19 +1,17 @@
 import asyncio
 import datetime
 import decimal
-from copy import copy
 from functools import partial
 from itertools import groupby
 from operator import itemgetter
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type
 
-from pypika import JoinType, Parameter, Table
+from pypika import Parameter, Table
 
 from tortoise.context import QueryContext
 from tortoise.exceptions import OperationalError
 from tortoise.fields.base import Field
 from tortoise.fields.relational import ManyToManyFieldInstance
-from tortoise.query_utils import QueryModifier
 
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -245,26 +243,19 @@ class BaseExecutor:
             **{f"{relation_field}__in": list(instance_id_set)}
         )
 
-        related_object_map = {}
-        for entry in related_object_list:
-            object_id = getattr(entry, relation_field)
-            related_object_map[object_id] = entry
-
+        related_object_map = {getattr(entry, relation_field):entry for entry in related_object_list}
         for instance in instance_list:
             setattr(instance, f"_{field}", related_object_map.get(instance.pk, None))
 
         return instance_list
 
     async def _prefetch_m2m_relation(self, instance_list: list, field: str, related_query) -> list:
-        instance_id_set: set = {
+        instance_id_set = [
             self._field_to_db(instance._meta.pk, instance.pk, instance)
             for instance in instance_list
-        }
-
-        field_object: ManyToManyFieldInstance = self.model._meta.fields_map[  # type: ignore
-            field
         ]
 
+        field_object: ManyToManyFieldInstance = self.model._meta.fields_map[field]
         through_table = Table(field_object.through)
 
         subquery = (
@@ -278,43 +269,20 @@ class BaseExecutor:
 
         related_query_table = related_query.model._meta.basetable
         related_pk_field = related_query.model._meta.db_pk_field
-        query = (
+        related_query.query = related_query.create_base_query_all_fields(alias=None)
+        related_query.query = (
             related_query.query.join(subquery)
             .on(getattr(subquery, field_object.forward_key) == related_query_table[related_pk_field])
-            .select(
-                getattr(subquery, field_object.backward_key),
-                *[related_query_table[field].as_(field) for field in related_query.fields],
-            )
+            .select(getattr(subquery, field_object.backward_key))
         )
 
-        if related_query._q_objects:
-            modifier = QueryModifier()
-            context = QueryContext().push(
-                related_query.model,
-                related_query_table,
-                { field_object.through: through_table.as_(subquery.alias) }
-            )
+        related_query._add_query_details(QueryContext().push(
+            related_query.model,
+            related_query_table,
+            {field_object.through: through_table.as_(subquery.alias)}
+        ))
 
-            joined_tables: List[Table] = []
-            for node in related_query._q_objects:
-                modifier &= node.resolve(
-                    context=context,
-                    annotations=related_query._annotations,
-                    custom_filters=related_query._custom_filters,
-                )
-
-            for join in modifier.joins:
-                if join[0] not in joined_tables:
-                    query = query.join(join[0], how=JoinType.left_outer).on(join[1])
-                    joined_tables.append(join[0])
-
-            if modifier.where_criterion:
-                query = query.where(modifier.where_criterion)
-
-            if modifier.having_criterion:
-                query = query.having(modifier.having_criterion)
-
-        _, raw_results = await self.db.execute_query(query.get_sql())
+        _, raw_results = await self.db.execute_query(related_query.query.get_sql())
         relations = [
             (
                 self.model._meta.pk.to_python_value(e[field_object.backward_key]),
@@ -361,7 +329,6 @@ class BaseExecutor:
                 related_model_field = self.model._meta.fields_map[field]
                 related_model: "Type[Model]" = related_model_field.model_class  # type: ignore
                 related_query = related_model.all().using_db(self.db)
-                related_query.query = copy(related_query.model._meta.basequery)
             if forwarded_prefetches:
                 related_query = related_query.prefetch_related(*forwarded_prefetches)
             self._prefetch_queries[field] = related_query
