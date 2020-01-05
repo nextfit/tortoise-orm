@@ -3,6 +3,8 @@ import datetime
 import decimal
 from copy import copy
 from functools import partial
+from itertools import groupby
+from operator import itemgetter
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type
 
 from pypika import JoinType, Parameter, Table
@@ -313,25 +315,19 @@ class BaseExecutor:
                 query = query.having(modifier.having_criterion)
 
         _, raw_results = await self.db.execute_query(query.get_sql())
-        relations = {
+        relations = [
             (
                 self.model._meta.pk.to_python_value(e[field_object.backward_key]),
-                field_object.model_class._meta.pk.to_python_value(e[related_pk_field]),
+                related_query.model._init_from_db(**e),
             )
             for e in raw_results
-        }
-        related_object_list = [related_query.model._init_from_db(**e) for e in raw_results]
+        ]
+
         await self.__class__(
             model=related_query.model, db=self.db, prefetch_map=related_query._prefetch_map
-        ).fetch_for_list(related_object_list)
-        related_object_map = {e.pk: e for e in related_object_list}
-        relation_map: Dict[str, list] = {}
+        ).fetch_for_list([v[1] for v in relations])
 
-        for object_id, related_object_id in relations:
-            if object_id not in relation_map:
-                relation_map[object_id] = []
-            relation_map[object_id].append(related_object_map[related_object_id])
-
+        relation_map = dict((k, [v[1] for v in itr]) for (k, itr) in groupby(relations, itemgetter(0)))
         for instance in instance_list:
             relation_container = getattr(instance, field)
             relation_container._set_result_for_query(relation_map.get(instance.pk, []))
