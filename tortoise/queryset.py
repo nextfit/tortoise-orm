@@ -47,7 +47,7 @@ class QuerySetSingle(Protocol[T_co]):
         ...  # pragma: nocoverage
 
 
-class AwaitableQuery(Generic[MODEL]):
+class AwaitableStatement(Generic[MODEL]):
     __slots__ = (
         "_joined_tables",
         "_db",
@@ -95,7 +95,68 @@ class AwaitableQuery(Generic[MODEL]):
                 self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
                 self._joined_tables.append(join[0])
 
-    def resolve_ordering(self, model, orderings, annotations) -> None:
+    def create_base_query(self, alias):
+        if alias is None:
+            return copy(self.model._meta.basequery)
+        else:
+            table = Table(self.model._meta.table, alias=alias)
+            return self.model._meta.db.query_class.from_(table)
+
+    def create_base_query_all_fields(self, alias):
+        return self.create_base_query(alias).select(*self.model._meta.db_fields)
+
+    def _make_query(self, context: QueryContext, alias=None) -> None:
+        raise NotImplementedError()  # pragma: nocoverage
+
+    async def _execute(self):
+        raise NotImplementedError()  # pragma: nocoverage
+
+
+class AwaitableQuery(AwaitableStatement[MODEL]):
+    __slots__ = (
+        "_orderings",
+        "_distinct",
+        "_offset",
+        "_limit",
+    )
+
+    def __init__(self,
+        model: Type[MODEL],
+        db=None, q_objects=None, annotations=None, custom_filters=None,
+        orderings=None, distinct=False, limit=None, offset=None):
+
+        super().__init__(model, db, q_objects, annotations, custom_filters)
+
+        self._orderings: List[Tuple[str, Order]] = orderings if orderings else \
+            self._parse_orderings(*model._meta.ordering) if model._meta.ordering else []
+
+        self._distinct: bool = distinct
+        self._limit: Optional[int] = limit
+        self._offset: Optional[int] = offset
+
+    def _parse_orderings(self, *orderings: str) -> List[Tuple[str, Order]]:
+        new_ordering = []
+        for ordering in orderings:
+            order_type = Order.asc
+            if ordering[0] == "-":
+                field_name = ordering[1:]
+                order_type = Order.desc
+            else:
+                field_name = ordering
+
+            if not (
+                field_name.split("__")[0] in self.model._meta.fields
+                or field_name in self.annotations
+            ):
+                raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
+            new_ordering.append((field_name, order_type))
+
+        return new_ordering
+
+    def resolve_ordering(self) -> None:
+        self.__resolve_ordering(self.model, self._orderings, self.annotations)
+
+    def __resolve_ordering(self, model, orderings, annotations) -> None:
         table = model._meta.basetable
         for ordering in orderings:
             field_name = ordering[0]
@@ -108,7 +169,7 @@ class AwaitableQuery(Generic[MODEL]):
                 related_field_name = field_name.split("__")[0]
                 related_field = model._meta.fields_map[related_field_name]
                 self._join_table_by_field(table, related_field_name, related_field)
-                self.resolve_ordering(
+                self.__resolve_ordering(
                     related_field.model_class,
                     [("__".join(field_name.split("__")[1:]), ordering[1])],
                     {},
@@ -134,22 +195,6 @@ class AwaitableQuery(Generic[MODEL]):
 
                 self.query = self.query.orderby(field, order=ordering[1])
 
-    def create_base_query(self, alias):
-        if alias is None:
-            return copy(self.model._meta.basequery)
-        else:
-            table = Table(self.model._meta.table, alias=alias)
-            return self.model._meta.db.query_class.from_(table)
-
-    def create_base_query_all_fields(self, alias):
-        return self.create_base_query(alias).select(*self.model._meta.db_fields)
-
-    def _make_query(self, context: QueryContext, alias=None) -> None:
-        raise NotImplementedError()  # pragma: nocoverage
-
-    async def _execute(self):
-        raise NotImplementedError()  # pragma: nocoverage
-
 
 class QuerySet(AwaitableQuery[MODEL]):
     __slots__ = (
@@ -160,11 +205,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         "_get",
         "_count",
         "_db",
-        "_limit",
-        "_offset",
         "_filter_kwargs",
-        "_orderings",
-        "_distinct",
         "_having",
     )
 
@@ -177,13 +218,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._single: bool = False
         self._get: bool = False
         self._count: bool = False
-        self._limit: Optional[int] = None
-        self._offset: Optional[int] = None
         self._filter_kwargs: Dict[str, Any] = {}
-        self._orderings: List[Tuple[str, Order]] = \
-            self._parse_orderings(*model._meta.ordering) if model._meta.ordering else []
 
-        self._distinct: bool = False
         self._having: Dict[str, Any] = {}
 
     def _clone(self) -> "QuerySet[MODEL]":
@@ -247,25 +283,6 @@ class QuerySet(AwaitableQuery[MODEL]):
         Same as .filter(), but with appends all args with NOT
         """
         return self._filter_or_exclude(negate=True, *args, **kwargs)
-
-    def _parse_orderings(self, *orderings: str) -> List[Tuple[str, Order]]:
-        new_ordering = []
-        for ordering in orderings:
-            order_type = Order.asc
-            if ordering[0] == "-":
-                field_name = ordering[1:]
-                order_type = Order.desc
-            else:
-                field_name = ordering
-
-            if not (
-                field_name.split("__")[0] in self.model._meta.fields
-                or field_name in self.annotations
-            ):
-                raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
-            new_ordering.append((field_name, order_type))
-
-        return new_ordering
 
     def order_by(self, *orderings: str) -> "QuerySet[MODEL]":
         """
@@ -524,7 +541,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._db = _db
         return queryset
 
-    def _resolve_annotate(self, context: QueryContext) -> None:
+    def _resolve_annotations(self, context: QueryContext) -> None:
         if not self.annotations:
             return
 
@@ -551,7 +568,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         context.pop()
 
     def _add_query_details(self, context: QueryContext):
-        self._resolve_annotate(context=context)
+        self._resolve_annotations(context=context)
         self.resolve_filters(context=context)
 
         if self._limit:
@@ -563,7 +580,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         if self._distinct:
             self.query._distinct = True
 
-        self.resolve_ordering(self.model, self._orderings, self.annotations)
+        self.resolve_ordering()
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
         if self._db is None:
@@ -598,8 +615,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         return instance_list
 
 
-class UpdateQuery(AwaitableQuery):
-    __slots__ = ("update_kwargs", "q_objects", "annotations", "custom_filters")
+class UpdateQuery(AwaitableStatement):
+    __slots__ = ("update_kwargs", )
 
     def __init__(self, model, update_kwargs, db, q_objects, annotations, custom_filters) -> None:
         super().__init__(model, db, q_objects, annotations, custom_filters)
@@ -646,8 +663,8 @@ class UpdateQuery(AwaitableQuery):
         return (await self._db.execute_query(str(self.query)))[0]
 
 
-class DeleteQuery(AwaitableQuery):
-    __slots__ = ("q_objects", "annotations", "custom_filters")
+class DeleteQuery(AwaitableStatement):
+    __slots__ = ()
 
     def __init__(self, model, db, q_objects, annotations, custom_filters) -> None:
         super().__init__(model, db, q_objects, annotations, custom_filters)
@@ -669,8 +686,8 @@ class DeleteQuery(AwaitableQuery):
         return (await self._db.execute_query(str(self.query)))[0]
 
 
-class CountQuery(AwaitableQuery):
-    __slots__ = ("q_objects", "annotations", "custom_filters")
+class CountQuery(AwaitableStatement):
+    __slots__ = ()
 
     def __init__(self, model, db, q_objects, annotations, custom_filters) -> None:
         super().__init__(model, db, q_objects, annotations, custom_filters)
@@ -695,14 +712,20 @@ class CountQuery(AwaitableQuery):
 
 class FieldSelectQuery(AwaitableQuery):
     # pylint: disable=W0223
-    __slots__ = ("annotations",)
+    __slots__ = ()
 
-    def __init__(self, model, db, q_objects, annotations, custom_filters) -> None:
-        super().__init__(model, db, q_objects, annotations, custom_filters)
+    def __init__(self, model,
+        db, q_objects, annotations, custom_filters,
+        orderings, distinct, limit, offset) -> None:
+
+        super().__init__(model,
+            db, q_objects, annotations, custom_filters,
+            orderings, distinct, limit, offset)
 
     def _join_table_with_forwarded_fields(
         self, model, field: str, forwarded_fields: str
     ) -> Tuple[Table, str]:
+
         table = model._meta.basetable
         if field in model._meta.fields_db_projection and not forwarded_fields:
             return table, model._meta.fields_db_projection[field]
@@ -791,40 +814,25 @@ class ValuesListQuery(FieldSelectQuery):
     __slots__ = (
         "flat",
         "fields",
-        "limit",
-        "offset",
-        "distinct",
-        "orderings",
-        "annotations",
-        "custom_filters",
-        "q_objects",
         "fields_for_select_list",
     )
 
     def __init__(
         self,
         model,
-        db,
-        q_objects,
-        fields_for_select_list,
-        limit,
-        offset,
-        distinct,
-        orderings,
-        flat,
-        annotations,
-        custom_filters,
+        db, q_objects, annotations, custom_filters,
+        orderings, distinct, limit, offset,
+        fields_for_select_list, flat,
     ) -> None:
-        super().__init__(model, db, q_objects, annotations, custom_filters)
+        super().__init__(model,
+            db, q_objects, annotations, custom_filters,
+            orderings, distinct, limit, offset)
+
         if flat and (len(fields_for_select_list) != 1):
             raise TypeError("You can flat value_list only if contains one field")
 
         fields_for_select = {str(i): field for i, field in enumerate(fields_for_select_list)}
         self.fields = fields_for_select
-        self.limit = limit
-        self.offset = offset
-        self.distinct = distinct
-        self.orderings = orderings
         self.fields_for_select_list = fields_for_select_list
         self.flat = flat
 
@@ -835,13 +843,14 @@ class ValuesListQuery(FieldSelectQuery):
             self.add_field_to_select_query(context, field, positional_number)
 
         self.resolve_filters(context=context)
-        if self.limit:
-            self.query._limit = self.limit
-        if self.offset:
-            self.query._offset = self.offset
-        if self.distinct:
+        if self._limit:
+            self.query._limit = self._limit
+        if self._offset:
+            self.query._offset = self._offset
+        if self._distinct:
             self.query._distinct = True
-        self.resolve_ordering(self.model, self.orderings, self.annotations)
+
+        self.resolve_ordering()
         context.pop()
 
     def __await__(self) -> Generator[Any, None, List[Any]]:
@@ -872,34 +881,20 @@ class ValuesListQuery(FieldSelectQuery):
 class ValuesQuery(FieldSelectQuery):
     __slots__ = (
         "fields_for_select",
-        "limit",
-        "offset",
-        "distinct",
-        "orderings",
-        "annotations",
-        "custom_filters",
-        "q_objects",
     )
 
     def __init__(
         self,
         model,
-        db,
-        q_objects,
+        db, q_objects, annotations, custom_filters,
+        orderings, distinct, limit, offset,
         fields_for_select,
-        limit,
-        offset,
-        distinct,
-        orderings,
-        annotations,
-        custom_filters,
     ) -> None:
-        super().__init__(model, db, q_objects, annotations, custom_filters)
+        super().__init__(model,
+            db, q_objects, annotations, custom_filters,
+            orderings, distinct, limit, offset)
+
         self.fields_for_select = fields_for_select
-        self.limit = limit
-        self.offset = offset
-        self.distinct = distinct
-        self.orderings = orderings
 
     def _make_query(self, context: QueryContext, alias=None) -> None:
         self.query = self.create_base_query(alias)
@@ -909,13 +904,14 @@ class ValuesQuery(FieldSelectQuery):
             self.add_field_to_select_query(context, field, return_as)
 
         self.resolve_filters(context=context)
-        if self.limit:
-            self.query._limit = self.limit
-        if self.offset:
-            self.query._offset = self.offset
-        if self.distinct:
+        if self._limit:
+            self.query._limit = self._limit
+        if self._offset:
+            self.query._offset = self._offset
+        if self._distinct:
             self.query._distinct = True
-        self.resolve_ordering(self.model, self.orderings, self.annotations)
+
+        self.resolve_ordering()
         context.pop()
 
     def __await__(self) -> Generator[Any, None, List[dict]]:
