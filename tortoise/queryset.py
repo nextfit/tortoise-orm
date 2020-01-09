@@ -71,10 +71,10 @@ class AwaitableQuery(Generic[MODEL]):
         self.annotations: Dict[str, Annotation] = annotations or {}
         self.custom_filters: Dict[str, FieldFilter] = custom_filters or {}
 
-    def resolve_filters(self, context: QueryContext, q_objects, annotations, custom_filters) -> None:
+    def resolve_filters(self, context: QueryContext) -> None:
         modifier = QueryModifier()
-        for node in q_objects:
-            modifier &= node.resolve(context, annotations, custom_filters)
+        for node in self.q_objects:
+            modifier &= node.resolve(context, self.annotations, self.custom_filters)
 
         for join in modifier.joins:
             if join[0] not in self._joined_tables:
@@ -552,12 +552,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
     def _add_query_details(self, context: QueryContext):
         self._resolve_annotate(context=context)
-        self.resolve_filters(
-            context=context,
-            q_objects=self.q_objects,
-            annotations=self.annotations,
-            custom_filters=self.custom_filters,
-        )
+        self.resolve_filters(context=context)
 
         if self._limit:
             self.query._limit = self._limit
@@ -613,14 +608,10 @@ class UpdateQuery(AwaitableQuery):
     def _make_query(self, context: QueryContext, alias=None) -> None:
         table = self.model._meta.basetable
         self.query = self._db.query_class.update(table)
-        context.push(self.model, table)
 
-        self.resolve_filters(
-            context=context,
-            q_objects=self.q_objects,
-            annotations=self.annotations,
-            custom_filters=self.custom_filters,
-        )
+        context.push(self.model, table)
+        self.resolve_filters(context=context)
+
         # Need to get executor to get correct column_map
         executor = self._db.executor_class(model=self.model, db=self._db)
 
@@ -664,12 +655,7 @@ class DeleteQuery(AwaitableQuery):
     def _make_query(self, context: QueryContext, alias=None) -> None:
         self.query = self.create_base_query(alias)
         context.push(self.model, self.query._from[-1])
-        self.resolve_filters(
-            context=context,
-            q_objects=self.q_objects,
-            annotations=self.annotations,
-            custom_filters=self.custom_filters,
-        )
+        self.resolve_filters(context=context)
         self.query._delete_from = True
         context.pop()
 
@@ -692,12 +678,7 @@ class CountQuery(AwaitableQuery):
     def _make_query(self, context: QueryContext, alias=None) -> None:
         self.query = copy(self.model._meta.basequery)
         context.push(self.model, self.query._from[-1])
-        self.resolve_filters(
-            context=context,
-            q_objects=self.q_objects,
-            annotations=self.annotations,
-            custom_filters=self.custom_filters,
-        )
+        self.resolve_filters(context=context)
         self.query._select_other(Count("*"))
         context.pop()
 
@@ -853,12 +834,7 @@ class ValuesListQuery(FieldSelectQuery):
         for positional_number, field in self.fields.items():
             self.add_field_to_select_query(context, field, positional_number)
 
-        self.resolve_filters(
-            context=context,
-            q_objects=self.q_objects,
-            annotations=self.annotations,
-            custom_filters=self.custom_filters,
-        )
+        self.resolve_filters(context=context)
         if self.limit:
             self.query._limit = self.limit
         if self.offset:
@@ -932,12 +908,7 @@ class ValuesQuery(FieldSelectQuery):
         for return_as, field in self.fields_for_select.items():
             self.add_field_to_select_query(context, field, return_as)
 
-        self.resolve_filters(
-            context=context,
-            q_objects=self.q_objects,
-            annotations=self.annotations,
-            custom_filters=self.custom_filters,
-        )
+        self.resolve_filters(context=context)
         if self.limit:
             self.query._limit = self.limit
         if self.offset:
