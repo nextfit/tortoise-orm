@@ -32,6 +32,8 @@ from tortoise.query_utils import \
     Prefetch, Q, QueryModifier, _get_joins_for_related_field
 
 # Empty placeholder - Should never be edited.
+from tortoise.ordering import QueryOrdering
+
 QUERY: QueryBuilder = QueryBuilder()
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -123,35 +125,21 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
     def __init__(self,
         model: Type[MODEL],
         db=None, q_objects=None, annotations=None, custom_filters=None,
-        orderings=None, distinct=False, limit=None, offset=None):
+        orderings: List[QueryOrdering] = None, distinct: bool = False, limit=None, offset=None):
 
         super().__init__(model, db, q_objects, annotations, custom_filters)
 
-        self._orderings: List[Tuple[str, Order]] = orderings if orderings else \
-            self._parse_orderings(*model._meta.ordering) if model._meta.ordering else []
+        self._orderings: List[QueryOrdering] = \
+            orderings if orderings else \
+            self._parse_orderings(*model._meta.ordering) if model._meta.ordering \
+            else []
 
         self._distinct: bool = distinct
         self._limit: Optional[int] = limit
         self._offset: Optional[int] = offset
 
-    def _parse_orderings(self, *orderings: str) -> List[Tuple[str, Order]]:
-        new_ordering = []
-        for ordering in orderings:
-            order_type = Order.asc
-            if ordering[0] == "-":
-                field_name = ordering[1:]
-                order_type = Order.desc
-            else:
-                field_name = ordering
-
-            if not (
-                field_name.split("__")[0] in self.model._meta.fields
-                or field_name in self.annotations
-            ):
-                raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
-            new_ordering.append((field_name, order_type))
-
-        return new_ordering
+    def _parse_orderings(self, *orderings: str) -> "List[QueryOrdering]":
+        return QueryOrdering.parse_orderings(self.model, self.annotations, *orderings)
 
     def resolve_ordering(self, context: QueryContext) -> None:
         self.__resolve_ordering(context, self._orderings, self.annotations)
@@ -161,7 +149,7 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
         model = context.stack[-1].model
 
         for ordering in orderings:
-            field_name = ordering[0]
+            field_name = ordering.field_name
             if field_name in model._meta.fetch_fields:
                 raise FieldError(
                     "Filtering by relation is not possible. Filter by nested field of related model"
@@ -174,7 +162,7 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
                 context.push(related_field.model_class, related_field.model_class._meta.basetable)
                 self.__resolve_ordering(
                     context,
-                    [("__".join(field_name.split("__")[1:]), ordering[1])],
+                    [QueryOrdering("__".join(field_name.split("__")[1:]), ordering.direction)],
                     {},
                 )
                 context.pop()
@@ -182,22 +170,20 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
             elif field_name in annotations:
                 annotation = annotations[field_name]
                 annotation_info = annotation.resolve(QueryContext().push(self.model, self.model._meta.basetable))
-                self.query = self.query.orderby(annotation_info.field, order=ordering[1])
+                self.query = self.query.orderby(annotation_info.field, order=ordering.direction)
 
             else:
-                field_object = self.model._meta.fields_map.get(field_name)
+                field_object = model._meta.fields_map.get(field_name)
                 if not field_object:
-                    raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
+                    raise FieldError(f"Unknown field {field_name} for model {model.__name__}")
                 field_name = field_object.source_field or field_name
                 field = getattr(table, field_name)
 
-                func = field_object.get_for_dialect(
-                    model._meta.db.capabilities.dialect, "function_cast"
-                )
+                func = field_object.get_for_dialect(model._meta.db.capabilities.dialect, "function_cast")
                 if func:
                     field = func(field_object, field)
 
-                self.query = self.query.orderby(field, order=ordering[1])
+                self.query = self.query.orderby(field, order=ordering.direction)
 
 
 class QuerySet(AwaitableQuery[MODEL]):
