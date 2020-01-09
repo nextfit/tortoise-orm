@@ -2,8 +2,6 @@ import asyncio
 import datetime
 import decimal
 from functools import partial
-from itertools import groupby
-from operator import itemgetter
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type
 
 from pypika import Parameter, Table
@@ -295,7 +293,10 @@ class BaseExecutor:
             model=related_query.model, db=self.db, prefetch_map=related_query._prefetch_map
         ).fetch_for_list([v[1] for v in relations])
 
-        relation_map = dict((k, [v[1] for v in itr]) for (k, itr) in groupby(relations, itemgetter(0)))
+        relation_map = {}
+        for k, item in relations:
+            relation_map.setdefault(k, []).append(item)
+
         for instance in instance_list:
             relation_container = getattr(instance, field)
             relation_container._set_result_for_query(relation_map.get(instance.pk, []))
