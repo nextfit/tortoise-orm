@@ -153,11 +153,13 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
 
         return new_ordering
 
-    def resolve_ordering(self) -> None:
-        self.__resolve_ordering(self.model, self._orderings, self.annotations)
+    def resolve_ordering(self, context: QueryContext) -> None:
+        self.__resolve_ordering(context, self._orderings, self.annotations)
 
-    def __resolve_ordering(self, model, orderings, annotations) -> None:
-        table = model._meta.basetable
+    def __resolve_ordering(self, context: QueryContext, orderings, annotations) -> None:
+        table = context.stack[-1].table
+        model = context.stack[-1].model
+
         for ordering in orderings:
             field_name = ordering[0]
             if field_name in model._meta.fetch_fields:
@@ -169,11 +171,13 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
                 related_field_name = field_name.split("__")[0]
                 related_field = model._meta.fields_map[related_field_name]
                 self._join_table_by_field(table, related_field_name, related_field)
+                context.push(related_field.model_class, related_field.model_class._meta.basetable)
                 self.__resolve_ordering(
-                    related_field.model_class,
+                    context,
                     [("__".join(field_name.split("__")[1:]), ordering[1])],
                     {},
                 )
+                context.pop()
 
             elif field_name in annotations:
                 annotation = annotations[field_name]
@@ -580,7 +584,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         if self._distinct:
             self.query._distinct = True
 
-        self.resolve_ordering()
+        self.resolve_ordering(context=context)
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
         if self._db is None:
@@ -850,7 +854,7 @@ class ValuesListQuery(FieldSelectQuery):
         if self._distinct:
             self.query._distinct = True
 
-        self.resolve_ordering()
+        self.resolve_ordering(context=context)
         context.pop()
 
     def __await__(self) -> Generator[Any, None, List[Any]]:
@@ -911,7 +915,7 @@ class ValuesQuery(FieldSelectQuery):
         if self._distinct:
             self.query._distinct = True
 
-        self.resolve_ordering()
+        self.resolve_ordering(context=context)
         context.pop()
 
     def __await__(self) -> Generator[Any, None, List[dict]]:
