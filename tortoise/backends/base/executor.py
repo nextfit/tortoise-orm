@@ -292,9 +292,9 @@ class BaseExecutor:
             for e in raw_results
         ]
 
-        await self.__class__(
-            model=related_query.model, db=self.db, prefetch_map=related_query._prefetch_map
-        ).fetch_for_list([v[1] for v in relations])
+        related_executor = self.__class__(
+            model=related_query.model, db=self.db, prefetch_map=related_query._prefetch_map)
+        await related_executor._execute_prefetch_queries([item for k, item in relations])
 
         relation_map = {}
         for k, item in relations:
