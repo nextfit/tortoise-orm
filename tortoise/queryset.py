@@ -480,6 +480,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             if isinstance(relation, Prefetch):
                 relation.resolve_for_queryset(queryset)
                 continue
+
             relation_split = relation.split("__")
             first_level_field = relation_split[0]
             if first_level_field not in self.model._meta.fetch_fields:

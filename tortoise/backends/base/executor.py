@@ -66,7 +66,7 @@ class BaseExecutor:
             table = self.model._meta.basetable
             self.delete_query = str(
                 self.model._meta.basequery.where(
-                    table[self.model._meta.db_pk_field] == self.Parameter(0)
+                    table[self.model._meta.db_pk_field] == self.parameter(0)
                 ).delete()
             )
             self.update_cache: Dict[str, str] = {}
@@ -104,6 +104,7 @@ class BaseExecutor:
                 for field in custom_fields:
                     setattr(instance, field, row[field])
             instance_list.append(instance)
+
         await self._execute_prefetch_queries(instance_list)
         return instance_list
 
@@ -129,13 +130,13 @@ class BaseExecutor:
         return str(
             self.db.query_class.into(self.model._meta.basetable)
             .columns(*columns)
-            .insert(*[self.Parameter(i) for i in range(len(columns))])
+            .insert(*[self.parameter(i) for i in range(len(columns))])
         )
 
     async def _process_insert_result(self, instance: "Model", results: Any):
         raise NotImplementedError()  # pragma: nocoverage
 
-    def Parameter(self, pos: int) -> Parameter:
+    def parameter(self, pos: int) -> Parameter:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_insert(self, instance: "Model") -> None:
@@ -179,10 +180,10 @@ class BaseExecutor:
             db_field = self.model._meta.fields_db_projection[field]
             field_object = self.model._meta.fields_map[field]
             if not field_object.pk:
-                query = query.set(db_field, self.Parameter(count))
+                query = query.set(db_field, self.parameter(count))
                 count += 1
 
-        query = query.where(table[self.model._meta.db_pk_field] == self.Parameter(count))
+        query = query.where(table[self.model._meta.db_pk_field] == self.parameter(count))
 
         sql = self.update_cache[key] = query.get_sql()
         return sql
@@ -223,9 +224,11 @@ class BaseExecutor:
                 related_object_map[object_id].append(entry)
             else:
                 related_object_map[object_id] = [entry]
+
         for instance in instance_list:
             relation_container = getattr(instance, field)
             relation_container._set_result_for_query(related_object_map.get(instance.pk, []))
+
         return instance_list
 
     async def _prefetch_reverse_o2o_relation(
@@ -300,6 +303,7 @@ class BaseExecutor:
         for instance in instance_list:
             relation_container = getattr(instance, field)
             relation_container._set_result_for_query(relation_map.get(instance.pk, []))
+
         return instance_list
 
     async def _prefetch_direct_relation(
@@ -330,8 +334,10 @@ class BaseExecutor:
                 related_model_field = self.model._meta.fields_map[field]
                 related_model: "Type[Model]" = related_model_field.model_class  # type: ignore
                 related_query = related_model.all().using_db(self.db)
+
             if forwarded_prefetches:
                 related_query = related_query.prefetch_related(*forwarded_prefetches)
+
             self._prefetch_queries[field] = related_query
 
     async def _do_prefetch(self, instance_id_list: list, field: str, related_query) -> list:
@@ -343,6 +349,7 @@ class BaseExecutor:
 
         if field in self.model._meta.m2m_fields:
             return await self._prefetch_m2m_relation(instance_id_list, field, related_query)
+
         return await self._prefetch_direct_relation(instance_id_list, field, related_query)
 
     async def _execute_prefetch_queries(self, instance_list: list) -> list:
@@ -361,15 +368,20 @@ class BaseExecutor:
         for relation in args:
             relation_split = relation.split("__")
             first_level_field = relation_split[0]
+
             if first_level_field not in self.model._meta.fetch_fields:
                 raise OperationalError(
                     f"relation {first_level_field} for {self.model._meta.table} not found"
                 )
+
             if first_level_field not in self.prefetch_map.keys():
                 self.prefetch_map[first_level_field] = set()
+
             forwarded_prefetch = "__".join(relation_split[1:])
+
             if forwarded_prefetch:
                 self.prefetch_map[first_level_field].add(forwarded_prefetch)
+
         await self._execute_prefetch_queries(instance_list)
         return instance_list
 

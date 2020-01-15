@@ -12,14 +12,14 @@ class AsyncpgExecutor(BaseExecutor):
     EXPLAIN_PREFIX = "EXPLAIN (FORMAT JSON, VERBOSE)"
     DB_NATIVE = BaseExecutor.DB_NATIVE | {uuid.UUID}
 
-    def Parameter(self, pos: int) -> Parameter:
+    def parameter(self, pos: int) -> Parameter:
         return Parameter("$%d" % (pos + 1,))
 
     def _prepare_insert_statement(self, columns: List[str], no_generated: bool = False) -> str:
         query = (
             self.db.query_class.into(self.model._meta.basetable)
             .columns(*columns)
-            .insert(*[self.Parameter(i) for i in range(len(columns))])
+            .insert(*[self.parameter(i) for i in range(len(columns))])
         )
         if not no_generated:
             generated_fields = self.model._meta.generated_db_fields
