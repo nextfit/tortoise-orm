@@ -17,7 +17,7 @@ from typing import (
     Union,
 )
 
-from pypika import JoinType, Order, Table, EmptyCriterion
+from pypika import JoinType, Table, EmptyCriterion
 from pypika.functions import Count
 from pypika.queries import QueryBuilder
 from typing_extensions import Protocol
@@ -477,26 +477,10 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._prefetch_map = {}
 
         for relation in args:
-            if isinstance(relation, Prefetch):
-                relation.resolve_for_queryset(queryset)
+            if not isinstance(relation, Prefetch):
+                relation = Prefetch(relation)
 
-            else:
-                relation_split = relation.split("__")
-                first_level_field = relation_split[0]
-                if first_level_field not in self.model._meta.fetch_fields:
-                    if first_level_field in self.model._meta.fields:
-                        msg = f"Field {first_level_field} on {self.model._meta.table} is not a relation"
-                    else:
-                        msg = f"Relation {first_level_field} for {self.model._meta.table} not found"
-
-                    raise FieldError(msg)
-
-                if first_level_field not in queryset._prefetch_map.keys():
-                    queryset._prefetch_map[first_level_field] = set()
-
-                forwarded_prefetch = "__".join(relation_split[1:])
-                if forwarded_prefetch:
-                    queryset._prefetch_map[first_level_field].add(forwarded_prefetch)
+            relation.resolve_for_queryset(queryset)
 
         return queryset
 

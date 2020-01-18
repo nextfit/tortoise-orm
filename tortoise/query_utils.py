@@ -240,10 +240,11 @@ class Q:
 class Prefetch:
     __slots__ = ("relation", "queryset")
 
-    def __init__(self, relation, queryset) -> None:
+    def __init__(self, relation, queryset=None) -> None:
         self.relation = relation
         self.queryset = queryset
-        self.queryset.query = copy(self.queryset.model._meta.basequery)
+        if self.queryset is not None:
+            self.queryset.query = copy(self.queryset.model._meta.basequery)
 
     def resolve_for_queryset(self, queryset) -> None:
         relation_split = self.relation.split("__")
@@ -262,8 +263,11 @@ class Prefetch:
                 queryset._prefetch_map[first_level_field] = set()
 
             queryset._prefetch_map[first_level_field].add(
-                Prefetch(forwarded_prefetch, self.queryset)
-            )
+                Prefetch(forwarded_prefetch, self.queryset))
+
+        elif self.queryset is None:
+            if first_level_field not in queryset._prefetch_map.keys():
+                queryset._prefetch_map[first_level_field] = set()
 
         else:
             queryset._prefetch_queries[first_level_field] = self.queryset
