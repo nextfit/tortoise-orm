@@ -479,25 +479,24 @@ class QuerySet(AwaitableQuery[MODEL]):
         for relation in args:
             if isinstance(relation, Prefetch):
                 relation.resolve_for_queryset(queryset)
-                continue
 
-            relation_split = relation.split("__")
-            first_level_field = relation_split[0]
-            if first_level_field not in self.model._meta.fetch_fields:
-                if first_level_field in self.model._meta.fields:
-                    raise FieldError(
-                        f"Field {first_level_field} on {self.model._meta.table} is not a relation"
-                    )
-                raise FieldError(
-                    f"Relation {first_level_field} for {self.model._meta.table} not found"
-                )
+            else:
+                relation_split = relation.split("__")
+                first_level_field = relation_split[0]
+                if first_level_field not in self.model._meta.fetch_fields:
+                    if first_level_field in self.model._meta.fields:
+                        msg = f"Field {first_level_field} on {self.model._meta.table} is not a relation"
+                    else:
+                        msg = f"Relation {first_level_field} for {self.model._meta.table} not found"
 
-            if first_level_field not in queryset._prefetch_map.keys():
-                queryset._prefetch_map[first_level_field] = set()
+                    raise FieldError(msg)
 
-            forwarded_prefetch = "__".join(relation_split[1:])
-            if forwarded_prefetch:
-                queryset._prefetch_map[first_level_field].add(forwarded_prefetch)
+                if first_level_field not in queryset._prefetch_map.keys():
+                    queryset._prefetch_map[first_level_field] = set()
+
+                forwarded_prefetch = "__".join(relation_split[1:])
+                if forwarded_prefetch:
+                    queryset._prefetch_map[first_level_field].add(forwarded_prefetch)
 
         return queryset
 

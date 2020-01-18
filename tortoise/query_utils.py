@@ -249,9 +249,12 @@ class Prefetch:
         relation_split = self.relation.split("__")
         first_level_field = relation_split[0]
         if first_level_field not in queryset.model._meta.fetch_fields:
-            raise OperationalError(
-                f"relation {first_level_field} for {queryset.model._meta.table} not found"
-            )
+            if first_level_field in queryset.model._meta.fields:
+                msg = f"Field {first_level_field} on {queryset.model._meta.table} is not a relation"
+            else:
+                msg = f"Relation {first_level_field} for {queryset.model._meta.table} not found"
+
+            raise FieldError(msg)
 
         forwarded_prefetch = "__".join(relation_split[1:])
         if forwarded_prefetch:

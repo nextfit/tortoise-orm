@@ -31,7 +31,7 @@ class TestPrefetching(test.TestCase):
         self.assertEqual(len(tournament.events), 2)
 
     async def test_prefetch_unknown_field(self):
-        with self.assertRaises(OperationalError):
+        with self.assertRaises(FieldError):
             tournament = await Tournament.create(name="tournament")
             await Event.create(name="First", tournament=tournament)
             await Event.create(name="Second", tournament=tournament)
