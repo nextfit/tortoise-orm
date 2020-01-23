@@ -11,16 +11,6 @@ from tortoise.filters import FieldFilter, QueryModifier
 from tortoise.functions import OuterRef
 
 
-def _process_filter_kwarg(context: QueryContext, key, value) -> QueryModifier:
-    context_item = context.stack[-1]
-    model = context_item.model
-
-    if value is None and f"{key}__isnull" in model._meta.filters:
-        return model._meta.get_filter(f"{key}__isnull")(context, True)
-    else:
-        return model._meta.get_filter(key)(context, value)
-
-
 def _get_joins_for_related_field(table, related_field, related_field_name) -> List[Tuple[Table, Criterion]]:
     required_joins = []
 
@@ -152,38 +142,41 @@ class Q:
             operator = overridden_operator
 
         if annotation_info.field.is_aggregate:
-            modifier = QueryModifier(having_criterion=operator(annotation_info.field, value))
+            return QueryModifier(having_criterion=operator(annotation_info.field, value))
         else:
-            modifier = QueryModifier(where_criterion=operator(annotation_info.field, value))
-
-        return modifier
+            return QueryModifier(where_criterion=operator(annotation_info.field, value))
 
     def _resolve_regular_kwarg(self, context: QueryContext, key, value) -> QueryModifier:
         model = context.stack[-1].model
-        if key not in model._meta.filters and key.split("__")[0] in model._meta.fetch_fields:
+        key_filter = model._meta.get_filter(key)
+
+        if key_filter is None and key.split("__")[0] in model._meta.fetch_fields:
             return self._resolve_nested_filter(context, key, value)
+
         else:
-            return _process_filter_kwarg(context, key, value)
+            if value is None and "isnull" in model.db.executor_class.FILTER_FUNC_MAP:
+                return model._meta.get_filter(f"{key}__isnull")(context, True)
+            else:
+                return key_filter(context, value)
 
     def _get_actual_key(self, model: "Model", key: str) -> str:
         if key in model._meta.fk_fields or key in model._meta.o2o_fields:
             return model._meta.fields_map[key].source_field
 
-        elif key in model._meta.m2m_fields:
+        if key in model._meta.m2m_fields:
             return key
 
-        elif (
-            key.split("__")[0] in model._meta.fetch_fields
-            or key in self._custom_filters
-            or key in model._meta.filters
-        ):
+        if key in self._custom_filters:
             return key
 
-        else:
-            allowed = sorted(
-                list(model._meta.fields | model._meta.fetch_fields | set(self._custom_filters))
-            )
-            raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
+        (field_name, sep, comparision) = key.partition('__')
+        if field_name in model._meta.fields:
+            return key
+
+        allowed = sorted(
+            list(model._meta.fields | set(self._custom_filters))
+        )
+        raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
 
     def _get_actual_value(self, context: QueryContext, value):
         if isinstance(value, OuterRef):

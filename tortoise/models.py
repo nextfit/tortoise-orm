@@ -17,7 +17,8 @@ from tortoise.fields.relational import (
     OneToOneFieldInstance,
     ReverseRelation,
 )
-from tortoise.filters import get_filters_for_field, FieldFilter
+from tortoise.filters import FieldFilter, BaseFieldFilter, ManyToManyRelationFilter, RELATED_FILTER_FUNC_MAP, \
+    BackwardFKFilter
 from tortoise.queryset import QuerySet, QuerySetSingle
 from tortoise.transactions import current_transaction_map
 
@@ -90,13 +91,11 @@ class MetaInfo:
         "fields_db_projection",
         "_inited",
         "fields_db_projection_reverse",
-        "filters",
         "fields_map",
         "default_connection",
         "basequery",
         "basequery_all_fields",
         "basetable",
-        "_filters",
         "unique_together",
         "indexes",
         "pk_attr",
@@ -127,8 +126,6 @@ class MetaInfo:
         self.fetch_fields: Set[str] = set()
         self.fields_db_projection: Dict[str, str] = {}
         self.fields_db_projection_reverse: Dict[str, str] = {}
-        self._filters: Dict[str, FieldFilter] = {}
-        self.filters: Dict[str, FieldFilter] = {}
         self.fields_map: Dict[str, Field] = {}
         self._inited: bool = False
         self.default_connection: Optional[str] = None
@@ -161,10 +158,6 @@ class MetaInfo:
         elif isinstance(value, BackwardFKRelation):
             self.backward_fk_fields.add(name)
 
-        field_filters = get_filters_for_field(
-            field_name=name, field=value, source_field=value.source_field or name
-        )
-        self._filters.update(field_filters)
         self.finalise_fields()
 
     @property
@@ -174,8 +167,37 @@ class MetaInfo:
         except KeyError:
             raise ConfigurationError("No DB associated to model")
 
-    def get_filter(self, key: str) -> FieldFilter:
-        return self.filters[key]
+    def get_filter(self, key: str) -> Optional[FieldFilter]:
+
+        (field_name, sep, comparision) = key.partition('__')
+        if field_name not in self.fields_map:
+            return None
+
+        field = self.fields_map[field_name]
+        source_field = field.source_field or field_name
+
+        if isinstance(field, ManyToManyFieldInstance):
+            if comparision not in RELATED_FILTER_FUNC_MAP:
+                return None
+
+            (filter_operator, filter_encoder) = RELATED_FILTER_FUNC_MAP[comparision]
+            return ManyToManyRelationFilter(field, filter_operator, filter_encoder(field))
+
+        if isinstance(field, BackwardFKRelation):
+            if comparision not in RELATED_FILTER_FUNC_MAP:
+                return None
+
+            (filter_operator, filter_encoder) = RELATED_FILTER_FUNC_MAP[comparision]
+            return BackwardFKFilter(field, filter_operator, filter_encoder(field))
+
+        if comparision not in self.db.executor_class.FILTER_FUNC_MAP:
+            return None
+
+        return BaseFieldFilter(
+            field_name,
+            field,
+            source_field,
+            *self.db.executor_class.FILTER_FUNC_MAP[comparision])
 
     def finalise_pk(self) -> None:
         self.pk = self.fields_map[self.pk_attr]
@@ -186,7 +208,6 @@ class MetaInfo:
         Finalise the model after it had been fully loaded.
         """
         self.finalise_fields()
-        self._generate_filters()
         self._generate_lazy_fk_m2m_fields()
         self._generate_db_fields()
 
@@ -315,17 +336,6 @@ class MetaInfo:
             else:
                 self.db_default_fields.append((key, model_field, field))
 
-    def _generate_filters(self) -> None:
-        get_overridden_filter_func = self.db.executor_class.get_overridden_filter_func
-        for key, filter_info in self._filters.items():
-            overridden_operator = get_overridden_filter_func(
-                filter_func=filter_info.opr  # type: ignore
-            )
-            if overridden_operator:
-                filter_info = copy(filter_info)
-                filter_info.opr = overridden_operator  # type: ignore
-            self.filters[key] = filter_info
-
 
 class ModelMeta(type):
     __slots__ = ()
@@ -333,7 +343,6 @@ class ModelMeta(type):
     def __new__(mcs, name: str, bases, attrs: dict, *args, **kwargs):
         fields_db_projection: Dict[str, str] = {}
         fields_map: Dict[str, Field] = {}
-        filters: Dict[str, FieldFilter] = {}
         fk_fields: Set[str] = set()
         m2m_fields: Set[str] = set()
         o2o_fields: Set[str] = set()
@@ -423,21 +432,6 @@ class ModelMeta(type):
                         m2m_fields.add(key)
                     else:
                         fields_db_projection[key] = value.source_field or key
-                        filters.update(
-                            get_filters_for_field(
-                                field_name=key,
-                                field=fields_map[key],
-                                source_field=fields_db_projection[key],
-                            )
-                        )
-                        if value.pk:
-                            filters.update(
-                                get_filters_for_field(
-                                    field_name="pk",
-                                    field=fields_map[key],
-                                    source_field=fields_db_projection[key],
-                                )
-                            )
 
         # Clean the class attributes
         for slot in fields_map:
@@ -446,7 +440,6 @@ class ModelMeta(type):
 
         meta.fields_map = fields_map
         meta.fields_db_projection = fields_db_projection
-        meta._filters = filters
         meta.fk_fields = fk_fields
         meta.backward_fk_fields = set()
         meta.o2o_fields = o2o_fields

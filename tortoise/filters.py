@@ -1,7 +1,7 @@
 
 import operator
 from functools import partial
-from typing import Dict, Optional, List, Tuple
+from typing import Optional, List, Tuple
 
 from pypika import Table, functions, Criterion
 from pypika.enums import SqlTypes
@@ -276,57 +276,19 @@ def insensitive_ends_with(field, value):
     )
 
 
-def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> Dict[str, FieldFilter]:
+def __field_to_db_value(field):
     target_table_pk = field.model_class._meta.pk
-    return {
-        field_name: ManyToManyRelationFilter(field, operator.eq, target_table_pk.to_db_value),
-        f"{field_name}__not": ManyToManyRelationFilter(field, not_equal, target_table_pk.to_db_value),
-        f"{field_name}__in": ManyToManyRelationFilter(field, is_in,
-            partial(related_list_encoder, field=target_table_pk)),
-
-        f"{field_name}__not_in": ManyToManyRelationFilter(field, not_in,
-            partial(related_list_encoder, field=target_table_pk)),
-    }
+    return target_table_pk.to_db_value
 
 
-def get_backward_fk_filters(field_name: str, field: BackwardFKRelation) -> Dict[str, FieldFilter]:
+def __field_to_list(field):
     target_table_pk = field.model_class._meta.pk
-    return {
-        field_name: BackwardFKFilter(field, operator.eq, target_table_pk.to_db_value),
-        f"{field_name}__not": BackwardFKFilter(field, not_equal, target_table_pk.to_db_value),
-        f"{field_name}__in": BackwardFKFilter(field, is_in, partial(related_list_encoder, field=target_table_pk)),
-        f"{field_name}__not_in": BackwardFKFilter(field, not_in, partial(related_list_encoder, field=target_table_pk)),
-    }
+    return partial(related_list_encoder, field=target_table_pk)
 
 
-def get_filters_for_field(field_name: str, field: Optional[Field], source_field: str) -> Dict[str, FieldFilter]:
-
-    if isinstance(field, ManyToManyFieldInstance):
-        return get_m2m_filters(field_name, field)
-    if isinstance(field, BackwardFKRelation):
-        return get_backward_fk_filters(field_name, field)
-
-    return {
-        field_name: BaseFieldFilter(field_name, field, source_field, operator.eq, None),
-        f"{field_name}__not": BaseFieldFilter(field_name, field, source_field, not_equal, None),
-        f"{field_name}__in": BaseFieldFilter(field_name, field, source_field, is_in, list_encoder),
-        f"{field_name}__not_in": BaseFieldFilter(field_name, field, source_field, not_in, list_encoder),
-        f"{field_name}__isnull": BaseFieldFilter(field_name, field, source_field, is_null, bool_encoder),
-        f"{field_name}__not_isnull": BaseFieldFilter(field_name, field, source_field, not_null, bool_encoder),
-        f"{field_name}__gte": BaseFieldFilter(field_name, field, source_field, operator.ge, None),
-        f"{field_name}__lte": BaseFieldFilter(field_name, field, source_field, operator.le, None),
-        f"{field_name}__gt": BaseFieldFilter(field_name, field, source_field, operator.gt, None),
-        f"{field_name}__lt": BaseFieldFilter(field_name, field, source_field, operator.lt, None),
-        f"{field_name}__contains": BaseFieldFilter(field_name, field, source_field, contains, string_encoder),
-        f"{field_name}__startswith": BaseFieldFilter(field_name, field, source_field, starts_with, string_encoder),
-        f"{field_name}__endswith": BaseFieldFilter(field_name, field, source_field, ends_with, string_encoder),
-        f"{field_name}__iexact": BaseFieldFilter(field_name, field, source_field, insensitive_exact, string_encoder),
-        f"{field_name}__icontains": BaseFieldFilter(field_name, field, source_field,
-            insensitive_contains, string_encoder),
-
-        f"{field_name}__istartswith": BaseFieldFilter(field_name, field, source_field,
-            insensitive_starts_with, string_encoder),
-
-        f"{field_name}__iendswith": BaseFieldFilter(field_name, field, source_field,
-            insensitive_ends_with, string_encoder),
-    }
+RELATED_FILTER_FUNC_MAP = {
+    "": (operator.eq, __field_to_db_value),
+    "not": (not_equal, __field_to_db_value),
+    "in": (is_in, __field_to_list),
+    "not_in": (not_in, __field_to_list)
+}

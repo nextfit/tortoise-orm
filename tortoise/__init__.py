@@ -20,7 +20,7 @@ from tortoise.fields.relational import (
     ManyToManyFieldInstance,
     OneToOneFieldInstance,
 )
-from tortoise.filters import get_m2m_filters
+
 from tortoise.models import Model
 from tortoise.queryset import QuerySet
 from tortoise.transactions import current_transaction_map
@@ -439,7 +439,6 @@ class Tortoise:
                         description=m2m_object.description,
                     )
                     m2m_relation._generated = True
-                    model._meta.filters.update(get_m2m_filters(field, m2m_object))
                     related_model._meta.add_field(backward_relation_name, m2m_relation)
 
                 if pk_attr_changed:

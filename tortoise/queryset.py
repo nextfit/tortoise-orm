@@ -326,9 +326,10 @@ class QuerySet(AwaitableQuery[MODEL]):
             if not isinstance(annotation, Annotation):
                 raise TypeError("value is expected to be Annotation instance")
             queryset.annotations[key] = annotation
-            from tortoise.models import get_filters_for_field
 
+            from tortoise.models import get_filters_for_field
             queryset.custom_filters.update(get_filters_for_field(key, None, key))
+
         return queryset
 
     def values_list(self, *fields_: str, flat: bool = False) -> "ValuesListQuery":

@@ -1,18 +1,12 @@
+import operator
+
 from pypika import Parameter, functions
 from pypika.enums import SqlTypes
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.fields import BigIntField, IntField, SmallIntField
-from tortoise.filters import (
-    contains,
-    ends_with,
-    insensitive_contains,
-    insensitive_ends_with,
-    insensitive_exact,
-    insensitive_starts_with,
-    starts_with,
-)
+import tortoise.filters as tf
 
 
 def mysql_contains(field, value):
@@ -44,16 +38,27 @@ def mysql_insensitive_ends_with(field, value):
 
 
 class MySQLExecutor(BaseExecutor):
-    FILTER_FUNC_OVERRIDE = {
-        contains: mysql_contains,
-        starts_with: mysql_starts_with,
-        ends_with: mysql_ends_with,
-        insensitive_exact: mysql_insensitive_exact,
-        insensitive_contains: mysql_insensitive_contains,
-        insensitive_starts_with: mysql_insensitive_starts_with,
-        insensitive_ends_with: mysql_insensitive_ends_with,
-    }
     EXPLAIN_PREFIX = "EXPLAIN FORMAT=JSON"
+
+    FILTER_FUNC_MAP = {
+        "": (operator.eq, None),
+        "not": (tf.not_equal, None),
+        "in": (tf.is_in, tf.list_encoder),
+        "not_in": (tf.not_in, tf.list_encoder),
+        "isnull": (tf.is_null, tf.bool_encoder),
+        "not_isnull": (tf.not_null, tf.bool_encoder),
+        "gte": (operator.ge, None),
+        "lte": (operator.le, None),
+        "gt": (operator.gt, None),
+        "lt": (operator.lt, None),
+        "contains": (mysql_contains, tf.string_encoder),
+        "startswith": (mysql_ends_with, tf.string_encoder),
+        "endswith": (mysql_ends_with, tf.string_encoder),
+        "iexact": (mysql_insensitive_exact, tf.string_encoder),
+        "icontains": (mysql_insensitive_contains, tf.string_encoder),
+        "istartswith": (mysql_insensitive_starts_with, tf.string_encoder),
+        "iendswith": (mysql_insensitive_ends_with, tf.string_encoder),
+    }
 
     def parameter(self, pos: int) -> Parameter:
         return Parameter("%s")

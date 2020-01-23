@@ -1,6 +1,8 @@
+
 import asyncio
 import datetime
 import decimal
+import operator
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type
 
@@ -10,7 +12,7 @@ from tortoise.context import QueryContext
 from tortoise.exceptions import OperationalError
 from tortoise.fields.base import Field
 from tortoise.fields.relational import ManyToManyFieldInstance
-
+import tortoise.filters as tf
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -23,9 +25,28 @@ EXECUTOR_CACHE: Dict[
 
 class BaseExecutor:
     TO_DB_OVERRIDE: Dict[Type[Field], Callable] = {}
-    FILTER_FUNC_OVERRIDE: Dict[Callable, Callable] = {}
     EXPLAIN_PREFIX: str = "EXPLAIN"
     DB_NATIVE = {bytes, str, int, bool, float, decimal.Decimal, datetime.datetime, datetime.date}
+
+    FILTER_FUNC_MAP = {
+        "": (operator.eq, None),
+        "not": (tf.not_equal, None),
+        "in": (tf.is_in, tf.list_encoder),
+        "not_in": (tf.not_in, tf.list_encoder),
+        "isnull": (tf.is_null, tf.bool_encoder),
+        "not_isnull": (tf.not_null, tf.bool_encoder),
+        "gte": (operator.ge, None),
+        "lte": (operator.le, None),
+        "gt": (operator.gt, None),
+        "lt": (operator.lt, None),
+        "contains": (tf.contains, tf.string_encoder),
+        "startswith": (tf.starts_with, tf.string_encoder),
+        "endswith": (tf.ends_with, tf.string_encoder),
+        "iexact": (tf.insensitive_exact, tf.string_encoder),
+        "icontains": (tf.insensitive_contains, tf.string_encoder),
+        "istartswith": (tf.insensitive_starts_with, tf.string_encoder),
+        "iendswith": (tf.insensitive_ends_with, tf.string_encoder),
+    }
 
     def __init__(
         self,
@@ -384,7 +405,3 @@ class BaseExecutor:
 
         await self._execute_prefetch_queries(instance_list)
         return instance_list
-
-    @classmethod
-    def get_overridden_filter_func(cls, filter_func: Callable) -> Optional[Callable]:
-        return cls.FILTER_FUNC_OVERRIDE.get(filter_func)
