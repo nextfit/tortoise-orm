@@ -52,7 +52,7 @@ class MySQLExecutor(BaseExecutor):
         "gt": (operator.gt, None),
         "lt": (operator.lt, None),
         "contains": (mysql_contains, tf.string_encoder),
-        "startswith": (mysql_ends_with, tf.string_encoder),
+        "startswith": (mysql_starts_with, tf.string_encoder),
         "endswith": (mysql_ends_with, tf.string_encoder),
         "iexact": (mysql_insensitive_exact, tf.string_encoder),
         "icontains": (mysql_insensitive_contains, tf.string_encoder),
