@@ -26,10 +26,9 @@ from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.context import QueryContext
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
 from tortoise.fields.relational import ForeignKeyFieldInstance, OneToOneFieldInstance
-from tortoise.filters import FieldFilter, EmptyCriterion as TortoiseEmptyCriterion
+from tortoise.filters import EmptyCriterion as TortoiseEmptyCriterion
 from tortoise.functions import Annotation
-from tortoise.query_utils import \
-    Prefetch, Q, QueryModifier, _get_joins_for_related_field
+from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
 
 # Empty placeholder - Should never be edited.
 from tortoise.ordering import QueryOrdering
@@ -58,10 +57,9 @@ class AwaitableStatement(Generic[MODEL]):
         "capabilities",
         "q_objects",
         "annotations",
-        "custom_filters",
     )
 
-    def __init__(self, model: Type[MODEL], db=None, q_objects=None, annotations=None, custom_filters=None) -> None:
+    def __init__(self, model: Type[MODEL], db=None, q_objects=None, annotations=None) -> None:
         self._joined_tables: List[Table] = []
         self._db: BaseDBAsyncClient = db  # type: ignore
 
@@ -71,12 +69,11 @@ class AwaitableStatement(Generic[MODEL]):
 
         self.q_objects: List[Q] = q_objects or []
         self.annotations: Dict[str, Annotation] = annotations or {}
-        self.custom_filters: Dict[str, FieldFilter] = custom_filters or {}
 
     def resolve_filters(self, context: QueryContext) -> None:
         modifier = QueryModifier()
         for node in self.q_objects:
-            modifier &= node.resolve(context, self.annotations, self.custom_filters)
+            modifier &= node.resolve(context, self.annotations)
 
         for join in modifier.joins:
             if join[0] not in self._joined_tables:
@@ -124,10 +121,10 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
 
     def __init__(self,
         model: Type[MODEL],
-        db=None, q_objects=None, annotations=None, custom_filters=None,
+        db=None, q_objects=None, annotations=None,
         orderings: List[QueryOrdering] = None, distinct: bool = False, limit=None, offset=None):
 
-        super().__init__(model, db, q_objects, annotations, custom_filters)
+        super().__init__(model, db, q_objects, annotations)
 
         self._orderings: List[QueryOrdering] = \
             orderings if orderings else \
@@ -234,7 +231,6 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         queryset.q_objects = copy(self.q_objects)
         queryset.annotations = copy(self.annotations)
-        queryset.custom_filters = copy(self.custom_filters)
 
         return queryset
 
@@ -327,9 +323,6 @@ class QuerySet(AwaitableQuery[MODEL]):
                 raise TypeError("value is expected to be Annotation instance")
             queryset.annotations[key] = annotation
 
-            from tortoise.models import get_filters_for_field
-            queryset.custom_filters.update(get_filters_for_field(key, None, key))
-
         return queryset
 
     def values_list(self, *fields_: str, flat: bool = False) -> "ValuesListQuery":
@@ -357,7 +350,6 @@ class QuerySet(AwaitableQuery[MODEL]):
             offset=self._offset,
             orderings=self._orderings,
             annotations=self.annotations,
-            custom_filters=self.custom_filters,
         )
 
     def values(self, *args: str, **kwargs: str) -> "ValuesQuery":
@@ -396,7 +388,6 @@ class QuerySet(AwaitableQuery[MODEL]):
             offset=self._offset,
             orderings=self._orderings,
             annotations=self.annotations,
-            custom_filters=self.custom_filters,
         )
 
     def delete(self) -> "DeleteQuery":
@@ -408,7 +399,6 @@ class QuerySet(AwaitableQuery[MODEL]):
             model=self.model,
             q_objects=self.q_objects,
             annotations=self.annotations,
-            custom_filters=self.custom_filters,
         )
 
     def update(self, **kwargs) -> "UpdateQuery":
@@ -421,7 +411,6 @@ class QuerySet(AwaitableQuery[MODEL]):
             update_kwargs=kwargs,
             q_objects=self.q_objects,
             annotations=self.annotations,
-            custom_filters=self.custom_filters,
         )
 
     def count(self) -> "CountQuery":
@@ -433,7 +422,6 @@ class QuerySet(AwaitableQuery[MODEL]):
             model=self.model,
             q_objects=self.q_objects,
             annotations=self.annotations,
-            custom_filters=self.custom_filters,
         )
 
     def all(self) -> "QuerySet[MODEL]":
@@ -593,8 +581,8 @@ class QuerySet(AwaitableQuery[MODEL]):
 class UpdateQuery(AwaitableStatement):
     __slots__ = ("update_kwargs", )
 
-    def __init__(self, model, update_kwargs, db, q_objects, annotations, custom_filters) -> None:
-        super().__init__(model, db, q_objects, annotations, custom_filters)
+    def __init__(self, model, update_kwargs, db, q_objects, annotations) -> None:
+        super().__init__(model, db, q_objects, annotations)
         self.update_kwargs = update_kwargs
 
     def _make_query(self, context: QueryContext, alias=None) -> None:
@@ -641,8 +629,8 @@ class UpdateQuery(AwaitableStatement):
 class DeleteQuery(AwaitableStatement):
     __slots__ = ()
 
-    def __init__(self, model, db, q_objects, annotations, custom_filters) -> None:
-        super().__init__(model, db, q_objects, annotations, custom_filters)
+    def __init__(self, model, db, q_objects, annotations) -> None:
+        super().__init__(model, db, q_objects, annotations)
 
     def _make_query(self, context: QueryContext, alias=None) -> None:
         self.query = self.create_base_query(alias)
@@ -664,8 +652,8 @@ class DeleteQuery(AwaitableStatement):
 class CountQuery(AwaitableStatement):
     __slots__ = ()
 
-    def __init__(self, model, db, q_objects, annotations, custom_filters) -> None:
-        super().__init__(model, db, q_objects, annotations, custom_filters)
+    def __init__(self, model, db, q_objects, annotations) -> None:
+        super().__init__(model, db, q_objects, annotations)
 
     def _make_query(self, context: QueryContext, alias=None) -> None:
         self.query = copy(self.model._meta.basequery)
@@ -689,12 +677,10 @@ class FieldSelectQuery(AwaitableQuery):
     # pylint: disable=W0223
     __slots__ = ()
 
-    def __init__(self, model,
-        db, q_objects, annotations, custom_filters,
+    def __init__(self, model, db, q_objects, annotations,
         orderings, distinct, limit, offset) -> None:
 
-        super().__init__(model,
-            db, q_objects, annotations, custom_filters,
+        super().__init__(model, db, q_objects, annotations,
             orderings, distinct, limit, offset)
 
     def _join_table_with_forwarded_fields(
@@ -793,15 +779,10 @@ class ValuesListQuery(FieldSelectQuery):
     )
 
     def __init__(
-        self,
-        model,
-        db, q_objects, annotations, custom_filters,
-        orderings, distinct, limit, offset,
-        fields_for_select_list, flat,
+        self, model, db, q_objects, annotations, orderings, distinct,
+        limit, offset, fields_for_select_list, flat,
     ) -> None:
-        super().__init__(model,
-            db, q_objects, annotations, custom_filters,
-            orderings, distinct, limit, offset)
+        super().__init__(model, db, q_objects, annotations, orderings, distinct, limit, offset)
 
         if flat and (len(fields_for_select_list) != 1):
             raise TypeError("You can flat value_list only if contains one field")
@@ -859,15 +840,11 @@ class ValuesQuery(FieldSelectQuery):
     )
 
     def __init__(
-        self,
-        model,
-        db, q_objects, annotations, custom_filters,
-        orderings, distinct, limit, offset,
-        fields_for_select,
+        self, model, db, q_objects, annotations, orderings, distinct,
+        limit, offset, fields_for_select,
     ) -> None:
-        super().__init__(model,
-            db, q_objects, annotations, custom_filters,
-            orderings, distinct, limit, offset)
+        super().__init__(model, db, q_objects, annotations, orderings,
+            distinct, limit, offset)
 
         self.fields_for_select = fields_for_select
 

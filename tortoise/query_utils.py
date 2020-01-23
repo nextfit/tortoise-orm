@@ -63,7 +63,6 @@ class Q:
         "join_type",
         "_is_negated",
         "_annotations",
-        "_custom_filters",
     )
 
     AND = "AND"
@@ -87,7 +86,6 @@ class Q:
         self.join_type = join_type
         self._is_negated = False
         self._annotations: Dict[str, Any] = {}
-        self._custom_filters: Dict[str, FieldFilter] = {}
 
     def __and__(self, other) -> "Q":
         if not isinstance(other, Q):
@@ -121,30 +119,24 @@ class Q:
 
         context.push(related_field.model_class, related_table)
         modifier = Q(**{"__".join(key.split("__")[1:]): value}).resolve(
-            context=context,
-            annotations=self._annotations,
-            custom_filters=self._custom_filters,
-        )
+            context=context, annotations=self._annotations)
         context.pop()
 
         return QueryModifier(joins=required_joins) & modifier
 
     def _resolve_custom_kwarg(self, context: QueryContext, key, value) -> QueryModifier:
-        having_info = self._custom_filters[key]
-        annotation = self._annotations[having_info.field_name]
-        annotation_info = annotation.resolve(context=context)
-        operator = having_info.opr
 
         model = context.stack[-1].model
-        overridden_operator = model._meta.db.executor_class.get_overridden_filter_func(filter_func=operator)
+        (field_name, sep, comparision) = key.partition('__')
+        (filter_operator, _) = model._meta.db.executor_class.FILTER_FUNC_MAP[comparision]
 
-        if overridden_operator:
-            operator = overridden_operator
+        annotation = self._annotations[field_name]
+        annotation_info = annotation.resolve(context=context)
 
         if annotation_info.field.is_aggregate:
-            return QueryModifier(having_criterion=operator(annotation_info.field, value))
+            return QueryModifier(having_criterion=filter_operator(annotation_info.field, value))
         else:
-            return QueryModifier(where_criterion=operator(annotation_info.field, value))
+            return QueryModifier(where_criterion=filter_operator(annotation_info.field, value))
 
     def _resolve_regular_kwarg(self, context: QueryContext, key, value) -> QueryModifier:
         model = context.stack[-1].model
@@ -154,7 +146,7 @@ class Q:
             return self._resolve_nested_filter(context, key, value)
 
         else:
-            if value is None and "isnull" in model.db.executor_class.FILTER_FUNC_MAP:
+            if value is None and "isnull" in model._meta.db.executor_class.FILTER_FUNC_MAP:
                 return model._meta.get_filter(f"{key}__isnull")(context, True)
             else:
                 return key_filter(context, value)
@@ -166,27 +158,24 @@ class Q:
         if key in model._meta.m2m_fields:
             return key
 
-        if key in self._custom_filters:
-            return key
-
         (field_name, sep, comparision) = key.partition('__')
-        if field_name in model._meta.fields:
+        if field_name == "pk":
+            return f"{model._meta.pk_attr}{sep}{comparision}"
+
+        if field_name in model._meta.fields or field_name in self._annotations:
             return key
 
-        allowed = sorted(
-            list(model._meta.fields | set(self._custom_filters))
-        )
+        allowed = sorted(list(model._meta.fields | self._annotations.keys()))
         raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
 
     def _get_actual_value(self, context: QueryContext, value):
         if isinstance(value, OuterRef):
             return OuterRef(self._get_actual_key(context.stack[-2].model, value.ref_name))
 
-        elif hasattr(value, "pk"):
+        if hasattr(value, "pk"):
             return value.pk
 
-        else:
-            return value
+        return value
 
     def _resolve_kwargs(self, context: QueryContext) -> QueryModifier:
         modifier = QueryModifier()
@@ -194,7 +183,7 @@ class Q:
             key = self._get_actual_key(context.stack[-1].model, raw_key)
             value = self._get_actual_value(context, raw_value)
 
-            if key in self._custom_filters:
+            if key.split("__")[0] in self._annotations:
                 filter_modifier = self._resolve_custom_kwarg(context, key, value)
             else:
                 filter_modifier = self._resolve_regular_kwarg(context, key, value)
@@ -212,7 +201,7 @@ class Q:
     def _resolve_children(self, context: QueryContext) -> QueryModifier:
         modifier = QueryModifier()
         for node in self.children:
-            node_modifier = node.resolve(context, self._annotations, self._custom_filters)
+            node_modifier = node.resolve(context, self._annotations)
             if self.join_type == self.AND:
                 modifier &= node_modifier
             else:
@@ -222,9 +211,8 @@ class Q:
             modifier = ~modifier
         return modifier
 
-    def resolve(self, context: QueryContext, annotations, custom_filters) -> QueryModifier:
+    def resolve(self, context: QueryContext, annotations) -> QueryModifier:
         self._annotations = annotations
-        self._custom_filters = custom_filters
         if self.filters:
             return self._resolve_kwargs(context)
         return self._resolve_children(context)
