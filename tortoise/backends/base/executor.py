@@ -57,8 +57,8 @@ class BaseExecutor:
     ) -> None:
         self.model = model
         self.db: "BaseDBAsyncClient" = db
-        self.prefetch_map = prefetch_map if prefetch_map else {}
-        self._prefetch_queries = prefetch_queries if prefetch_queries else {}
+        self.prefetch_map = prefetch_map or {}
+        self._prefetch_queries = prefetch_queries or {}
 
         key = f"{self.db.connection_name}:{self.model._meta.table}"
         if key not in EXECUTOR_CACHE:
@@ -314,8 +314,13 @@ class BaseExecutor:
         ]
 
         related_executor = self.__class__(
-            model=related_query.model, db=self.db, prefetch_map=related_query._prefetch_map)
-        await related_executor._execute_prefetch_queries([item for k, item in relations])
+            model=related_query.model,
+            db=self.db,
+            prefetch_map=related_query._prefetch_map,
+            prefetch_queries=related_query._prefetch_queries,
+        )
+
+        await related_executor._execute_prefetch_queries([item for _, item in relations])
 
         relation_map = {}
         for k, item in relations:
