@@ -124,7 +124,7 @@ class Q:
 
         return QueryModifier(joins=required_joins) & modifier
 
-    def _resolve_custom_kwarg(self, context: QueryContext, key, value) -> QueryModifier:
+    def _resolve_annotation_filters(self, context: QueryContext, key, value) -> QueryModifier:
 
         model = context.stack[-1].model
         (field_name, sep, comparision) = key.partition('__')
@@ -138,7 +138,7 @@ class Q:
         else:
             return QueryModifier(where_criterion=filter_operator(annotation_info.field, value))
 
-    def _resolve_regular_kwarg(self, context: QueryContext, key, value) -> QueryModifier:
+    def _resolve_field_filters(self, context: QueryContext, key, value) -> QueryModifier:
         model = context.stack[-1].model
         key_filter = model._meta.get_filter(key)
 
@@ -177,16 +177,16 @@ class Q:
 
         return value
 
-    def _resolve_kwargs(self, context: QueryContext) -> QueryModifier:
+    def _resolve_filters(self, context: QueryContext) -> QueryModifier:
         modifier = QueryModifier()
         for raw_key, raw_value in self.filters.items():
             key = self._get_actual_key(context.stack[-1].model, raw_key)
             value = self._get_actual_value(context, raw_value)
 
             if key.split("__")[0] in self._annotations:
-                filter_modifier = self._resolve_custom_kwarg(context, key, value)
+                filter_modifier = self._resolve_annotation_filters(context, key, value)
             else:
-                filter_modifier = self._resolve_regular_kwarg(context, key, value)
+                filter_modifier = self._resolve_field_filters(context, key, value)
 
             if self.join_type == self.AND:
                 modifier &= filter_modifier
@@ -214,7 +214,8 @@ class Q:
     def resolve(self, context: QueryContext, annotations) -> QueryModifier:
         self._annotations = annotations
         if self.filters:
-            return self._resolve_kwargs(context)
+            return self._resolve_filters(context)
+
         return self._resolve_children(context)
 
 

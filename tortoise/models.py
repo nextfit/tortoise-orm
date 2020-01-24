@@ -107,6 +107,7 @@ class MetaInfo:
         "db_native_fields",
         "db_default_fields",
         "db_complex_fields",
+        "_filter_cache",
     )
 
     def __init__(self, meta) -> None:
@@ -142,6 +143,8 @@ class MetaInfo:
         self.db_default_fields: List[Tuple[str, str, Field]] = []
         self.db_complex_fields: List[Tuple[str, str, Field]] = []
 
+        self._filter_cache: Dict[str, Optional[FieldFilter]] = {}
+
     def add_field(self, name: str, value: Field):
         if name in self.fields_map:
             raise ConfigurationError(f"Field {name} already present in meta")
@@ -167,8 +170,7 @@ class MetaInfo:
         except KeyError:
             raise ConfigurationError("No DB associated to model")
 
-    def get_filter(self, key: str) -> Optional[FieldFilter]:
-
+    def __create_filter(self, key: str) -> Optional[FieldFilter]:
         (field_name, sep, comparision) = key.partition('__')
         if field_name not in self.fields_map:
             return None
@@ -198,6 +200,15 @@ class MetaInfo:
             field,
             source_field,
             *self.db.executor_class.FILTER_FUNC_MAP[comparision])
+
+    def get_filter(self, key: str) -> Optional[FieldFilter]:
+        if key in self._filter_cache:
+            return self._filter_cache[key]
+
+        else:
+            key_filter = self.__create_filter(key)
+            self._filter_cache[key] = key_filter
+            return key_filter
 
     def finalise_pk(self) -> None:
         self.pk = self.fields_map[self.pk_attr]
