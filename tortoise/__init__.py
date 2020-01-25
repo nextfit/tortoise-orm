@@ -545,9 +545,6 @@ class Tortoise:
                 model._meta.finalise_model()
                 model._meta.basetable = Table(model._meta.table)
                 model._meta.basequery = model._meta.db.query_class.from_(model._meta.table)
-                model._meta.basequery_all_fields = model._meta.basequery.select(
-                    *model._meta.db_fields
-                )
 
     @classmethod
     async def init(

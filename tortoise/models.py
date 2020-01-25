@@ -94,7 +94,6 @@ class MetaInfo:
         "fields_map",
         "default_connection",
         "basequery",
-        "basequery_all_fields",
         "basetable",
         "unique_together",
         "indexes",
@@ -131,7 +130,6 @@ class MetaInfo:
         self._inited: bool = False
         self.default_connection: Optional[str] = None
         self.basequery: Query = Query()
-        self.basequery_all_fields: Query = Query()
         self.basetable: Table = Table("")
         self.pk_attr: str = getattr(meta, "pk_attr", "")
         self.generated_db_fields: Tuple[str] = None  # type: ignore
