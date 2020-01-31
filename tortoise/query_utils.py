@@ -16,9 +16,9 @@ def _get_joins_for_related_field(table, related_field, related_field_name) -> Li
 
     table_pk = related_field.model._meta.db_pk_field
     related_table_pk = related_field.model_class._meta.db_pk_field
+    related_table = related_field.model_class._meta.basetable
 
     if isinstance(related_field, ManyToManyFieldInstance):
-        related_table = related_field.model_class._meta.basetable
         through_table = Table(related_field.through)
         required_joins.append(
             (
@@ -35,7 +35,6 @@ def _get_joins_for_related_field(table, related_field, related_field_name) -> Li
         )
 
     elif isinstance(related_field, BackwardFKRelation):
-        related_table = related_field.model_class._meta.basetable
         required_joins.append(
             (
                 related_table,
@@ -44,7 +43,7 @@ def _get_joins_for_related_field(table, related_field, related_field_name) -> Li
         )
 
     else:
-        related_table = related_field.model_class._meta.basetable
+        related_table = related_table.as_(f"{table.get_table_name()}__{related_field_name}")
         required_joins.append(
             (
                 related_table,
