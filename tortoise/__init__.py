@@ -241,7 +241,7 @@ class Tortoise:
 
         :param serializable:
             ``False`` if you want raw python objects,
-            ``True`` for JSON-serialisable data. (Defaults to ``True``)
+            ``True`` for JSON-serializable data. (Defaults to ``True``)
 
         :return:
             A dictionary containing the model qualifier as key,
@@ -730,4 +730,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.15.7"
+__version__ = "0.15.9"

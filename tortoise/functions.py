@@ -7,6 +7,7 @@ from pypika.terms import Function as BaseFunction
 
 from tortoise.context import QueryContext
 from tortoise.exceptions import ConfigurationError
+from tortoise.fields.relational import ForeignKeyFieldInstance
 
 ##############################################################################
 # Base
@@ -93,8 +94,12 @@ class Function(Annotation):
 
         related_field = model._meta.fields_map[field_split[0]]
 
-        related_table = related_field.model_class._meta.basetable
         related_model = related_field.model_class
+        related_table = related_model._meta.basetable
+        if isinstance(related_field, ForeignKeyFieldInstance):
+            # Only FK's can be to same table, so we only auto-alias FK join tables
+            related_table = related_table.as_(f"{table.get_table_name()}__{field_split[0]}")
+
         context.push(related_model, related_table)
         annotation_info = self._resolve_field_for_model(
             context, "__".join(field_split[1:]), *default_values
