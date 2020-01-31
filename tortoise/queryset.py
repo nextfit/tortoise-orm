@@ -87,12 +87,21 @@ class AwaitableStatement(Generic[MODEL]):
         self.query._wheres = modifier.where_criterion
         self.query._havings = modifier.having_criterion
 
-    def _join_table_by_field(self, table, related_field_name, related_field) -> None:
+    def _join_table_by_field(self, table, related_field_name, related_field) -> Table:
+        """
+        :param table:
+        :param related_field_name:
+        :param related_field:
+        :return: related_table
+        """
+
         joins = _get_joins_for_related_field(table, related_field, related_field_name)
         for join in joins:
             if join[0] not in self._joined_tables:
                 self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
                 self._joined_tables.append(join[0])
+
+        return joins[-1][0]
 
     def create_base_query(self, alias):
         if alias is None:
@@ -155,8 +164,8 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
             if field_name.split("__")[0] in model._meta.fetch_fields:
                 related_field_name = field_name.split("__")[0]
                 related_field = model._meta.fields_map[related_field_name]
-                self._join_table_by_field(table, related_field_name, related_field)
-                context.push(related_field.model_class, related_field.model_class._meta.basetable)
+                related_table = self._join_table_by_field(table, related_field_name, related_field)
+                context.push(related_field.model_class, related_table)
                 self.__resolve_ordering(
                     context,
                     [QueryOrdering("__".join(field_name.split("__")[1:]), ordering.direction)],
@@ -684,10 +693,13 @@ class FieldSelectQuery(AwaitableQuery):
             orderings, distinct, limit, offset)
 
     def _join_table_with_forwarded_fields(
-        self, model, field: str, forwarded_fields: str
+        self, context: QueryContext, field: str, forwarded_fields: str
     ) -> Tuple[Table, str]:
 
-        table = model._meta.basetable
+        context_item = context.stack[-1]
+        model = context_item.model
+        table = context_item.table
+
         if field in model._meta.fields_db_projection and not forwarded_fields:
             return table, model._meta.fields_db_projection[field]
 
@@ -704,14 +716,17 @@ class FieldSelectQuery(AwaitableQuery):
         if not field_object:
             raise FieldError(f'Unknown field "{field}" for model "{model.__name__}"')
 
-        self._join_table_by_field(table, field, field_object)
+        field_table = self._join_table_by_field(table, field, field_object)
         forwarded_fields_split = forwarded_fields.split("__")
 
-        return self._join_table_with_forwarded_fields(
-            model=field_object.model_class,
+        context.push(field_object.model_class, field_table)
+        output = self._join_table_with_forwarded_fields(
+            context=context,
             field=forwarded_fields_split[0],
             forwarded_fields="__".join(forwarded_fields_split[1:]),
         )
+        context.pop()
+        return output
 
     def add_field_to_select_query(self, context: QueryContext, field, return_as) -> None:
         table = context.stack[-1].table
@@ -738,9 +753,11 @@ class FieldSelectQuery(AwaitableQuery):
 
         field_split = field.split("__")
         if field_split[0] in self.model._meta.fetch_fields:
+            context.push(model=self.model, table=self.model._meta.basetable)
             related_table, related_db_field = self._join_table_with_forwarded_fields(
-                model=self.model, field=field_split[0], forwarded_fields="__".join(field_split[1:])
+                context=context, field=field_split[0], forwarded_fields="__".join(field_split[1:])
             )
+            context.pop()
             self.query._select_field(getattr(related_table, related_db_field).as_(return_as))
             return
 

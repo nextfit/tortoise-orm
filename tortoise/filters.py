@@ -39,7 +39,7 @@ class QueryModifier:
     def __init__(
         self,
         where_criterion: Optional[Criterion] = None,
-        joins: Optional[List[Tuple[Criterion, Criterion]]] = None,
+        joins: Optional[List[Tuple[Table, Criterion]]] = None,
         having_criterion: Optional[Criterion] = None,
     ) -> None:
         self.where_criterion: Criterion = where_criterion or EmptyCriterion()

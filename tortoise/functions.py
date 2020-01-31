@@ -60,18 +60,21 @@ class Function(Annotation):
         self.field_object: Any = None
         self.default_values = default_values
 
-    def _resolve_field_for_model(self, model, field: str, *default_values) -> AnnotationInfo:
+    def _resolve_field_for_model(self, context: QueryContext, field: str, *default_values) -> AnnotationInfo:
+        model = context.stack[-1].model
+        table = context.stack[-1].table
+
         field_split = field.split("__")
         if not field_split[1:]:
             function_joins = []
             if field_split[0] in model._meta.fetch_fields:
                 related_field = model._meta.fields_map[field_split[0]]
                 related_field_meta = related_field.model_class._meta
-                join = (model._meta.basetable, field_split[0], related_field)
+                join = (table, field_split[0], related_field)
                 function_joins.append(join)
                 field = related_field_meta.basetable[related_field_meta.db_pk_field]
             else:
-                field = model._meta.basetable[field_split[0]]
+                field = table[field_split[0]]
 
                 if self.populate_field_object:
                     self.field_object = model._meta.fields_map.get(field_split[0], None)
@@ -89,16 +92,21 @@ class Function(Annotation):
             raise ConfigurationError(f"{field} not resolvable")
 
         related_field = model._meta.fields_map[field_split[0]]
-        join = (model._meta.basetable, field_split[0], related_field)
+
+        related_table = related_field.model_class._meta.basetable
+        related_model = related_field.model_class
+        context.push(related_model, related_table)
         annotation_info = self._resolve_field_for_model(
-            related_field.model_class, "__".join(field_split[1:]), *default_values
+            context, "__".join(field_split[1:]), *default_values
         )
+        context.pop()
+
+        join = (table, field_split[0], related_field)
         annotation_info.joins.append(join)
         return annotation_info
 
     def resolve(self, context: QueryContext, alias=None) -> AnnotationInfo:
-        model = context.stack[-1].model
-        annotation_info = self._resolve_field_for_model(model, self.field, *self.default_values)
+        annotation_info = self._resolve_field_for_model(context, self.field, *self.default_values)
         annotation_info.joins = reversed(annotation_info.joins)
         return annotation_info
 
