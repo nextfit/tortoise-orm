@@ -11,7 +11,7 @@ from pypika import Parameter, Table
 from tortoise.context import QueryContext
 from tortoise.exceptions import OperationalError
 from tortoise.fields.base import Field
-from tortoise.fields.relational import ManyToManyFieldInstance
+from tortoise.fields.relational import ManyToManyField
 import tortoise.filters as tf
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -277,7 +277,7 @@ class BaseExecutor:
             for instance in instance_list
         ]
 
-        field_object: ManyToManyFieldInstance = self.model._meta.fields_map[field]
+        field_object: ManyToManyField = self.model._meta.fields_map[field]
         through_table = Table(field_object.through)
 
         subquery = (

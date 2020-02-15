@@ -18,9 +18,9 @@ from tortoise import Tortoise, fields
 from tortoise.contrib import test
 from tortoise.fields.relational import (
     BackwardFKRelation,
-    ForeignKeyFieldInstance,
-    ManyToManyFieldInstance,
-    OneToOneFieldInstance,
+    ForeignKeyField,
+    ManyToManyField,
+    OneToOneField,
 )
 
 
@@ -128,7 +128,7 @@ class TestBasic(test.TestCase):
                 "fk_fields": [
                     {
                         "name": "fk",
-                        "field_type": "ForeignKeyFieldInstance",
+                        "field_type": "ForeignKeyField",
                         "raw_field": "fk_id",
                         "python_type": "models.StraightFields",
                         "generated": False,
@@ -156,7 +156,7 @@ class TestBasic(test.TestCase):
                     {
                         "default": None,
                         "description": "Line",
-                        "field_type": "OneToOneFieldInstance",
+                        "field_type": "OneToOneField",
                         "generated": False,
                         "indexed": True,
                         "name": "o2o",
@@ -182,7 +182,7 @@ class TestBasic(test.TestCase):
                 "m2m_fields": [
                     {
                         "name": "rel_to",
-                        "field_type": "ManyToManyFieldInstance",
+                        "field_type": "ManyToManyField",
                         "python_type": "models.StraightFields",
                         "generated": False,
                         "nullable": False,
@@ -193,7 +193,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "rel_from",
-                        "field_type": "ManyToManyFieldInstance",
+                        "field_type": "ManyToManyField",
                         "python_type": "models.StraightFields",
                         "generated": False,
                         "nullable": False,
@@ -288,7 +288,7 @@ class TestBasic(test.TestCase):
                 "fk_fields": [
                     {
                         "name": "fk",
-                        "field_type": ForeignKeyFieldInstance,
+                        "field_type": ForeignKeyField,
                         "raw_field": "fk_id",
                         "python_type": StraightFields,
                         "generated": False,
@@ -316,7 +316,7 @@ class TestBasic(test.TestCase):
                     {
                         "default": None,
                         "description": "Line",
-                        "field_type": OneToOneFieldInstance,
+                        "field_type": OneToOneField,
                         "generated": False,
                         "indexed": True,
                         "name": "o2o",
@@ -342,7 +342,7 @@ class TestBasic(test.TestCase):
                 "m2m_fields": [
                     {
                         "name": "rel_to",
-                        "field_type": ManyToManyFieldInstance,
+                        "field_type": ManyToManyField,
                         "python_type": StraightFields,
                         "generated": False,
                         "nullable": False,
@@ -353,7 +353,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "rel_from",
-                        "field_type": ManyToManyFieldInstance,
+                        "field_type": ManyToManyField,
                         "python_type": StraightFields,
                         "generated": False,
                         "nullable": False,
@@ -448,7 +448,7 @@ class TestBasic(test.TestCase):
                 "fk_fields": [
                     {
                         "name": "fk",
-                        "field_type": "ForeignKeyFieldInstance",
+                        "field_type": "ForeignKeyField",
                         "raw_field": "fk_id",
                         "python_type": "models.SourceFields",
                         "generated": False,
@@ -476,7 +476,7 @@ class TestBasic(test.TestCase):
                     {
                         "default": None,
                         "description": "Line",
-                        "field_type": "OneToOneFieldInstance",
+                        "field_type": "OneToOneField",
                         "generated": False,
                         "indexed": True,
                         "name": "o2o",
@@ -502,7 +502,7 @@ class TestBasic(test.TestCase):
                 "m2m_fields": [
                     {
                         "name": "rel_to",
-                        "field_type": "ManyToManyFieldInstance",
+                        "field_type": "ManyToManyField",
                         "python_type": "models.SourceFields",
                         "generated": False,
                         "nullable": False,
@@ -513,7 +513,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "rel_from",
-                        "field_type": "ManyToManyFieldInstance",
+                        "field_type": "ManyToManyField",
                         "python_type": "models.SourceFields",
                         "generated": False,
                         "nullable": False,
@@ -608,7 +608,7 @@ class TestBasic(test.TestCase):
                 "fk_fields": [
                     {
                         "name": "fk",
-                        "field_type": ForeignKeyFieldInstance,
+                        "field_type": ForeignKeyField,
                         "raw_field": "fk_id",
                         "python_type": SourceFields,
                         "generated": False,
@@ -636,7 +636,7 @@ class TestBasic(test.TestCase):
                     {
                         "default": None,
                         "description": "Line",
-                        "field_type": OneToOneFieldInstance,
+                        "field_type": OneToOneField,
                         "generated": False,
                         "indexed": True,
                         "name": "o2o",
@@ -662,7 +662,7 @@ class TestBasic(test.TestCase):
                 "m2m_fields": [
                     {
                         "name": "rel_to",
-                        "field_type": ManyToManyFieldInstance,
+                        "field_type": ManyToManyField,
                         "python_type": SourceFields,
                         "generated": False,
                         "nullable": False,
@@ -673,7 +673,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "rel_from",
-                        "field_type": ManyToManyFieldInstance,
+                        "field_type": ManyToManyField,
                         "python_type": SourceFields,
                         "generated": False,
                         "nullable": False,
@@ -731,7 +731,7 @@ class TestBasic(test.TestCase):
                 "m2m_fields": [
                     {
                         "name": "peers",
-                        "field_type": "ManyToManyFieldInstance",
+                        "field_type": "ManyToManyField",
                         "python_type": "models.UUIDM2MRelatedModel",
                         "generated": False,
                         "nullable": False,
@@ -789,7 +789,7 @@ class TestBasic(test.TestCase):
                 "m2m_fields": [
                     {
                         "name": "peers",
-                        "field_type": ManyToManyFieldInstance,
+                        "field_type": ManyToManyField,
                         "python_type": UUIDM2MRelatedModel,
                         "generated": False,
                         "nullable": False,
@@ -858,7 +858,7 @@ class TestBasic(test.TestCase):
                     {
                         "default": None,
                         "description": None,
-                        "field_type": "ForeignKeyFieldInstance",
+                        "field_type": "ForeignKeyField",
                         "generated": False,
                         "indexed": False,
                         "name": "model",
@@ -874,7 +874,7 @@ class TestBasic(test.TestCase):
                     {
                         "default": None,
                         "description": None,
-                        "field_type": "OneToOneFieldInstance",
+                        "field_type": "OneToOneField",
                         "generated": False,
                         "indexed": True,
                         "name": "parent",

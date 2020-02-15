@@ -16,9 +16,9 @@ from tortoise.exceptions import ConfigurationError
 from tortoise.fields.relational import (
     BackwardFKRelation,
     BackwardOneToOneRelation,
-    ForeignKeyFieldInstance,
-    ManyToManyFieldInstance,
-    OneToOneFieldInstance,
+    ForeignKeyField,
+    ManyToManyField,
+    OneToOneField,
 )
 
 from tortoise.models import Model
@@ -174,7 +174,7 @@ class Tortoise:
                 del desc["db_field_types"]
 
             # Foreign Keys have
-            if isinstance(field, (ForeignKeyFieldInstance, OneToOneFieldInstance)):
+            if isinstance(field, (ForeignKeyField, OneToOneField)):
                 del desc["db_column"]
                 desc["raw_field"] = field.source_field
             else:
@@ -182,7 +182,7 @@ class Tortoise:
 
             # These fields are entierly "virtual", so no direct DB representation
             if isinstance(
-                field, (ManyToManyFieldInstance, BackwardFKRelation, BackwardOneToOneRelation,),
+                field, (ManyToManyField, BackwardFKRelation, BackwardOneToOneRelation,),
             ):
                 del desc["db_column"]
 
@@ -312,7 +312,7 @@ class Tortoise:
                 pk_attr_changed = False
 
                 for field in model._meta.fk_fields:
-                    fk_object = cast(ForeignKeyFieldInstance, model._meta.fields_map[field])
+                    fk_object = cast(ForeignKeyField, model._meta.fields_map[field])
                     reference = fk_object.model_name
                     related_app_name, related_model_name = split_reference(reference)
                     related_model = get_related_model(related_app_name, related_model_name)
@@ -351,7 +351,7 @@ class Tortoise:
                         related_model._meta.add_field(backward_relation_name, fk_relation)
 
                 for field in model._meta.o2o_fields:
-                    o2o_object = cast(OneToOneFieldInstance, model._meta.fields_map[field])
+                    o2o_object = cast(OneToOneField, model._meta.fields_map[field])
                     reference = o2o_object.model_name
                     related_app_name, related_model_name = split_reference(reference)
                     related_model = get_related_model(related_app_name, related_model_name)
@@ -394,7 +394,7 @@ class Tortoise:
                         model._meta.pk_attr = key_field
 
                 for field in list(model._meta.m2m_fields):
-                    m2m_object = cast(ManyToManyFieldInstance, model._meta.fields_map[field])
+                    m2m_object = cast(ManyToManyField, model._meta.fields_map[field])
                     if m2m_object._generated:
                         continue
 
@@ -429,7 +429,7 @@ class Tortoise:
 
                         m2m_object.through = f"{model._meta.table}_{related_model_table_name}"
 
-                    m2m_relation = ManyToManyFieldInstance(
+                    m2m_relation = ManyToManyField(
                         f"{app_name}.{model_name}",
                         m2m_object.through,
                         forward_key=m2m_object.backward_key,

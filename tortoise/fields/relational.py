@@ -143,7 +143,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
     Many to many relation container for :func:`.ManyToManyField`.
     """
 
-    def __init__(self, model, instance, m2m_field: "ManyToManyFieldInstance") -> None:
+    def __init__(self, model, instance, m2m_field: "ManyToManyField") -> None:
         super().__init__(model, m2m_field.related_name, instance)
         self.field = m2m_field
         self.model = m2m_field.model_class
@@ -260,7 +260,38 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         await db.execute_query(str(query))
 
 
-class ForeignKeyFieldInstance(Field):
+class ForeignKeyField(Field):
+    """
+    ForeignKey relation field.
+
+    This field represents a foreign key relation to another model.
+
+    See :ref:`foreign_key` for usage information.
+
+    You must provide the following:
+
+    ``model_name``:
+        The name of the related model in a :samp:`'{app}.{model}'` format.
+
+    The following is optional:
+
+    ``related_name``:
+        The attribute name on the related model to reverse resolve the foreign key.
+    ``on_delete``:
+        One of:
+            ``field.CASCADE``:
+                Indicate that the model should be cascade deleted if related model gets deleted.
+            ``field.RESTRICT``:
+                Indicate that the related model delete will be restricted as long as a
+                foreign key points to it.
+            ``field.SET_NULL``:
+                Resets the field to NULL in case the related model gets deleted.
+                Can only be set if field has ``null=True`` set.
+            ``field.SET_DEFAULT``:
+                Resets the field to ``default`` value in case the related model gets deleted.
+                Can only be set is field has a ``default`` set.
+    """
+
     has_db_field = False
 
     def __init__(
@@ -295,66 +326,7 @@ class BackwardFKRelation(Field):
         self.description: Optional[str] = description
 
 
-class OneToOneFieldInstance(Field):
-    has_db_field = False
-
-    def __init__(
-        self,
-        model_name: str,
-        related_name: Union[Optional[str], Literal[False]] = None,
-        on_delete=CASCADE,
-        **kwargs,
-    ) -> None:
-        kwargs["unique"] = True
-        super().__init__(**kwargs)
-        if len(model_name.split(".")) != 2:
-            raise ConfigurationError('OneToOneField accepts model name in format "app.Model"')
-        self.model_class: "Type[Model]" = None  # type: ignore
-        self.model_name = model_name
-        self.related_name = related_name
-        if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
-            raise ConfigurationError("on_delete can only be CASCADE, RESTRICT or SET_NULL")
-        if on_delete == SET_NULL and not bool(kwargs.get("null")):
-            raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
-        self.on_delete = on_delete
-
-
-class BackwardOneToOneRelation(BackwardFKRelation):
-    pass
-
-
-class ManyToManyFieldInstance(Field):
-    has_db_field = False
-    field_type = ManyToManyRelation
-
-    def __init__(
-        self,
-        model_name: str,
-        through: Optional[str] = None,
-        forward_key: Optional[str] = None,
-        backward_key: str = "",
-        related_name: str = "",
-        field_type: "Type[Model]" = None,  # type: ignore
-        **kwargs,
-    ) -> None:
-        super().__init__(**kwargs)
-        self.model_class: "Type[Model]" = field_type
-        if len(model_name.split(".")) != 2:
-            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
-        self.model_name: str = model_name
-        self.related_name: str = related_name
-        self.forward_key: str = forward_key or f"{model_name.split('.')[1].lower()}_id"
-        self.backward_key: str = backward_key
-        self.through: Optional[str] = through
-        self._generated: bool = False
-
-
-def OneToOneField(
-    model_name: str,
-    related_name: Union[Optional[str], Literal[False]] = None,
-    on_delete=CASCADE,
-    **kwargs,
-) -> OneToOneRelation:
+class OneToOneField(Field):
     """
     OneToOne relation field.
 
@@ -386,57 +358,34 @@ def OneToOneField(
                 Can only be set is field has a ``default`` set.
     """
 
-    return OneToOneFieldInstance(model_name, related_name, on_delete, **kwargs)
+    has_db_field = False
+
+    def __init__(
+        self,
+        model_name: str,
+        related_name: Union[Optional[str], Literal[False]] = None,
+        on_delete=CASCADE,
+        **kwargs,
+    ) -> None:
+        kwargs["unique"] = True
+        super().__init__(**kwargs)
+        if len(model_name.split(".")) != 2:
+            raise ConfigurationError('OneToOneField accepts model name in format "app.Model"')
+        self.model_class: "Type[Model]" = None  # type: ignore
+        self.model_name = model_name
+        self.related_name = related_name
+        if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
+            raise ConfigurationError("on_delete can only be CASCADE, RESTRICT or SET_NULL")
+        if on_delete == SET_NULL and not bool(kwargs.get("null")):
+            raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
+        self.on_delete = on_delete
 
 
-def ForeignKeyField(
-    model_name: str,
-    related_name: Union[Optional[str], Literal[False]] = None,
-    on_delete=CASCADE,
-    **kwargs,
-) -> ForeignKeyRelation:
-    """
-    ForeignKey relation field.
-
-    This field represents a foreign key relation to another model.
-
-    See :ref:`foreign_key` for usage information.
-
-    You must provide the following:
-
-    ``model_name``:
-        The name of the related model in a :samp:`'{app}.{model}'` format.
-
-    The following is optional:
-
-    ``related_name``:
-        The attribute name on the related model to reverse resolve the foreign key.
-    ``on_delete``:
-        One of:
-            ``field.CASCADE``:
-                Indicate that the model should be cascade deleted if related model gets deleted.
-            ``field.RESTRICT``:
-                Indicate that the related model delete will be restricted as long as a
-                foreign key points to it.
-            ``field.SET_NULL``:
-                Resets the field to NULL in case the related model gets deleted.
-                Can only be set if field has ``null=True`` set.
-            ``field.SET_DEFAULT``:
-                Resets the field to ``default`` value in case the related model gets deleted.
-                Can only be set is field has a ``default`` set.
-    """
-
-    return ForeignKeyFieldInstance(model_name, related_name, on_delete, **kwargs)
+class BackwardOneToOneRelation(BackwardFKRelation):
+    pass
 
 
-def ManyToManyField(
-    model_name: str,
-    through: Optional[str] = None,
-    forward_key: Optional[str] = None,
-    backward_key: str = "",
-    related_name: str = "",
-    **kwargs,
-) -> "ManyToManyRelation":
+class ManyToManyField(Field):
     """
     ManyToMany relation field.
 
@@ -464,6 +413,26 @@ def ManyToManyField(
         The attribute name on the related model to reverse resolve the many to many.
     """
 
-    return ManyToManyFieldInstance(  # type: ignore
-        model_name, through, forward_key, backward_key, related_name, **kwargs
-    )
+    has_db_field = False
+    field_type = ManyToManyRelation
+
+    def __init__(
+        self,
+        model_name: str,
+        through: Optional[str] = None,
+        forward_key: Optional[str] = None,
+        backward_key: str = "",
+        related_name: str = "",
+        field_type: "Type[Model]" = None,  # type: ignore
+        **kwargs,
+    ) -> None:
+        super().__init__(**kwargs)
+        self.model_class: "Type[Model]" = field_type
+        if len(model_name.split(".")) != 2:
+            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
+        self.model_name: str = model_name
+        self.related_name: str = related_name
+        self.forward_key: str = forward_key or f"{model_name.split('.')[1].lower()}_id"
+        self.backward_key: str = backward_key
+        self.through: Optional[str] = through
+        self._generated: bool = False

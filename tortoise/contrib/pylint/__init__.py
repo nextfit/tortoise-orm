@@ -71,7 +71,7 @@ def transform_model(cls: ClassDef) -> None:
                             relval = [
                                 # attr.value.func,
                                 MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
-                                    "ManyToManyFieldInstance"
+                                    "ManyToManyField"
                                 )[1][0],
                                 MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
                                     "ManyToManyRelation"
@@ -80,7 +80,7 @@ def transform_model(cls: ClassDef) -> None:
                         elif attrname == "ForeignKeyField":
                             relval = [
                                 MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
-                                    "ForeignKeyFieldInstance"
+                                    "ForeignKeyField"
                                 )[1][0],
                                 MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
                                     "ReverseRelation"
@@ -89,7 +89,7 @@ def transform_model(cls: ClassDef) -> None:
                         elif attrname == "OneToOneField":
                             relval = [
                                 MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
-                                    "OneToOneFieldInstance"
+                                    "OneToOneField"
                                 )[1][0],
                                 MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
                                     "OneToOneRelation"

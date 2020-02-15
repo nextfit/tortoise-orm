@@ -6,7 +6,7 @@ from pypika.terms import Criterion
 
 from tortoise.context import QueryContext
 from tortoise.exceptions import FieldError, OperationalError
-from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
+from tortoise.fields.relational import BackwardFKRelation, ManyToManyField
 from tortoise.filters import FieldFilter, QueryModifier
 from tortoise.functions import OuterRef
 
@@ -18,7 +18,7 @@ def _get_joins_for_related_field(table, related_field, related_field_name) -> Li
     related_table_pk = related_field.model_class._meta.db_pk_field
     related_table = related_field.model_class._meta.basetable
 
-    if isinstance(related_field, ManyToManyFieldInstance):
+    if isinstance(related_field, ManyToManyField):
         through_table = Table(related_field.through)
         required_joins.append(
             (

@@ -25,7 +25,7 @@ from typing_extensions import Protocol
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.context import QueryContext
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
-from tortoise.fields.relational import ForeignKeyFieldInstance, OneToOneFieldInstance
+from tortoise.fields.relational import ForeignKeyField, OneToOneField
 from tortoise.filters import EmptyCriterion as TortoiseEmptyCriterion
 from tortoise.functions import Annotation
 from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
@@ -610,7 +610,7 @@ class UpdateQuery(AwaitableStatement):
                 raise FieldError(f"Unknown keyword argument {key} for model {self.model}")
             if field_object.pk:
                 raise IntegrityError(f"Field {key} is PK and can not be updated")
-            if isinstance(field_object, (ForeignKeyFieldInstance, OneToOneFieldInstance)):
+            if isinstance(field_object, (ForeignKeyField, OneToOneField)):
                 fk_field: str = field_object.source_field  # type: ignore
                 db_field = self.model._meta.fields_map[fk_field].source_field
                 value = executor.column_map[fk_field](value.pk, None)

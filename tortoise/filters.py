@@ -8,7 +8,7 @@ from pypika.enums import SqlTypes
 
 from tortoise.context import QueryContext
 from tortoise.fields import Field
-from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
+from tortoise.fields.relational import BackwardFKRelation, ManyToManyField
 from tortoise.functions import OuterRef, Subquery
 
 
@@ -164,7 +164,7 @@ class RelationFilter(FieldFilter):
 
             outer_field = outer_model._meta.fields_map[value.ref_name]
 
-            if isinstance(outer_field, ManyToManyFieldInstance):
+            if isinstance(outer_field, ManyToManyField):
                 if outer_field.through in outer_context_item.through_tables:
                     outer_through_table = outer_context_item.through_tables[outer_field.through]
                     encoded_value = outer_through_table[outer_field.forward_key]

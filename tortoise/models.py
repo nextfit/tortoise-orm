@@ -11,10 +11,10 @@ from tortoise.fields.data import IntField
 from tortoise.fields.relational import (
     BackwardFKRelation,
     BackwardOneToOneRelation,
-    ForeignKeyFieldInstance,
-    ManyToManyFieldInstance,
+    ForeignKeyField,
+    ManyToManyField,
     ManyToManyRelation,
-    OneToOneFieldInstance,
+    OneToOneField,
     ReverseRelation,
 )
 from tortoise.filters import FieldFilter, BaseFieldFilter, ManyToManyRelationFilter, RELATED_FILTER_FUNC_MAP, \
@@ -168,7 +168,7 @@ class MetaInfo:
         if value.has_db_field:
             self.fields_db_projection[name] = value.source_field or name
 
-        if isinstance(value, ManyToManyFieldInstance):
+        if isinstance(value, ManyToManyField):
             self.m2m_fields.add(name)
         elif isinstance(value, BackwardOneToOneRelation):
             self.backward_o2o_fields.add(name)
@@ -192,7 +192,7 @@ class MetaInfo:
         field = self.fields_map[field_name]
         source_field = field.source_field or field_name
 
-        if isinstance(field, ManyToManyFieldInstance):
+        if isinstance(field, ManyToManyField):
             if comparision not in RELATED_FILTER_FUNC_MAP:
                 return None
 
@@ -449,11 +449,11 @@ class ModelMeta(type):
                     fields_map[key] = value
                     value.model_field_name = key
 
-                    if isinstance(value, ForeignKeyFieldInstance):
+                    if isinstance(value, ForeignKeyField):
                         fk_fields.add(key)
-                    elif isinstance(value, OneToOneFieldInstance):
+                    elif isinstance(value, OneToOneField):
                         o2o_fields.add(key)
-                    elif isinstance(value, ManyToManyFieldInstance):
+                    elif isinstance(value, ManyToManyField):
                         m2m_fields.add(key)
                     else:
                         fields_db_projection[key] = value.source_field or key
@@ -788,7 +788,7 @@ class Model(metaclass=ModelMeta):
                         f"'{cls.__name__}.{together}' has no '{field_name}' field."
                     )
 
-                if isinstance(field, ManyToManyFieldInstance):
+                if isinstance(field, ManyToManyField):
                     raise ConfigurationError(
                         f"'{cls.__name__}.{together}' '{field_name}' field refers"
                         " to ManyToMany field."
