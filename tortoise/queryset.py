@@ -130,8 +130,13 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
 
     def __init__(self,
         model: Type[MODEL],
-        db=None, q_objects=None, annotations=None,
-        orderings: List[QueryOrdering] = None, distinct: bool = False, limit=None, offset=None):
+        db=None,
+        q_objects=None,
+        annotations=None,
+        orderings: List[QueryOrdering] = None,
+        distinct: bool = False,
+        limit=None,
+        offset=None):
 
         super().__init__(model, db, q_objects, annotations)
 

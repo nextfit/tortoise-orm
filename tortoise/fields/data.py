@@ -386,7 +386,23 @@ class BinaryField(Field, bytes):  # type: ignore
         SQL_TYPE = "LONGBLOB"
 
 
-class IntEnumFieldInstance(SmallIntField):
+class IntEnumField(SmallIntField):
+    """
+    Enum Field
+
+    A field representing an integer enumeration.
+
+    The description of the field is set automatically if not specified to a multiline list of
+    "name: value" pairs.
+
+    ``enum_type``:
+        The enum class
+    ``description``:
+        The description of the field. It is set automatically if not specified to a multiline list
+        of "name: value" pairs.
+
+    """
+
     def __init__(
         self, enum_type: Type[IntEnum], description: Optional[str] = None, **kwargs
     ) -> None:
@@ -416,28 +432,27 @@ class IntEnumFieldInstance(SmallIntField):
 IntEnumType = TypeVar("IntEnumType", bound=IntEnum)
 
 
-def IntEnumField(
-    enum_type: Type[IntEnumType], description: Optional[str] = None, **kwargs,
-) -> IntEnumType:
+class CharEnumField(CharField):
     """
-    Enum Field
+    Char Enum Field
 
-    A field representing an integer enumeration.
+    A field representing a character enumeration.
 
-    The description of the field is set automatically if not specified to a multiline list of
-    "name: value" pairs.
+    **Warning**: If ``max_length`` is not specified or equals to zero, the size of represented
+    char fields is automatically detected. So if later you update the enum, you need to update your
+    table schema as well.
 
     ``enum_type``:
         The enum class
     ``description``:
         The description of the field. It is set automatically if not specified to a multiline list
         of "name: value" pairs.
+    ``max_length``:
+        The length of the created CharField. If it is zero it is automatically detected from
+        enum_type.
 
     """
-    return IntEnumFieldInstance(enum_type, description, **kwargs)  # type: ignore
 
-
-class CharEnumFieldInstance(CharField):
     def __init__(
         self,
         enum_type: Type[Enum],
@@ -467,29 +482,3 @@ class CharEnumFieldInstance(CharField):
 
 
 CharEnumType = TypeVar("CharEnumType", bound=Enum)
-
-
-def CharEnumField(
-    enum_type: Type[CharEnumType], description: Optional[str] = None, max_length: int = 0, **kwargs,
-) -> CharEnumType:
-    """
-    Char Enum Field
-
-    A field representing a character enumeration.
-
-    **Warning**: If ``max_length`` is not specified or equals to zero, the size of represented
-    char fields is automatically detected. So if later you update the enum, you need to update your
-    table schema as well.
-
-    ``enum_type``:
-        The enum class
-    ``description``:
-        The description of the field. It is set automatically if not specified to a multiline list
-        of "name: value" pairs.
-    ``max_length``:
-        The length of the created CharField. If it is zero it is automatically detected from
-        enum_type.
-
-    """
-
-    return CharEnumFieldInstance(enum_type, description, max_length, **kwargs)  # type: ignore
