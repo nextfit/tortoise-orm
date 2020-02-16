@@ -45,7 +45,7 @@ T_co = TypeVar("T_co", covariant=True)
 class QuerySetSingle(Protocol[T_co]):
     # pylint: disable=W0104
     def __await__(self) -> Generator[Any, None, T_co]:
-        ...  # pragma: nocoverage
+        pass  # pragma: nocoverage
 
 
 class AwaitableStatement(Generic[MODEL]):
@@ -593,7 +593,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
 
 class UpdateQuery(AwaitableStatement):
-    __slots__ = ("update_kwargs", )
+    __slots__ = ("update_kwargs",)
 
     def __init__(self, model, update_kwargs, db, q_objects, annotations) -> None:
         super().__init__(model, db, q_objects, annotations)
@@ -768,29 +768,32 @@ class FieldSelectQuery(AwaitableQuery):
 
         raise FieldError(f'Unknown field "{field}" for model "{self.model.__name__}"')
 
-    def resolve_to_python_value(self, model: "Type[Model]", field: str) -> Callable:
-        if field in model._meta.fetch_fields:
+    def resolve_to_python_value(self, model: "Type[Model]", field_name: str) -> Callable:
+        if field_name in model._meta.fetch_fields:
             # return as is to get whole model objects
             return lambda x: x
 
-        if field in [x[1] for x in model._meta.db_native_fields]:
-            return lambda x: x
-
-        if field in self.annotations:
-            field_object = self.annotations[field].field_object
+        if field_name in self.annotations:
+            field_object = self.annotations[field_name].field_object
             if field_object:
                 return field_object.to_python_value
             return lambda x: x
 
-        if field in model._meta.fields_map:
-            return model._meta.fields_map[field].to_python_value
+        if field_name in model._meta.fields_map:
+            field = model._meta.fields_map[field_name]
+            if (field.skip_to_python_if_native and
+                field.field_type in model._meta.db.executor_class.DB_NATIVE
+            ):
+                return lambda x: x
+            else:
+                return model._meta.fields_map[field_name].to_python_value
 
-        field_split = field.split("__")
+        field_split = field_name.split("__")
         if field_split[0] in model._meta.fetch_fields:
             new_model = model._meta.fields_map[field_split[0]].model_class  # type: ignore
             return self.resolve_to_python_value(new_model, "__".join(field_split[1:]))
 
-        raise FieldError(f'Unknown field "{field}" for model "{model}"')
+        raise FieldError(f'Unknown field "{field_name}" for model "{model}"')
 
 
 class ValuesListQuery(FieldSelectQuery):

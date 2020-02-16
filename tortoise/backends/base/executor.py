@@ -6,12 +6,10 @@ import operator
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type
 
-from pypika import Parameter, Table
+from pypika import Parameter
 
-from tortoise.context import QueryContext
 from tortoise.exceptions import OperationalError
 from tortoise.fields.base import Field
-from tortoise.fields.relational import ManyToManyField
 import tortoise.filters as tf
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -225,133 +223,6 @@ class BaseExecutor:
             )
         )[0]
 
-    async def _prefetch_reverse_relation(
-        self, instance_list: list, field: str, related_query
-    ) -> list:
-        instance_id_set: set = {
-            self._field_to_db(instance._meta.pk, instance.pk, instance)
-            for instance in instance_list
-        }
-        relation_field = self.model._meta.fields_map[field].relation_field  # type: ignore
-
-        related_object_list = await related_query.filter(
-            **{f"{relation_field}__in": list(instance_id_set)}
-        )
-
-        related_object_map: Dict[str, list] = {}
-        for entry in related_object_list:
-            object_id = getattr(entry, relation_field)
-            if object_id in related_object_map.keys():
-                related_object_map[object_id].append(entry)
-            else:
-                related_object_map[object_id] = [entry]
-
-        for instance in instance_list:
-            relation_container = getattr(instance, field)
-            relation_container._set_result_for_query(related_object_map.get(instance.pk, []))
-
-        return instance_list
-
-    async def _prefetch_reverse_o2o_relation(
-        self, instance_list: list, field: str, related_query
-    ) -> list:
-        instance_id_set: set = {
-            self._field_to_db(instance._meta.pk, instance.pk, instance)
-            for instance in instance_list
-        }
-        relation_field = self.model._meta.fields_map[field].relation_field  # type: ignore
-
-        related_object_list = await related_query.filter(
-            **{f"{relation_field}__in": list(instance_id_set)}
-        )
-
-        related_object_map = {getattr(entry, relation_field):entry for entry in related_object_list}
-        for instance in instance_list:
-            setattr(instance, f"_{field}", related_object_map.get(instance.pk, None))
-
-        return instance_list
-
-    async def _prefetch_m2m_relation(self, instance_list: list, field: str, related_query) -> list:
-        instance_id_set = [
-            self._field_to_db(instance._meta.pk, instance.pk, instance)
-            for instance in instance_list
-        ]
-
-        field_object: ManyToManyField = self.model._meta.fields_map[field]
-        through_table = Table(field_object.through)
-
-        subquery = (
-            self.db.query_class.from_(through_table)
-            .select(
-                through_table[field_object.backward_key],
-                through_table[field_object.forward_key],
-            )
-            .where(through_table[field_object.backward_key].isin(instance_id_set))
-        )
-
-        related_query_table = related_query.model._meta.basetable
-        related_pk_field = related_query.model._meta.db_pk_field
-        related_query.query = related_query.create_base_query_all_fields(alias=None)
-        related_query.query = (
-            related_query.query.join(subquery)
-            .on(getattr(subquery, field_object.forward_key) == related_query_table[related_pk_field])
-            .select(getattr(subquery, field_object.backward_key))
-        )
-
-        related_query._add_query_details(QueryContext().push(
-            related_query.model,
-            related_query_table,
-            {field_object.through: through_table.as_(subquery.alias)}
-        ))
-
-        _, raw_results = await self.db.execute_query(related_query.query.get_sql())
-        relations = [
-            (
-                self.model._meta.pk.to_python_value(e[field_object.backward_key]),
-                related_query.model._init_from_db(**e),
-            )
-            for e in raw_results
-        ]
-
-        related_executor = self.__class__(
-            model=related_query.model,
-            db=self.db,
-            prefetch_map=related_query._prefetch_map,
-            prefetch_queries=related_query._prefetch_queries,
-        )
-
-        await related_executor._execute_prefetch_queries([item for _, item in relations])
-
-        relation_map = {}
-        for k, item in relations:
-            relation_map.setdefault(k, []).append(item)
-
-        for instance in instance_list:
-            relation_container = getattr(instance, field)
-            relation_container._set_result_for_query(relation_map.get(instance.pk, []))
-
-        return instance_list
-
-    async def _prefetch_direct_relation(
-        self, instance_list: list, field: str, related_query
-    ) -> list:
-        related_objects_for_fetch = set()
-        relation_key_field = f"{field}_id"
-        for instance in instance_list:
-            if getattr(instance, relation_key_field):
-                related_objects_for_fetch.add(getattr(instance, relation_key_field))
-            else:
-                setattr(instance, field, None)
-
-        if related_objects_for_fetch:
-            related_object_list = await related_query.filter(pk__in=list(related_objects_for_fetch))
-            related_object_map = {obj.pk: obj for obj in related_object_list}
-            for instance in instance_list:
-                setattr(
-                    instance, field, related_object_map.get(getattr(instance, relation_key_field))
-                )
-        return instance_list
-
     def _make_prefetch_queries(self) -> None:
         for field, forwarded_prefetches in self.prefetch_map.items():
             if field in self._prefetch_queries:
@@ -366,23 +237,13 @@ class BaseExecutor:
 
             self._prefetch_queries[field] = related_query
 
-    async def _do_prefetch(self, instance_id_list: list, field: str, related_query) -> list:
-        if field in self.model._meta.backward_fk_fields:
-            return await self._prefetch_reverse_relation(instance_id_list, field, related_query)
-
-        if field in self.model._meta.backward_o2o_fields:
-            return await self._prefetch_reverse_o2o_relation(instance_id_list, field, related_query)
-
-        if field in self.model._meta.m2m_fields:
-            return await self._prefetch_m2m_relation(instance_id_list, field, related_query)
-
-        return await self._prefetch_direct_relation(instance_id_list, field, related_query)
-
     async def _execute_prefetch_queries(self, instance_list: list) -> list:
         if instance_list and (self.prefetch_map or self._prefetch_queries):
             self._make_prefetch_queries()
+            fields_map = self.model._meta.fields_map
+
             prefetch_tasks = [
-                self._do_prefetch(instance_list, field, related_query)
+                fields_map[field].prefetch(instance_list, related_query)
                 for field, related_query in self._prefetch_queries.items()
             ]
             await asyncio.gather(*prefetch_tasks)

@@ -53,11 +53,14 @@ class Field(metaclass=_FieldMeta):
         description: Optional[str] = None,
         **kwargs,
     ) -> None:
+
         if not self.indexable and (unique or index):
             raise ConfigurationError(f"{self.__class__.__name__} can't be indexed")
+
         if pk:
             index = True
             unique = True
+
         self.source_field = source_field
         self.generated = generated
         self.pk = pk
@@ -65,7 +68,7 @@ class Field(metaclass=_FieldMeta):
         self.null = null
         self.unique = unique
         self.index = index
-        self.model_field_name = ""
+        self.model_field_name = None
         self.model = model
         self.reference = reference
         self.description = description

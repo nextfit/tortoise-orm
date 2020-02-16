@@ -24,7 +24,7 @@ class QueryOrdering:
                 field_name = ordering
                 order_type = Order.asc
 
-            if not (field_name.split("__")[0] in model._meta.fields or field_name in annotations):
+            if not (field_name.split("__")[0] in model._meta.fields_map or field_name in annotations):
                 raise FieldError(f"Unknown field {field_name} for model {model.__name__}")
 
             output.append(QueryOrdering(field_name, order_type))

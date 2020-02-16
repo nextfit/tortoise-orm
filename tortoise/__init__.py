@@ -4,9 +4,8 @@ import json
 import logging
 import os
 import warnings
-from copy import deepcopy
 from inspect import isclass
-from typing import Any, Coroutine, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import Any, Coroutine, Dict, List, Optional, Type, Union
 
 from pypika import Table
 
@@ -19,7 +18,7 @@ from tortoise.fields.relational import (
     ForeignKeyField,
     ManyToManyField,
     OneToOneField,
-)
+    RelationField)
 
 from tortoise.models import Model
 from tortoise.queryset import QuerySet
@@ -78,11 +77,6 @@ class Tortoise:
                                                     #  are unique together
                     "pk_field":             {...}   # Primary key field
                     "data_fields":          [...]   # Data fields
-                    "fk_fields":            [...]   # Foreign Key fields FROM this model
-                    "backward_fk_fields":   [...]   # Foreign Key fields TO this model
-                    "o2o_fields":           [...]  # OneToOne fields FROM this model
-                    "backward_o2o_fields":  [...]  # OneToOne fields TO this model
-                    "m2m_fields":           [...]   # Many-to-Many fields
                 }
 
             Each field is specified as follows
@@ -196,37 +190,11 @@ class Tortoise:
             "description": model._meta.table_description or None,
             "unique_together": model._meta.unique_together or [],
             "pk_field": describe_field(model._meta.pk_attr),
-            "data_fields": [
+            "fields": [
                 describe_field(name)
                 for name in model._meta.fields_map.keys()
                 if name != model._meta.pk_attr
-                and name in (model._meta.fields - model._meta.fetch_fields)
-            ],
-            "fk_fields": [
-                describe_field(name)
-                for name in model._meta.fields_map.keys()
-                if name in model._meta.fk_fields
-            ],
-            "backward_fk_fields": [
-                describe_field(name)
-                for name in model._meta.fields_map.keys()
-                if name in model._meta.backward_fk_fields
-            ],
-            "o2o_fields": [
-                describe_field(name)
-                for name in model._meta.fields_map.keys()
-                if name in model._meta.o2o_fields
-            ],
-            "backward_o2o_fields": [
-                describe_field(name)
-                for name in model._meta.fields_map.keys()
-                if name in model._meta.backward_o2o_fields
-            ],
-            "m2m_fields": [
-                describe_field(name)
-                for name in model._meta.fields_map.keys()
-                if name in model._meta.m2m_fields
-            ],
+            ]
         }
 
     @classmethod
@@ -268,181 +236,21 @@ class Tortoise:
 
     @classmethod
     def _init_relations(cls) -> None:
-        def get_related_model(related_app_name: str, related_model_name: str):
-            """
-            Test, if app and model really exist. Throws a ConfigurationError with a hopefully
-            helpful message. If successfull, returns the requested model.
-            """
-            try:
-                return cls.apps[related_app_name][related_model_name]
-            except KeyError:
-                if related_app_name not in cls.apps:
-                    raise ConfigurationError(f"No app with name '{related_app_name}' registered.")
-                raise ConfigurationError(
-                    f"No model with name '{related_model_name}' registered in"
-                    f" app '{related_app_name}'."
-                )
-
-        def split_reference(reference: str) -> Tuple[str, str]:
-            """
-            Test, if reference follow the official naming conventions. Throws a
-            ConfigurationError with a hopefully helpful message. If successfull,
-            returns the app and the model name.
-            """
-            items = reference.split(".")
-            if len(items) != 2:  # pragma: nocoverage
-                raise ConfigurationError(
-                    (
-                        "'%s' is not a valid model reference Bad Reference."
-                        " Should be something like <appname>.<modelname>."
-                    )
-                    % reference
-                )
-
-            return (items[0], items[1])
-
         for app_name, app in cls.apps.items():
             for model_name, model in app.items():
                 if model._meta._inited:
                     continue
+
                 model._meta._inited = True
                 if not model._meta.table:
                     model._meta.table = model.__name__.lower()
 
-                pk_attr_changed = False
+                field_objects = list(model._meta.fields_map.values())
+                for field in field_objects:
+                    if isinstance(field, RelationField) and not field.generated:
+                        field.create_relation()
 
-                for field in model._meta.fk_fields:
-                    fk_object = cast(ForeignKeyField, model._meta.fields_map[field])
-                    reference = fk_object.model_name
-                    related_app_name, related_model_name = split_reference(reference)
-                    related_model = get_related_model(related_app_name, related_model_name)
-
-                    key_field = f"{field}_id"
-                    key_fk_object = deepcopy(related_model._meta.pk)
-                    key_fk_object.pk = False
-                    key_fk_object.unique = False
-                    key_fk_object.index = fk_object.index
-                    key_fk_object.default = fk_object.default
-                    key_fk_object.null = fk_object.null
-                    key_fk_object.generated = fk_object.generated
-                    key_fk_object.reference = fk_object
-                    key_fk_object.description = fk_object.description
-                    if fk_object.source_field:
-                        key_fk_object.source_field = fk_object.source_field
-                        fk_object.source_field = key_field
-                    else:
-                        fk_object.source_field = key_field
-                        key_fk_object.source_field = key_field
-                    model._meta.add_field(key_field, key_fk_object)
-
-                    fk_object.model_class = related_model
-                    backward_relation_name = fk_object.related_name
-                    if backward_relation_name is not False:
-                        if not backward_relation_name:
-                            backward_relation_name = f"{model._meta.table}s"
-                        if backward_relation_name in related_model._meta.fields:
-                            raise ConfigurationError(
-                                f'backward relation "{backward_relation_name}" duplicates in'
-                                f" model {related_model_name}"
-                            )
-                        fk_relation = BackwardFKRelation(
-                            model, f"{field}_id", fk_object.null, fk_object.description
-                        )
-                        related_model._meta.add_field(backward_relation_name, fk_relation)
-
-                for field in model._meta.o2o_fields:
-                    o2o_object = cast(OneToOneField, model._meta.fields_map[field])
-                    reference = o2o_object.model_name
-                    related_app_name, related_model_name = split_reference(reference)
-                    related_model = get_related_model(related_app_name, related_model_name)
-
-                    key_field = f"{field}_id"
-                    key_o2o_object = deepcopy(related_model._meta.pk)
-                    key_o2o_object.pk = o2o_object.pk
-                    key_o2o_object.index = o2o_object.index
-                    key_o2o_object.default = o2o_object.default
-                    key_o2o_object.null = o2o_object.null
-                    key_o2o_object.unique = o2o_object.unique
-                    key_o2o_object.generated = o2o_object.generated
-                    key_o2o_object.reference = o2o_object
-                    key_o2o_object.description = o2o_object.description
-                    if o2o_object.source_field:
-                        key_o2o_object.source_field = o2o_object.source_field
-                        o2o_object.source_field = key_field
-                    else:
-                        o2o_object.source_field = key_field
-                        key_o2o_object.source_field = key_field
-                    model._meta.add_field(key_field, key_o2o_object)
-
-                    o2o_object.model_class = related_model
-                    backward_relation_name = o2o_object.related_name
-                    if backward_relation_name is not False:
-                        if not backward_relation_name:
-                            backward_relation_name = f"{model._meta.table}"
-                        if backward_relation_name in related_model._meta.fields:
-                            raise ConfigurationError(
-                                f'backward relation "{backward_relation_name}" duplicates in'
-                                f" model {related_model_name}"
-                            )
-                        o2o_relation = BackwardOneToOneRelation(
-                            model, f"{field}_id", null=True, description=o2o_object.description
-                        )
-                        related_model._meta.add_field(backward_relation_name, o2o_relation)
-
-                    if o2o_object.pk:
-                        pk_attr_changed = True
-                        model._meta.pk_attr = key_field
-
-                for field in list(model._meta.m2m_fields):
-                    m2m_object = cast(ManyToManyField, model._meta.fields_map[field])
-                    if m2m_object._generated:
-                        continue
-
-                    backward_key = m2m_object.backward_key
-                    if not backward_key:
-                        backward_key = f"{model._meta.table}_id"
-                        if backward_key == m2m_object.forward_key:
-                            backward_key = f"{model._meta.table}_rel_id"
-                        m2m_object.backward_key = backward_key
-
-                    reference = m2m_object.model_name
-                    related_app_name, related_model_name = split_reference(reference)
-                    related_model = get_related_model(related_app_name, related_model_name)
-
-                    m2m_object.model_class = related_model
-
-                    backward_relation_name = m2m_object.related_name
-                    if not backward_relation_name:
-                        backward_relation_name = m2m_object.related_name = f"{model._meta.table}s"
-                    if backward_relation_name in related_model._meta.fields:
-                        raise ConfigurationError(
-                            f'backward relation "{backward_relation_name}" duplicates in'
-                            f" model {related_model_name}"
-                        )
-
-                    if not m2m_object.through:
-                        related_model_table_name = (
-                            related_model._meta.table
-                            if related_model._meta.table
-                            else related_model.__name__.lower()
-                        )
-
-                        m2m_object.through = f"{model._meta.table}_{related_model_table_name}"
-
-                    m2m_relation = ManyToManyField(
-                        f"{app_name}.{model_name}",
-                        m2m_object.through,
-                        forward_key=m2m_object.backward_key,
-                        backward_key=m2m_object.forward_key,
-                        related_name=field,
-                        field_type=model,
-                        description=m2m_object.description,
-                    )
-                    m2m_relation._generated = True
-                    related_model._meta.add_field(backward_relation_name, m2m_relation)
-
-                if pk_attr_changed:
-                    model._meta.finalise_pk()
+                model._meta.finalise_pk()
 
     @classmethod
     def _discover_client_class(cls, engine: str) -> BaseDBAsyncClient:
@@ -518,7 +326,6 @@ class Tortoise:
             cls.apps[name] = models_map
 
         cls._init_relations()
-
         cls._build_initial_querysets()
 
     @classmethod

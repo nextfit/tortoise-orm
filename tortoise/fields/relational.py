@@ -1,15 +1,15 @@
-from typing import TYPE_CHECKING, Awaitable, Generic, Optional, TypeVar, Union
+from copy import deepcopy
+from functools import partial
+from typing import Awaitable, Generic, Optional, TypeVar, Union, Dict
 
 from pypika import Table
 from typing_extensions import Literal
 
+from tortoise.context import QueryContext
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
 from tortoise.fields.base import CASCADE, RESTRICT, SET_NULL, Field
 
-if TYPE_CHECKING:  # pragma: nocoverage
-    from typing import Type
-    from tortoise.models import Model
-    from tortoise.queryset import QuerySet
+from typing import Type
 
 MODEL = TypeVar("MODEL", bound="Model")
 
@@ -34,6 +34,59 @@ ForeignKeyRelation = Union[Awaitable[MODEL], MODEL]
 """
 Type hint for the result of accessing the :func:`.ForeignKeyField` field in the model.
 """
+
+
+class _NoneAwaitable:
+    __slots__ = ()
+
+    def __await__(self):
+        yield None
+
+    def __bool__(self):
+        return False
+
+
+NoneAwaitable = _NoneAwaitable()
+
+
+def _fk_setter(self, value, _key, relation_field):
+    setattr(self, relation_field, value.pk if value else None)
+    setattr(self, _key, value)
+
+
+def _fk_getter(self, _key, ftype, relation_field):
+    try:
+        return getattr(self, _key)
+    except AttributeError:
+        _pk = getattr(self, relation_field)
+        if _pk:
+            return ftype.filter(pk=_pk).first()
+        return NoneAwaitable
+
+
+def _rfk_getter(self, _key, ftype, frelfield):
+    val = getattr(self, _key, None)
+    if val is None:
+        val = ReverseRelation(ftype, frelfield, self)
+        setattr(self, _key, val)
+    return val
+
+
+def _ro2o_getter(self, _key, ftype, frelfield):
+    if hasattr(self, _key):
+        return getattr(self, _key)
+
+    val = ftype.filter(**{frelfield: self.pk}).first()
+    setattr(self, _key, val)
+    return val
+
+
+def _m2m_getter(self, _key, field_object):
+    val = getattr(self, _key, None)
+    if val is None:
+        val = ManyToManyRelation(field_object.model_class, self, field_object)
+        setattr(self, _key, val)
+    return val
 
 
 class ReverseRelation(Generic[MODEL]):
@@ -260,7 +313,53 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         await db.execute_query(str(query))
 
 
-class ForeignKeyField(Field):
+class RelationField(Field):
+    has_db_field = False
+
+    def attribute_property(self):
+        raise NotImplementedError()
+
+    def create_relation(self):
+        raise NotImplementedError()
+
+    async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
+        related_objects_for_fetch = set()
+        relation_key_field = f"{self.model_field_name}_id"
+        for instance in instance_list:
+            if getattr(instance, relation_key_field):
+                related_objects_for_fetch.add(getattr(instance, relation_key_field))
+            else:
+                setattr(instance, self.model_field_name, None)
+
+        if related_objects_for_fetch:
+            related_object_list = await related_query.filter(pk__in=list(related_objects_for_fetch))
+            related_object_map = {obj.pk: obj for obj in related_object_list}
+            for instance in instance_list:
+                setattr(instance, self.model_field_name,
+                    related_object_map.get(getattr(instance, relation_key_field)))
+
+        return instance_list
+
+    @staticmethod
+    def get_related_model(related_app_name: str, related_model_name: str):
+        """
+        Test, if app and model really exist. Throws a ConfigurationError with a hopefully
+        helpful message. If successful, returns the requested model.
+        """
+        from tortoise import Tortoise
+        if related_app_name not in Tortoise.apps:
+            raise ConfigurationError(f"No app with name '{related_app_name}' registered.")
+
+        related_app = Tortoise.apps[related_app_name]
+        if related_model_name not in related_app:
+            raise ConfigurationError(
+                f"No model with name '{related_model_name}' registered in app '{related_app_name}'."
+            )
+
+        return related_app[related_model_name]
+
+
+class ForeignKeyField(RelationField):
     """
     ForeignKey relation field.
 
@@ -292,8 +391,6 @@ class ForeignKeyField(Field):
                 Can only be set is field has a ``default`` set.
     """
 
-    has_db_field = False
-
     def __init__(
         self,
         model_name: str,
@@ -304,29 +401,132 @@ class ForeignKeyField(Field):
         super().__init__(**kwargs)
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
+
         self.model_class: "Type[Model]" = None  # type: ignore
         self.model_name = model_name
         self.related_name = related_name
+
         if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
             raise ConfigurationError("on_delete can only be CASCADE, RESTRICT or SET_NULL")
+
         if on_delete == SET_NULL and not bool(kwargs.get("null")):
             raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
+
         self.on_delete = on_delete
 
+    def attribute_property(self):
+        _key = f"_{self.model_field_name}"
+        relation_field = self.source_field
+        return property(
+            partial(
+                _fk_getter,
+                _key=_key,
+                ftype=self.model_class,  # type: ignore
+                relation_field=relation_field,
+            ),
+            partial(_fk_setter, _key=_key, relation_field=relation_field),
+            partial(_fk_setter, value=None, _key=_key, relation_field=relation_field),
+        )
 
-class BackwardFKRelation(Field):
-    has_db_field = False
+    def create_relation(self):
+        related_app_name, related_model_name = self.model_name.split(".")
+        related_model = RelationField.get_related_model(related_app_name, related_model_name)
 
+        key_field = f"{self.model_field_name}_id"
+        key_fk_object = deepcopy(related_model._meta.pk)
+        key_fk_object.pk = False
+        key_fk_object.unique = False
+        key_fk_object.index = self.index
+        key_fk_object.default = self.default
+        key_fk_object.null = self.null
+        key_fk_object.generated = self.generated
+        key_fk_object.reference = self
+        key_fk_object.description = self.description
+
+        if self.source_field:
+            key_fk_object.source_field = self.source_field
+            self.source_field = key_field
+
+        else:
+            self.source_field = key_field
+            key_fk_object.source_field = key_field
+
+        self.model._meta.add_field(key_field, key_fk_object)
+        self.model_class = related_model
+        backward_relation_name = self.related_name
+
+        if backward_relation_name is not False:
+            if not backward_relation_name:
+                backward_relation_name = f"{self.model._meta.table}s"
+
+            if backward_relation_name in related_model._meta.fields_map:
+                raise ConfigurationError(
+                    f'backward relation "{backward_relation_name}" duplicates in'
+                    f" model {related_model_name}"
+                )
+
+            fk_relation = BackwardFKRelation(
+                self.model, key_field, self.null, self.description
+            )
+            fk_relation.model_field_name = backward_relation_name
+            related_model._meta.add_field(backward_relation_name, fk_relation)
+
+
+class BackwardFKRelation(RelationField):
     def __init__(
-        self, field_type: "Type[Model]", relation_field: str, null: bool, description: Optional[str]
+        self,
+        field_type: "Type[Model]",
+        relation_field: str,
+        null: bool,
+        description: Optional[str]
     ) -> None:
         super().__init__(null=null)
         self.model_class: "Type[Model]" = field_type
         self.relation_field: str = relation_field
         self.description: Optional[str] = description
+        self.generated = True
+
+    def attribute_property(self):
+        _key = f"_{self.model_field_name}"
+        return property(
+            partial(
+                _rfk_getter,
+                _key=_key,
+                ftype=self.model_class,
+                frelfield=self.relation_field,
+            )
+        )
+
+    def create_relation(self):
+        raise RuntimeError("This method on should not have been called on a generated relation.")
+
+    async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
+        instance_id_set: set = {
+            self.model._meta.db.executor_class._field_to_db(instance._meta.pk, instance.pk, instance)
+            for instance in instance_list
+        }
+        relation_field = self.model._meta.fields_map[self.model_field_name].relation_field  # type: ignore
+
+        related_object_list = await related_query.filter(
+            **{f"{relation_field}__in": list(instance_id_set)}
+        )
+
+        related_object_map: Dict[str, list] = {}
+        for entry in related_object_list:
+            object_id = getattr(entry, relation_field)
+            if object_id in related_object_map.keys():
+                related_object_map[object_id].append(entry)
+            else:
+                related_object_map[object_id] = [entry]
+
+        for instance in instance_list:
+            relation_container = getattr(instance, self.model_field_name)
+            relation_container._set_result_for_query(related_object_map.get(instance.pk, []))
+
+        return instance_list
 
 
-class OneToOneField(Field):
+class OneToOneField(RelationField):
     """
     OneToOne relation field.
 
@@ -358,8 +558,6 @@ class OneToOneField(Field):
                 Can only be set is field has a ``default`` set.
     """
 
-    has_db_field = False
-
     def __init__(
         self,
         model_name: str,
@@ -380,12 +578,96 @@ class OneToOneField(Field):
             raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
         self.on_delete = on_delete
 
+    def attribute_property(self):
+        _key = f"_{self.model_field_name}"
+        relation_field = self.source_field
+        return property(
+            partial(
+                _fk_getter,
+                _key=_key,
+                ftype=self.model_class,  # type: ignore
+                relation_field=relation_field,
+            ),
+            partial(_fk_setter, _key=_key, relation_field=relation_field),
+            partial(_fk_setter, value=None, _key=_key, relation_field=relation_field),
+        )
+
+    def create_relation(self):
+        related_app_name, related_model_name = self.model_name.split(".")
+        related_model = RelationField.get_related_model(related_app_name, related_model_name)
+
+        key_field = f"{self.model_field_name}_id"
+        key_o2o_object = deepcopy(related_model._meta.pk)
+        key_o2o_object.pk = self.pk
+        key_o2o_object.index = self.index
+        key_o2o_object.default = self.default
+        key_o2o_object.null = self.null
+        key_o2o_object.unique = self.unique
+        key_o2o_object.generated = self.generated
+        key_o2o_object.reference = self
+        key_o2o_object.description = self.description
+        if self.source_field:
+            key_o2o_object.source_field = self.source_field
+            self.source_field = key_field
+        else:
+            self.source_field = key_field
+            key_o2o_object.source_field = key_field
+
+        self.model._meta.add_field(key_field, key_o2o_object)
+
+        self.model_class = related_model
+        backward_relation_name = self.related_name
+        if backward_relation_name is not False:
+            if not backward_relation_name:
+                backward_relation_name = f"{self.model._meta.table}"
+
+            if backward_relation_name in related_model._meta.fields_map:
+                raise ConfigurationError(
+                    f'backward relation "{backward_relation_name}" duplicates in'
+                    f" model {related_model_name}"
+                )
+
+            o2o_relation = BackwardOneToOneRelation(
+                self.model, key_field, null=True, description=self.description
+            )
+            o2o_relation.model_field_name = backward_relation_name
+            related_model._meta.add_field(backward_relation_name, o2o_relation)
+
+        if self.pk:
+            self.model._meta.pk_attr = key_field
+
 
 class BackwardOneToOneRelation(BackwardFKRelation):
-    pass
+    def attribute_property(self):
+        _key = f"_{self.model_field_name}"
+        return property(
+            partial(
+                _ro2o_getter,
+                _key=_key,
+                ftype=self.model_class,
+                frelfield=self.relation_field,
+            ),
+        )
+
+    async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
+        instance_id_set: set = {
+            self.model._meta.db.executor_class._field_to_db(instance._meta.pk, instance.pk, instance)
+            for instance in instance_list
+        }
+        relation_field = self.model._meta.fields_map[self.model_field_name].relation_field  # type: ignore
+
+        related_object_list = await related_query.filter(
+            **{f"{relation_field}__in": list(instance_id_set)}
+        )
+
+        related_object_map = {getattr(entry, relation_field): entry for entry in related_object_list}
+        for instance in instance_list:
+            setattr(instance, f"_{self.model_field_name}", related_object_map.get(instance.pk, None))
+
+        return instance_list
 
 
-class ManyToManyField(Field):
+class ManyToManyField(RelationField):
     """
     ManyToMany relation field.
 
@@ -413,7 +695,6 @@ class ManyToManyField(Field):
         The attribute name on the related model to reverse resolve the many to many.
     """
 
-    has_db_field = False
     field_type = ManyToManyRelation
 
     def __init__(
@@ -435,4 +716,115 @@ class ManyToManyField(Field):
         self.forward_key: str = forward_key or f"{model_name.split('.')[1].lower()}_id"
         self.backward_key: str = backward_key
         self.through: Optional[str] = through
-        self._generated: bool = False
+
+    def attribute_property(self):
+        _key = f"_{self.model_field_name}"
+        return property(partial(_m2m_getter, _key=_key, field_object=self))
+
+    def create_relation(self):
+        backward_key = self.backward_key
+        if not backward_key:
+            backward_key = f"{self.model._meta.table}_id"
+
+            if backward_key == self.forward_key:
+                backward_key = f"{self.model._meta.table}_rel_id"
+
+            self.backward_key = backward_key
+
+        related_app_name, related_model_name = self.model_name.split(".")
+        related_model = RelationField.get_related_model(related_app_name, related_model_name)
+
+        self.model_class = related_model
+
+        backward_relation_name = self.related_name
+        if not backward_relation_name:
+            backward_relation_name = self.related_name = f"{self.model._meta.table}s"
+
+        if backward_relation_name in related_model._meta.fields_map:
+            raise ConfigurationError(
+                f'backward relation "{backward_relation_name}" duplicates in'
+                f" model {related_model_name}"
+            )
+
+        if not self.through:
+            related_model_table_name = (
+                related_model._meta.table
+                if related_model._meta.table
+                else related_model.__name__.lower()
+            )
+
+            self.through = f"{self.model._meta.table}_{related_model_table_name}"
+
+        m2m_relation = ManyToManyField(
+            f"{self.model._meta.app}.{self.model.__name__}",
+            self.through,
+            forward_key=self.backward_key,
+            backward_key=self.forward_key,
+            related_name=self.model_field_name,
+            field_type=self.model,
+            description=self.description,
+        )
+        m2m_relation.generated = True
+        m2m_relation.model_field_name = backward_relation_name
+        related_model._meta.add_field(backward_relation_name, m2m_relation)
+
+    async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
+        instance_id_set = [
+            self.model._meta.db.executor_class._field_to_db(instance._meta.pk, instance.pk, instance)
+            for instance in instance_list
+        ]
+
+        field_object: ManyToManyField = self.model._meta.fields_map[self.model_field_name]
+        through_table = Table(field_object.through)
+
+        subquery = (
+            self.model._meta.db.query_class.from_(through_table)
+            .select(
+                through_table[field_object.backward_key],
+                through_table[field_object.forward_key],
+            )
+            .where(through_table[field_object.backward_key].isin(instance_id_set))
+        )
+
+        related_query_table = related_query.model._meta.basetable
+        related_pk_field = related_query.model._meta.db_pk_field
+        related_query.query = related_query.create_base_query_all_fields(alias=None)
+        related_query.query = (
+            related_query.query.join(subquery)
+            .on(getattr(subquery, field_object.forward_key) == related_query_table[related_pk_field])
+            .select(getattr(subquery, field_object.backward_key))
+        )
+
+        related_query._add_query_details(QueryContext().push(
+            related_query.model,
+            related_query_table,
+            {field_object.through: through_table.as_(subquery.alias)}
+        ))
+
+        _, raw_results = await self.model._meta.db.execute_query(related_query.query.get_sql())
+        relations = [
+            (
+                self.model._meta.pk.to_python_value(e[field_object.backward_key]),
+                related_query.model._init_from_db(**e),
+            )
+            for e in raw_results
+        ]
+
+        related_executor = self.model._meta.db.executor_class(
+            model=related_query.model,
+            db=self.model._meta.db,
+            prefetch_map=related_query._prefetch_map,
+            prefetch_queries=related_query._prefetch_queries,
+        )
+
+        await related_executor._execute_prefetch_queries([item for _, item in relations])
+
+        relation_map = {}
+        for k, item in relations:
+            relation_map.setdefault(k, []).append(item)
+
+        for instance in instance_list:
+            relation_container = getattr(instance, self.model_field_name)
+            relation_container._set_result_for_query(relation_map.get(instance.pk, []))
+
+        return instance_list

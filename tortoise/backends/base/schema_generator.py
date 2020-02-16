@@ -258,32 +258,27 @@ class BaseSchemaGenerator:
 
         table_create_string += self._post_table_hook()
 
-        for m2m_field in model._meta.m2m_fields:
-            field_object = model._meta.fields_map[m2m_field]
-            if field_object._generated:
-                continue
-            m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
-                exists="IF NOT EXISTS " if safe else "",
-                table_name=field_object.through,
-                backward_table=model._meta.table,
-                forward_table=field_object.model_class._meta.table,
-                backward_field=model._meta.db_pk_field,
-                forward_field=field_object.model_class._meta.db_pk_field,
-                backward_key=field_object.backward_key,
-                backward_type=model._meta.pk.get_for_dialect(self.DIALECT, "SQL_TYPE"),
-                forward_key=field_object.forward_key,
-                forward_type=field_object.model_class._meta.pk.get_for_dialect(
-                    self.DIALECT, "SQL_TYPE"
-                ),
-                extra=self._table_generate_extra(table=field_object.through),
-                comment=self._table_comment_generator(
-                    table=field_object.through, comment=field_object.description
+        from tortoise import ManyToManyField
+        for field in model._meta.fields_map.values():
+            if isinstance(field, ManyToManyField) and not field.generated:
+                m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
+                    exists="IF NOT EXISTS " if safe else "",
+                    table_name=field.through,
+                    backward_table=model._meta.table,
+                    forward_table=field.model_class._meta.table,
+                    backward_field=model._meta.db_pk_field,
+                    forward_field=field.model_class._meta.db_pk_field,
+                    backward_key=field.backward_key,
+                    backward_type=model._meta.pk.get_for_dialect(self.DIALECT, "SQL_TYPE"),
+                    forward_key=field.forward_key,
+                    forward_type=field.model_class._meta.pk.get_for_dialect(self.DIALECT, "SQL_TYPE"),
+                    extra=self._table_generate_extra(table=field.through),
+                    comment=
+                        self._table_comment_generator(table=field.through, comment=field.description)
+                        if field.description else "",
                 )
-                if field_object.description
-                else "",
-            )
-            m2m_create_string += self._post_table_hook()
-            m2m_tables_for_create.append(m2m_create_string)
+                m2m_create_string += self._post_table_hook()
+                m2m_tables_for_create.append(m2m_create_string)
 
         return {
             "table": model._meta.table,

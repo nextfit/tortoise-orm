@@ -6,7 +6,7 @@ from pypika.terms import Criterion
 
 from tortoise.context import QueryContext
 from tortoise.exceptions import FieldError, OperationalError
-from tortoise.fields.relational import BackwardFKRelation, ManyToManyField
+from tortoise.fields.relational import BackwardFKRelation, ManyToManyField, ForeignKeyField, OneToOneField
 from tortoise.filters import FieldFilter, QueryModifier
 from tortoise.functions import OuterRef
 
@@ -151,20 +151,24 @@ class Q:
                 return key_filter(context, value)
 
     def _get_actual_key(self, model: "Model", key: str) -> str:
-        if key in model._meta.fk_fields or key in model._meta.o2o_fields:
-            return model._meta.fields_map[key].source_field
-
-        if key in model._meta.m2m_fields:
-            return key
-
         (field_name, sep, comparision) = key.partition('__')
         if field_name == "pk":
             return f"{model._meta.pk_attr}{sep}{comparision}"
 
-        if field_name in model._meta.fields or field_name in self._annotations:
+        if field_name in self._annotations:
             return key
 
-        allowed = sorted(list(model._meta.fields | self._annotations.keys()))
+        if field_name in model._meta.fields_map:
+            field = model._meta.fields_map[field_name]
+            if isinstance(field, (ForeignKeyField, OneToOneField)):
+                return field.source_field
+
+            # if isinstance(field, ManyToManyField):
+            #     return key
+
+            return key
+
+        allowed = sorted(list(model._meta.fields_map.keys() | self._annotations.keys()))
         raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
 
     def _get_actual_value(self, context: QueryContext, value):
@@ -231,7 +235,7 @@ class Prefetch:
         relation_split = self.relation.split("__")
         first_level_field = relation_split[0]
         if first_level_field not in queryset.model._meta.fetch_fields:
-            if first_level_field in queryset.model._meta.fields:
+            if first_level_field in queryset.model._meta.fields_map:
                 msg = f"Field {first_level_field} on {queryset.model._meta.table} is not a relation"
             else:
                 msg = f"Relation {first_level_field} for {queryset.model._meta.table} not found"

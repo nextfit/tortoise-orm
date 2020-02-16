@@ -1,10 +1,9 @@
-from copy import copy, deepcopy
-from functools import partial
+
+from copy import deepcopy
 from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar
 
 from pypika import Query, Table, Order
 
-from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import ConfigurationError, OperationalError
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntField
@@ -13,10 +12,9 @@ from tortoise.fields.relational import (
     BackwardOneToOneRelation,
     ForeignKeyField,
     ManyToManyField,
-    ManyToManyRelation,
     OneToOneField,
-    ReverseRelation,
-)
+    RelationField)
+
 from tortoise.filters import FieldFilter, BaseFieldFilter, ManyToManyRelationFilter, RELATED_FILTER_FUNC_MAP, \
     BackwardFKFilter
 from tortoise.queryset import QuerySet, QuerySetSingle
@@ -24,19 +22,6 @@ from tortoise.transactions import current_transaction_map
 
 MODEL = TypeVar("MODEL", bound="Model")
 # TODO: Define Filter type object. Possibly tuple?
-
-
-class _NoneAwaitable:
-    __slots__ = ()
-
-    def __await__(self):
-        yield None
-
-    def __bool__(self):
-        return False
-
-
-NoneAwaitable = _NoneAwaitable()
 
 
 def get_together(meta, together: str) -> Tuple[Tuple[str, ...], ...]:
@@ -50,59 +35,13 @@ def get_together(meta, together: str) -> Tuple[Tuple[str, ...], ...]:
     return _together
 
 
-def _fk_setter(self, value, _key, relation_field):
-    setattr(self, relation_field, value.pk if value else None)
-    setattr(self, _key, value)
-
-
-def _fk_getter(self, _key, ftype, relation_field):
-    try:
-        return getattr(self, _key)
-    except AttributeError:
-        _pk = getattr(self, relation_field)
-        if _pk:
-            return ftype.filter(pk=_pk).first()
-        return NoneAwaitable
-
-
-def _rfk_getter(self, _key, ftype, frelfield):
-    val = getattr(self, _key, None)
-    if val is None:
-        val = ReverseRelation(ftype, frelfield, self)
-        setattr(self, _key, val)
-    return val
-
-
-def _ro2o_getter(self, _key, ftype, frelfield):
-    if hasattr(self, _key):
-        return getattr(self, _key)
-
-    val = ftype.filter(**{frelfield: self.pk}).first()
-    setattr(self, _key, val)
-    return val
-
-
-def _m2m_getter(self, _key, field_object):
-    val = getattr(self, _key, None)
-    if val is None:
-        val = ManyToManyRelation(field_object.model_class, self, field_object)
-        setattr(self, _key, val)
-    return val
-
-
 class MetaInfo:
     __slots__ = (
         "abstract",
         "table",
         "ordering",
         "app",
-        "fields",
         "db_fields",
-        "m2m_fields",
-        "o2o_fields",
-        "backward_o2o_fields",
-        "fk_fields",
-        "backward_fk_fields",
         "fetch_fields",
         "fields_db_projection",
         "_inited",
@@ -119,9 +58,6 @@ class MetaInfo:
         "table_description",
         "pk",
         "db_pk_field",
-        "db_native_fields",
-        "db_default_fields",
-        "db_complex_fields",
         "_filter_cache",
     )
 
@@ -132,13 +68,7 @@ class MetaInfo:
         self.app: Optional[str] = getattr(meta, "app", None)
         self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
         self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")
-        self.fields: Set[str] = set()
         self.db_fields: Set[str] = set()
-        self.m2m_fields: Set[str] = set()
-        self.fk_fields: Set[str] = set()
-        self.o2o_fields: Set[str] = set()
-        self.backward_fk_fields: Set[str] = set()
-        self.backward_o2o_fields: Set[str] = set()
         self.fetch_fields: Set[str] = set()
         self.fields_db_projection: Dict[str, str] = {}
         self.fields_db_projection_reverse: Dict[str, str] = {}
@@ -153,9 +83,6 @@ class MetaInfo:
         self.table_description: str = getattr(meta, "table_description", "")
         self.pk: Field = None  # type: ignore
         self.db_pk_field: str = ""
-        self.db_native_fields: List[Tuple[str, str, Field]] = []
-        self.db_default_fields: List[Tuple[str, str, Field]] = []
-        self.db_complex_fields: List[Tuple[str, str, Field]] = []
 
         self._filter_cache: Dict[str, Optional[FieldFilter]] = {}
 
@@ -168,17 +95,10 @@ class MetaInfo:
         if value.has_db_field:
             self.fields_db_projection[name] = value.source_field or name
 
-        if isinstance(value, ManyToManyField):
-            self.m2m_fields.add(name)
-        elif isinstance(value, BackwardOneToOneRelation):
-            self.backward_o2o_fields.add(name)
-        elif isinstance(value, BackwardFKRelation):
-            self.backward_fk_fields.add(name)
-
         self.finalise_fields()
 
     @property
-    def db(self) -> BaseDBAsyncClient:
+    def db(self) -> "BaseDBAsyncClient":
         try:
             return current_transaction_map[self.default_connection].get()
         except KeyError:
@@ -233,133 +153,22 @@ class MetaInfo:
         Finalise the model after it had been fully loaded.
         """
         self.finalise_fields()
-        self._generate_lazy_fk_m2m_fields()
-        self._generate_db_fields()
+        self._generate_relation_properties()
 
     def finalise_fields(self) -> None:
         self.db_fields = set(self.fields_db_projection.values())
-        self.fields = set(self.fields_map.keys())
         self.fields_db_projection_reverse = {
             value: key for key, value in self.fields_db_projection.items()
         }
-        self.fetch_fields = (
-            self.m2m_fields
-            | self.backward_fk_fields
-            | self.fk_fields
-            | self.backward_o2o_fields
-            | self.o2o_fields
-        )
 
-        generated_fields = []
-        for field in self.fields_map.values():
-            if not field.generated:
-                continue
-            generated_fields.append(field.source_field or field.model_field_name)
-        self.generated_db_fields = tuple(generated_fields)  # type: ignore
+        self.fetch_fields = {key for key, field in self.fields_map.items() if not field.has_db_field}
+        self.generated_db_fields = [field.source_field or field.model_field_name
+            for field in self.fields_map.values() if field.generated]
 
-    def _generate_lazy_fk_m2m_fields(self) -> None:
-        # Create lazy FK fields on model.
-        for key in self.fk_fields:
-            _key = f"_{key}"
-            relation_field = self.fields_map[key].source_field
-            setattr(
-                self._model,
-                key,
-                property(
-                    partial(
-                        _fk_getter,
-                        _key=_key,
-                        ftype=self.fields_map[key].model_class,  # type: ignore
-                        relation_field=relation_field,
-                    ),
-                    partial(_fk_setter, _key=_key, relation_field=relation_field),
-                    partial(_fk_setter, value=None, _key=_key, relation_field=relation_field),
-                ),
-            )
-
-        # Create lazy reverse FK fields on model.
-        for key in self.backward_fk_fields:
-            _key = f"_{key}"
-            field_object: BackwardFKRelation = self.fields_map[key]  # type: ignore
-            setattr(
-                self._model,
-                key,
-                property(
-                    partial(
-                        _rfk_getter,
-                        _key=_key,
-                        ftype=field_object.model_class,
-                        frelfield=field_object.relation_field,
-                    )
-                ),
-            )
-
-        # Create lazy one to one fields on model.
-        for key in self.o2o_fields:
-            _key = f"_{key}"
-            relation_field = self.fields_map[key].source_field
-            setattr(
-                self._model,
-                key,
-                property(
-                    partial(
-                        _fk_getter,
-                        _key=_key,
-                        ftype=self.fields_map[key].model_class,  # type: ignore
-                        relation_field=relation_field,
-                    ),
-                    partial(_fk_setter, _key=_key, relation_field=relation_field),
-                    partial(_fk_setter, value=None, _key=_key, relation_field=relation_field),
-                ),
-            )
-
-        # Create lazy reverse one to one fields on model.
-        for key in self.backward_o2o_fields:
-            _key = f"_{key}"
-            field_object: BackwardOneToOneRelation = self.fields_map[key]  # type: ignore
-            setattr(
-                self._model,
-                key,
-                property(
-                    partial(
-                        _ro2o_getter,
-                        _key=_key,
-                        ftype=field_object.model_class,
-                        frelfield=field_object.relation_field,
-                    ),
-                ),
-            )
-
-        # Create lazy M2M fields on model.
-        for key in self.m2m_fields:
-            _key = f"_{key}"
-            setattr(
-                self._model,
-                key,
-                property(partial(_m2m_getter, _key=_key, field_object=self.fields_map[key])),
-            )
-
-    def _generate_db_fields(self) -> None:
-        self.db_default_fields.clear()
-        self.db_complex_fields.clear()
-        self.db_native_fields.clear()
-
-        for key in self.db_fields:
-            model_field = self.fields_db_projection_reverse[key]
-            field = self.fields_map[model_field]
-
-            default_converter = field.__class__.to_python_value is Field.to_python_value
-            if (
-                field.skip_to_python_if_native
-                and field.field_type in self.db.executor_class.DB_NATIVE
-            ):
-                self.db_native_fields.append((key, model_field, field))
-            elif not default_converter:
-                self.db_complex_fields.append((key, model_field, field))
-            elif field.field_type in self.db.executor_class.DB_NATIVE:
-                self.db_native_fields.append((key, model_field, field))
-            else:
-                self.db_default_fields.append((key, model_field, field))
+    def _generate_relation_properties(self) -> None:
+        for key, field in self.fields_map.items():
+            if isinstance(field, RelationField):
+                setattr(self._model, key, field.attribute_property())
 
 
 class ModelMeta(type):
@@ -368,9 +177,6 @@ class ModelMeta(type):
     def __new__(mcs, name: str, bases, attrs: dict, *args, **kwargs):
         fields_db_projection: Dict[str, str] = {}
         fields_map: Dict[str, Field] = {}
-        fk_fields: Set[str] = set()
-        m2m_fields: Set[str] = set()
-        o2o_fields: Set[str] = set()
         meta_class = attrs.get("Meta", type("Meta", (), {}))
         pk_attr: str = "id"
 
@@ -449,13 +255,7 @@ class ModelMeta(type):
                     fields_map[key] = value
                     value.model_field_name = key
 
-                    if isinstance(value, ForeignKeyField):
-                        fk_fields.add(key)
-                    elif isinstance(value, OneToOneField):
-                        o2o_fields.add(key)
-                    elif isinstance(value, ManyToManyField):
-                        m2m_fields.add(key)
-                    else:
+                    if value.has_db_field:
                         fields_db_projection[key] = value.source_field or key
 
         # Clean the class attributes
@@ -465,11 +265,6 @@ class ModelMeta(type):
 
         meta.fields_map = fields_map
         meta.fields_db_projection = fields_db_projection
-        meta.fk_fields = fk_fields
-        meta.backward_fk_fields = set()
-        meta.o2o_fields = o2o_fields
-        meta.backward_o2o_fields = set()
-        meta.m2m_fields = m2m_fields
         meta.default_connection = None
         meta.pk_attr = pk_attr
         meta._inited = False
@@ -499,36 +294,44 @@ class Model(metaclass=ModelMeta):
         passed_fields = {*kwargs.keys()} | meta.fetch_fields
 
         for key, value in kwargs.items():
-            if key in meta.fk_fields or key in meta.o2o_fields:
-                if value and not value._saved_in_db:
-                    raise OperationalError(
-                        f"You should first call .save() on {value} before referring to it"
+            if key in self._meta.fields_map:
+                field = self._meta.fields_map[key]
+
+                if isinstance(field, (ForeignKeyField, OneToOneField)):
+                    if value and not value._saved_in_db:
+                        raise OperationalError(
+                            f"You should first call .save() on {value} before referring to it"
+                        )
+                    setattr(self, key, value)
+                    passed_fields.add(meta.fields_map[key].source_field)  # type: ignore
+
+                elif key in meta.fields_db_projection:
+                    field_object = meta.fields_map[key]
+                    if field_object.generated:
+                        self._custom_generated_pk = True
+                    if value is None and not field_object.null:
+                        raise ValueError(f"{key} is non nullable field, but null was passed")
+                    setattr(self, key, field_object.to_python_value(value))
+
+                elif isinstance(field, BackwardOneToOneRelation):
+                    raise ConfigurationError(
+                        "You can't set backward one to one relations through init,"
+                        " change related model instead"
                     )
-                setattr(self, key, value)
-                passed_fields.add(meta.fields_map[key].source_field)  # type: ignore
-            elif key in meta.fields_db_projection:
-                field_object = meta.fields_map[key]
-                if field_object.generated:
-                    self._custom_generated_pk = True
-                if value is None and not field_object.null:
-                    raise ValueError(f"{key} is non nullable field, but null was passed")
-                setattr(self, key, field_object.to_python_value(value))
-            elif key in meta.backward_fk_fields:
-                raise ConfigurationError(
-                    "You can't set backward relations through init, change related model instead"
-                )
-            elif key in meta.backward_o2o_fields:
-                raise ConfigurationError(
-                    "You can't set backward one to one relations through init,"
-                    " change related model instead"
-                )
-            elif key in meta.m2m_fields:
-                raise ConfigurationError(
-                    "You can't set m2m relations through init, use m2m_manager instead"
-                )
+
+                elif isinstance(field, BackwardFKRelation):
+                    raise ConfigurationError(
+                        "You can't set backward relations through init, change related model instead"
+                    )
+
+                elif isinstance(field, ManyToManyField):
+                    raise ConfigurationError(
+                        "You can't set m2m relations through init, use m2m_manager instead"
+                    )
 
         # Assign defaults for missing fields
-        for key in meta.fields.difference(passed_fields):
+        missing_fields = set(meta.fields_map.keys()).difference(passed_fields)
+        for key in missing_fields:
             field_object = meta.fields_map[key]
             if callable(field_object.default):
                 setattr(self, key, field_object.default())
@@ -541,14 +344,16 @@ class Model(metaclass=ModelMeta):
         self._saved_in_db = True
 
         meta = self._meta
+        for key in meta.db_fields:
+            model_field = meta.fields_db_projection_reverse[key]
+            field = meta.fields_map[model_field]
 
-        for key, model_field, field in meta.db_native_fields:
-            setattr(self, model_field, kwargs[key])
-        for key, model_field, field in meta.db_default_fields:
-            value = kwargs[key]
-            setattr(self, model_field, None if value is None else field.field_type(value))
-        for key, model_field, field in meta.db_complex_fields:
-            setattr(self, model_field, field.to_python_value(kwargs[key]))
+            if (field.skip_to_python_if_native and
+                field.field_type in meta.db.executor_class.DB_NATIVE):
+                setattr(self, model_field, kwargs[key])
+
+            else:
+                setattr(self, model_field, field.to_python_value(kwargs[key]))
 
         return self
 
@@ -582,7 +387,7 @@ class Model(metaclass=ModelMeta):
 
     async def save(
         self,
-        using_db: Optional[BaseDBAsyncClient] = None,
+        using_db: Optional["BaseDBAsyncClient"] = None,
         update_fields: Optional[List[str]] = None,
     ) -> None:
         """
@@ -611,7 +416,7 @@ class Model(metaclass=ModelMeta):
             raise OperationalError("Can't delete unpersisted record")
         await db.executor_class(model=self.__class__, db=db).execute_delete(self)
 
-    async def fetch_related(self, *args, using_db: Optional[BaseDBAsyncClient] = None) -> None:
+    async def fetch_related(self, *args, using_db: Optional["BaseDBAsyncClient"] = None) -> None:
         """
         Fetch related fields.
 
@@ -627,7 +432,7 @@ class Model(metaclass=ModelMeta):
     @classmethod
     async def get_or_create(
         cls: Type[MODEL],
-        using_db: Optional[BaseDBAsyncClient] = None,
+        using_db: Optional["BaseDBAsyncClient"] = None,
         defaults: Optional[dict] = None,
         **kwargs,
     ) -> Tuple[MODEL, bool]:
@@ -666,7 +471,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def bulk_create(
-        cls: Type[MODEL], objects: List[MODEL], using_db: Optional[BaseDBAsyncClient] = None
+        cls: Type[MODEL], objects: List[MODEL], using_db: Optional["BaseDBAsyncClient"] = None
     ) -> None:
         """
         Bulk insert operation:
@@ -752,7 +557,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def fetch_for_list(
-        cls, instance_list: List[MODEL], *args, using_db: Optional[BaseDBAsyncClient] = None
+        cls, instance_list: List[MODEL], *args, using_db: Optional["BaseDBAsyncClient"] = None
     ) -> None:
         db = using_db or cls._meta.db
         await db.executor_class(model=cls, db=db).fetch_for_list(instance_list, *args)
