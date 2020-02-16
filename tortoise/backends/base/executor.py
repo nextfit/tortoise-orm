@@ -60,29 +60,28 @@ class BaseExecutor:
 
         key = f"{self.db.connection_name}:{self.model._meta.table}"
         if key not in EXECUTOR_CACHE:
-            self.regular_columns, columns = self._prepare_insert_columns()
-            self.insert_query = self._prepare_insert_statement(columns)
+            self.field_names, column_names = self._prepare_insert_columns()
+            self.insert_query = self._prepare_insert_statement(column_names)
 
             if self.model._meta.generated_column_names:
-                self.regular_columns_all, columns_all = self._prepare_insert_columns(
-                    include_generated=True
-                )
-                self.insert_query_all = self._prepare_insert_statement(
-                    columns_all, no_generated=True
-                )
+                self.all_field_names, all_column_names = \
+                    self._prepare_insert_columns(include_generated=True)
+                self.insert_query_all = \
+                    self._prepare_insert_statement(all_column_names, no_generated=True)
+
             else:
-                self.regular_columns_all = self.regular_columns
+                self.all_field_names = self.field_names
                 self.insert_query_all = self.insert_query
 
             self.column_map: Dict[str, Callable[[Any, Any], Any]] = {}
-            for column in self.regular_columns_all:
-                field_object = self.model._meta.fields_map[column]
+            for field_name in self.all_field_names:
+                field_object = self.model._meta.fields_map[field_name]
                 if field_object.__class__ in self.TO_DB_OVERRIDE:
-                    self.column_map[column] = partial(
+                    self.column_map[field_name] = partial(
                         self.TO_DB_OVERRIDE[field_object.__class__], field_object
                     )
                 else:
-                    self.column_map[column] = field_object.to_db_value
+                    self.column_map[field_name] = field_object.to_db_value
 
             table = self.model._meta.basetable
             self.delete_query = str(
@@ -93,9 +92,9 @@ class BaseExecutor:
             self.update_cache: Dict[str, str] = {}
 
             EXECUTOR_CACHE[key] = (
-                self.regular_columns,
+                self.field_names,
                 self.insert_query,
-                self.regular_columns_all,
+                self.all_field_names,
                 self.insert_query_all,
                 self.column_map,
                 self.delete_query,
@@ -103,9 +102,9 @@ class BaseExecutor:
             )
         else:
             (
-                self.regular_columns,
+                self.field_names,
                 self.insert_query,
-                self.regular_columns_all,
+                self.all_field_names,
                 self.insert_query_all,
                 self.column_map,
                 self.delete_query,
@@ -131,15 +130,15 @@ class BaseExecutor:
 
     def _prepare_insert_columns(self, include_generated=False) -> Tuple[List[str], List[str]]:
         fields_map = self.model._meta.fields_map
-        regular_fields_names = [field_name
+        fields_names = [field_name
             for field_name in self.model._meta.field_to_db_column_name_map.keys()
             if include_generated or not fields_map[field_name].generated
         ]
 
         column_names = [self.model._meta.field_to_db_column_name_map[c]
-            for c in regular_fields_names]
+            for c in fields_names]
 
-        return regular_fields_names, column_names
+        return fields_names, column_names
 
     @classmethod
     def _field_to_db(cls, field_object: Field, attr: Any, instance) -> Any:
@@ -164,25 +163,26 @@ class BaseExecutor:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_insert(self, instance: "Model") -> None:
-        if not instance._custom_generated_pk:
+        if instance._custom_generated_pk:
             values = [
-                self.column_map[column](getattr(instance, column), instance)
-                for column in self.regular_columns
+                self.column_map[field_name](getattr(instance, field_name), instance)
+                for field_name in self.all_field_names
+            ]
+            await self.db.execute_insert(self.insert_query_all, values)
+
+        else:
+            values = [
+                self.column_map[field_name](getattr(instance, field_name), instance)
+                for field_name in self.field_names
             ]
             insert_result = await self.db.execute_insert(self.insert_query, values)
             await self._process_insert_result(instance, insert_result)
-        else:
-            values = [
-                self.column_map[column](getattr(instance, column), instance)
-                for column in self.regular_columns_all
-            ]
-            await self.db.execute_insert(self.insert_query_all, values)
 
     async def execute_bulk_insert(self, instances: "List[Model]") -> None:
         values_lists = [
             [
-                self.column_map[column](getattr(instance, column), instance)
-                for column in self.regular_columns
+                self.column_map[field_name](getattr(instance, field_name), instance)
+                for field_name in self.field_names
             ]
             for instance in instances
         ]

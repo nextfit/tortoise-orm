@@ -294,10 +294,10 @@ class Model(metaclass=ModelMeta):
         passed_fields = {*kwargs.keys()} | meta.fetch_fields
 
         for key, value in kwargs.items():
-            if key in self._meta.fields_map:
-                field = self._meta.fields_map[key]
+            if key in meta.fields_map:
+                field_object = meta.fields_map[key]
 
-                if isinstance(field, (ForeignKeyField, OneToOneField)):
+                if isinstance(field_object, (ForeignKeyField, OneToOneField)):
                     if value and not value._saved_in_db:
                         raise OperationalError(
                             f"You should first call .save() on {value} before referring to it"
@@ -306,25 +306,24 @@ class Model(metaclass=ModelMeta):
                     passed_fields.add(meta.fields_map[key].db_column)  # type: ignore
 
                 elif key in meta.field_to_db_column_name_map:
-                    field_object = meta.fields_map[key]
                     if field_object.generated:
                         self._custom_generated_pk = True
                     if value is None and not field_object.null:
                         raise ValueError(f"{key} is non nullable field, but null was passed")
                     setattr(self, key, field_object.to_python_value(value))
 
-                elif isinstance(field, BackwardOneToOneRelation):
+                elif isinstance(field_object, BackwardOneToOneRelation):
                     raise ConfigurationError(
                         "You can't set backward one to one relations through init,"
                         " change related model instead"
                     )
 
-                elif isinstance(field, BackwardFKRelation):
+                elif isinstance(field_object, BackwardFKRelation):
                     raise ConfigurationError(
                         "You can't set backward relations through init, change related model instead"
                     )
 
-                elif isinstance(field, ManyToManyField):
+                elif isinstance(field_object, ManyToManyField):
                     raise ConfigurationError(
                         "You can't set m2m relations through init, use m2m_manager instead"
                     )
