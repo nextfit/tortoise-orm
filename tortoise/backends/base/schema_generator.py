@@ -137,11 +137,11 @@ class BaseSchemaGenerator:
         m2m_tables_for_create = []
         references = set()
 
-        for field_name, db_field in model._meta.fields_db_projection.items():
+        for field_name, column_name in model._meta.field_to_db_column_name_map.items():
             field_object = model._meta.fields_map[field_name]
             comment = (
                 self._column_comment_generator(
-                    table=model._meta.table, column=db_field, comment=field_object.description
+                    table=model._meta.table, column=column_name, comment=field_object.description
                 )
                 if field_object.description
                 else ""
@@ -153,7 +153,7 @@ class BaseSchemaGenerator:
                     if generated_sql:  # pragma: nobranch
                         fields_to_create.append(
                             self.GENERATED_PK_TEMPLATE.format(
-                                field_name=db_field, generated_sql=generated_sql, comment=comment,
+                                field_name=column_name, generated_sql=generated_sql, comment=comment,
                             )
                         )
                         continue
@@ -165,14 +165,14 @@ class BaseSchemaGenerator:
                 comment = (
                     self._column_comment_generator(
                         table=model._meta.table,
-                        column=db_field,
+                        column=column_name,
                         comment=field_object.reference.description,
                     )
                     if field_object.reference.description
                     else ""
                 )
                 field_creation_string = self._create_string(
-                    db_field=db_field,
+                    db_field=column_name,
                     field_type=field_object.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                     nullable=nullable,
                     unique=unique,
@@ -181,11 +181,11 @@ class BaseSchemaGenerator:
                 ) + self._create_fk_string(
                     constraint_name=self._generate_fk_name(
                         model._meta.table,
-                        db_field,
+                        column_name,
                         field_object.reference.model_class._meta.table,
                         field_object.reference.model_class._meta.db_pk_field,
                     ),
-                    db_field=db_field,
+                    db_field=column_name,
                     table=field_object.reference.model_class._meta.table,
                     field=field_object.reference.model_class._meta.db_pk_field,
                     on_delete=field_object.reference.on_delete,
@@ -194,7 +194,7 @@ class BaseSchemaGenerator:
                 references.add(field_object.reference.model_class._meta.table)
             else:
                 field_creation_string = self._create_string(
-                    db_field=db_field,
+                    db_field=column_name,
                     field_type=field_object.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                     nullable=nullable,
                     unique=unique,
@@ -205,7 +205,7 @@ class BaseSchemaGenerator:
             fields_to_create.append(field_creation_string)
 
             if field_object.index and not field_object.pk:
-                fields_with_index.append(db_field)
+                fields_with_index.append(column_name)
 
         if model._meta.unique_together:
             for unique_together_list in model._meta.unique_together:

@@ -611,22 +611,25 @@ class UpdateQuery(AwaitableStatement):
 
         for key, value in self.update_kwargs.items():
             field_object = self.model._meta.fields_map.get(key)
+
             if not field_object:
                 raise FieldError(f"Unknown keyword argument {key} for model {self.model}")
+
             if field_object.pk:
                 raise IntegrityError(f"Field {key} is PK and can not be updated")
+
             if isinstance(field_object, (ForeignKeyField, OneToOneField)):
                 fk_field: str = field_object.source_field  # type: ignore
-                db_field = self.model._meta.fields_map[fk_field].source_field
+                column_name = self.model._meta.fields_map[fk_field].source_field
                 value = executor.column_map[fk_field](value.pk, None)
             else:
                 try:
-                    db_field = self.model._meta.fields_db_projection[key]
+                    column_name = self.model._meta.field_to_db_column_name_map[key]
                 except KeyError:
                     raise FieldError(f"Field {key} is virtual and can not be updated")
                 value = executor.column_map[key](value, None)
 
-            self.query = self.query.set(db_field, value)
+            self.query = self.query.set(column_name, value)
 
         context.pop()
 
@@ -705,10 +708,10 @@ class FieldSelectQuery(AwaitableQuery):
         model = context_item.model
         table = context_item.table
 
-        if field in model._meta.fields_db_projection and not forwarded_fields:
-            return table, model._meta.fields_db_projection[field]
+        if field in model._meta.field_to_db_column_name_map and not forwarded_fields:
+            return table, model._meta.field_to_db_column_name_map[field]
 
-        if field in model._meta.fields_db_projection and forwarded_fields:
+        if field in model._meta.field_to_db_column_name_map and forwarded_fields:
             raise FieldError(f'Field "{field}" for model "{model.__name__}" is not relation')
 
         if field in self.model._meta.fetch_fields and not forwarded_fields:
@@ -739,8 +742,8 @@ class FieldSelectQuery(AwaitableQuery):
         if field == "pk":
             field = self.model._meta.pk_attr
 
-        if field in self.model._meta.fields_db_projection:
-            db_field = self.model._meta.fields_db_projection[field]
+        if field in self.model._meta.field_to_db_column_name_map:
+            db_field = self.model._meta.field_to_db_column_name_map[field]
             self.query._select_field(getattr(table, db_field).as_(return_as))
             return
 

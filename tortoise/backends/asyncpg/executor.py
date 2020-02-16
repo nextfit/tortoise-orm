@@ -22,14 +22,14 @@ class AsyncpgExecutor(BaseExecutor):
             .insert(*[self.parameter(i) for i in range(len(columns))])
         )
         if not no_generated:
-            generated_fields = self.model._meta.generated_db_fields
-            if generated_fields:
-                query = query.returning(*generated_fields)
+            generated_column_names = self.model._meta.generated_column_names
+            if generated_column_names:
+                query = query.returning(*generated_column_names)
         return str(query)
 
     async def _process_insert_result(self, instance: Model, results: Optional[asyncpg.Record]):
         if results:
-            generated_fields = self.model._meta.generated_db_fields
-            db_projection = instance._meta.fields_db_projection_reverse
-            for key, val in zip(generated_fields, results):
-                setattr(instance, db_projection[key], val)
+            generated_column_names = self.model._meta.generated_column_names
+            col_to_field_name = instance._meta.db_column_to_field_name_map
+            for column_name, val in zip(generated_column_names, results):
+                setattr(instance, col_to_field_name[column_name], val)

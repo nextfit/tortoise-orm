@@ -43,9 +43,9 @@ class MetaInfo:
         "app",
         "db_fields",
         "fetch_fields",
-        "fields_db_projection",
+        "field_to_db_column_name_map",
         "_inited",
-        "fields_db_projection_reverse",
+        "db_column_to_field_name_map",
         "fields_map",
         "default_connection",
         "basequery",
@@ -53,7 +53,7 @@ class MetaInfo:
         "unique_together",
         "indexes",
         "pk_attr",
-        "generated_db_fields",
+        "generated_column_names",
         "_model",
         "table_description",
         "pk",
@@ -70,15 +70,15 @@ class MetaInfo:
         self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")
         self.db_fields: Set[str] = set()
         self.fetch_fields: Set[str] = set()
-        self.fields_db_projection: Dict[str, str] = {}
-        self.fields_db_projection_reverse: Dict[str, str] = {}
+        self.field_to_db_column_name_map: Dict[str, str] = {}
+        self.db_column_to_field_name_map: Dict[str, str] = {}
         self.fields_map: Dict[str, Field] = {}
         self._inited: bool = False
         self.default_connection: Optional[str] = None
         self.basequery: Query = Query()
         self.basetable: Table = Table("")
         self.pk_attr: str = getattr(meta, "pk_attr", "")
-        self.generated_db_fields: Tuple[str] = None  # type: ignore
+        self.generated_column_names: Tuple[str] = None  # type: ignore
         self._model: "Model" = None  # type: ignore
         self.table_description: str = getattr(meta, "table_description", "")
         self.pk: Field = None  # type: ignore
@@ -93,7 +93,7 @@ class MetaInfo:
         self.fields_map[name] = value
 
         if value.has_db_field:
-            self.fields_db_projection[name] = value.source_field or name
+            self.field_to_db_column_name_map[name] = value.source_field or name
 
         self.finalise_fields()
 
@@ -156,13 +156,13 @@ class MetaInfo:
         self._generate_relation_properties()
 
     def finalise_fields(self) -> None:
-        self.db_fields = set(self.fields_db_projection.values())
-        self.fields_db_projection_reverse = {
-            value: key for key, value in self.fields_db_projection.items()
+        self.db_fields = set(self.field_to_db_column_name_map.values())
+        self.db_column_to_field_name_map = {
+            value: key for key, value in self.field_to_db_column_name_map.items()
         }
 
         self.fetch_fields = {key for key, field in self.fields_map.items() if not field.has_db_field}
-        self.generated_db_fields = [field.source_field or field.model_field_name
+        self.generated_column_names = [field.source_field or field.model_field_name
             for field in self.fields_map.values() if field.generated]
 
     def _generate_relation_properties(self) -> None:
@@ -175,7 +175,7 @@ class ModelMeta(type):
     __slots__ = ()
 
     def __new__(mcs, name: str, bases, attrs: dict, *args, **kwargs):
-        fields_db_projection: Dict[str, str] = {}
+        field_to_db_column_name_map: Dict[str, str] = {}
         fields_map: Dict[str, Field] = {}
         meta_class = attrs.get("Meta", type("Meta", (), {}))
         pk_attr: str = "id"
@@ -256,7 +256,7 @@ class ModelMeta(type):
                     value.model_field_name = key
 
                     if value.has_db_field:
-                        fields_db_projection[key] = value.source_field or key
+                        field_to_db_column_name_map[key] = value.source_field or key
 
         # Clean the class attributes
         for slot in fields_map:
@@ -264,7 +264,7 @@ class ModelMeta(type):
         attrs["_meta"] = meta = MetaInfo(meta_class)
 
         meta.fields_map = fields_map
-        meta.fields_db_projection = fields_db_projection
+        meta.field_to_db_column_name_map = field_to_db_column_name_map
         meta.default_connection = None
         meta.pk_attr = pk_attr
         meta._inited = False
@@ -305,7 +305,7 @@ class Model(metaclass=ModelMeta):
                     setattr(self, key, value)
                     passed_fields.add(meta.fields_map[key].source_field)  # type: ignore
 
-                elif key in meta.fields_db_projection:
+                elif key in meta.field_to_db_column_name_map:
                     field_object = meta.fields_map[key]
                     if field_object.generated:
                         self._custom_generated_pk = True
@@ -345,15 +345,15 @@ class Model(metaclass=ModelMeta):
 
         meta = self._meta
         for key in meta.db_fields:
-            model_field = meta.fields_db_projection_reverse[key]
-            field = meta.fields_map[model_field]
+            field_name = meta.db_column_to_field_name_map[key]
+            field_object = meta.fields_map[field_name]
 
-            if (field.skip_to_python_if_native and
-                field.field_type in meta.db.executor_class.DB_NATIVE):
-                setattr(self, model_field, kwargs[key])
+            if (field_object.skip_to_python_if_native and
+                field_object.field_type in meta.db.executor_class.DB_NATIVE):
+                setattr(self, field_name, kwargs[key])
 
             else:
-                setattr(self, model_field, field.to_python_value(kwargs[key]))
+                setattr(self, field_name, field_object.to_python_value(kwargs[key]))
 
         return self
 

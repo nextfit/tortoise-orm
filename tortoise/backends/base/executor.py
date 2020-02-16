@@ -64,7 +64,7 @@ class BaseExecutor:
             self.insert_query = self._prepare_insert_statement(columns)
             self.regular_columns_all = self.regular_columns
             self.insert_query_all = self.insert_query
-            if self.model._meta.generated_db_fields:
+            if self.model._meta.generated_column_names:
                 self.regular_columns_all, columns_all = self._prepare_insert_columns(
                     include_generated=True
                 )
@@ -128,13 +128,16 @@ class BaseExecutor:
         return instance_list
 
     def _prepare_insert_columns(self, include_generated=False) -> Tuple[List[str], List[str]]:
-        regular_columns = []
-        for column in self.model._meta.fields_db_projection.keys():
-            field_object = self.model._meta.fields_map[column]
-            if include_generated or not field_object.generated:
-                regular_columns.append(column)
-        result_columns = [self.model._meta.fields_db_projection[c] for c in regular_columns]
-        return regular_columns, result_columns
+        fields_map = self.model._meta.fields_map
+        regular_fields_names = [field_name
+            for field_name in self.model._meta.field_to_db_column_name_map.keys()
+            if include_generated or not fields_map[field_name].generated
+        ]
+
+        column_names = [self.model._meta.field_to_db_column_name_map[c]
+            for c in regular_fields_names]
+
+        return regular_fields_names, column_names
 
     @classmethod
     def _field_to_db(cls, field_object: Field, attr: Any, instance) -> Any:
@@ -195,8 +198,8 @@ class BaseExecutor:
         table = self.model._meta.basetable
         query = self.db.query_class.update(table)
         count = 0
-        for field in update_fields or self.model._meta.fields_db_projection.keys():
-            db_field = self.model._meta.fields_db_projection[field]
+        for field in update_fields or self.model._meta.field_to_db_column_name_map.keys():
+            db_field = self.model._meta.field_to_db_column_name_map[field]
             field_object = self.model._meta.fields_map[field]
             if not field_object.pk:
                 query = query.set(db_field, self.parameter(count))
@@ -210,7 +213,7 @@ class BaseExecutor:
     async def execute_update(self, instance, update_fields: Optional[List[str]]) -> int:
         values = [
             self.column_map[field](getattr(instance, field), instance)
-            for field in update_fields or self.model._meta.fields_db_projection.keys()
+            for field in update_fields or self.model._meta.field_to_db_column_name_map.keys()
             if not self.model._meta.fields_map[field].pk
         ]
         values.append(self.model._meta.pk.to_db_value(instance.pk, instance))
