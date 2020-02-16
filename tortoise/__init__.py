@@ -190,11 +190,8 @@ class Tortoise:
             "description": model._meta.table_description or None,
             "unique_together": model._meta.unique_together or [],
             "pk_field": describe_field(model._meta.pk_attr),
-            "fields": [
-                describe_field(name)
-                for name in model._meta.fields_map.keys()
-                if name != model._meta.pk_attr
-            ]
+            "fields": [describe_field(name) for name in model._meta.fields_map.keys()
+                if name != model._meta.pk_attr]
         }
 
     @classmethod

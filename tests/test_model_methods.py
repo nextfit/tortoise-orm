@@ -9,7 +9,7 @@ from tortoise.exceptions import (
     MultipleObjectsReturned,
     OperationalError,
 )
-from tortoise.models import NoneAwaitable
+from tortoise.fields.relational import NoneAwaitable
 
 
 class TestModelCreate(test.TestCase):

@@ -151,13 +151,7 @@ class Q:
                 return key_filter(context, value)
 
     def _get_actual_key(self, model: "Model", key: str) -> str:
-        (field_name, sep, comparision) = key.partition('__')
-        if field_name == "pk":
-            return f"{model._meta.pk_attr}{sep}{comparision}"
-
-        if field_name in self._annotations:
-            return key
-
+        field_name = key
         if field_name in model._meta.fields_map:
             field = model._meta.fields_map[field_name]
             if isinstance(field, (ForeignKeyField, OneToOneField)):
@@ -166,6 +160,13 @@ class Q:
             # if isinstance(field, ManyToManyField):
             #     return key
 
+            return key
+
+        (field_name, sep, comparision) = key.partition('__')
+        if field_name == "pk":
+            return f"{model._meta.pk_attr}{sep}{comparision}"
+
+        if field_name in model._meta.fields_map or field_name in self._annotations:
             return key
 
         allowed = sorted(list(model._meta.fields_map.keys() | self._annotations.keys()))
