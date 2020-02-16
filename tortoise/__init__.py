@@ -151,7 +151,7 @@ class Tortoise:
             desc = {
                 "name": name,
                 "field_type": field.__class__.__name__ if serializable else field.__class__,
-                "db_column": field.source_field or name,
+                "db_column": field.db_column or name,
                 "raw_field": None,
                 "db_field_types": field.get_db_field_types(),
                 "python_type": type_name(field_type) if serializable else field_type,
@@ -170,7 +170,7 @@ class Tortoise:
             # Foreign Keys have
             if isinstance(field, (ForeignKeyField, OneToOneField)):
                 del desc["db_column"]
-                desc["raw_field"] = field.source_field
+                desc["raw_field"] = field.db_column
             else:
                 del desc["raw_field"]
 

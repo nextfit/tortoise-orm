@@ -1,8 +1,8 @@
 """
-This module does a series of use tests on a non-source_field model,
-  and then the EXACT same ones on a source_field'ed model.
+This module does a series of use tests on a non-db_column model,
+  and then the EXACT same ones on a db_column'ed model.
 
-This is to test that behaviour doesn't change when one defined source_field parameters.
+This is to test that behaviour doesn't change when one defined db_column parameters.
 """
 from tests.testmodels import SourceFields, StraightFields
 from tortoise.contrib import test

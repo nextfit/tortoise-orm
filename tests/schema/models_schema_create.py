@@ -64,11 +64,11 @@ class VenueInformation(Model):
 
 
 class SourceFields(Model):
-    id = fields.IntField(pk=True, source_field="sometable_id")
-    chars = fields.CharField(max_length=255, source_field="some_chars_table", index=True)
+    id = fields.IntField(pk=True, db_column="sometable_id")
+    chars = fields.CharField(max_length=255, db_column="some_chars_table", index=True)
 
     fk = fields.ForeignKeyField(
-        "models.SourceFields", related_name="team_members", null=True, source_field="fk_sometable"
+        "models.SourceFields", related_name="team_members", null=True, db_column="fk_sometable"
     )
 
     rel_to = fields.ManyToManyField(

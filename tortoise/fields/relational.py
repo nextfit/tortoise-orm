@@ -416,7 +416,7 @@ class ForeignKeyField(RelationField):
 
     def attribute_property(self):
         _key = f"_{self.model_field_name}"
-        relation_field = self.source_field
+        relation_field = self.db_column
         return property(
             partial(
                 _fk_getter,
@@ -443,13 +443,13 @@ class ForeignKeyField(RelationField):
         key_fk_object.reference = self
         key_fk_object.description = self.description
 
-        if self.source_field:
-            key_fk_object.source_field = self.source_field
-            self.source_field = key_field
+        if self.db_column:
+            key_fk_object.db_column = self.db_column
+            self.db_column = key_field
 
         else:
-            self.source_field = key_field
-            key_fk_object.source_field = key_field
+            self.db_column = key_field
+            key_fk_object.db_column = key_field
 
         self.model._meta.add_field(key_field, key_fk_object)
         self.model_class = related_model
@@ -580,7 +580,7 @@ class OneToOneField(RelationField):
 
     def attribute_property(self):
         _key = f"_{self.model_field_name}"
-        relation_field = self.source_field
+        relation_field = self.db_column
         return property(
             partial(
                 _fk_getter,
@@ -606,12 +606,12 @@ class OneToOneField(RelationField):
         key_o2o_object.generated = self.generated
         key_o2o_object.reference = self
         key_o2o_object.description = self.description
-        if self.source_field:
-            key_o2o_object.source_field = self.source_field
-            self.source_field = key_field
+        if self.db_column:
+            key_o2o_object.db_column = self.db_column
+            self.db_column = key_field
         else:
-            self.source_field = key_field
-            key_o2o_object.source_field = key_field
+            self.db_column = key_field
+            key_o2o_object.db_column = key_field
 
         self.model._meta.add_field(key_field, key_o2o_object)
 

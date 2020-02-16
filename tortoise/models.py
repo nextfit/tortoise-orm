@@ -93,7 +93,7 @@ class MetaInfo:
         self.fields_map[name] = value
 
         if value.has_db_field:
-            self.field_to_db_column_name_map[name] = value.source_field or name
+            self.field_to_db_column_name_map[name] = value.db_column or name
 
         self.finalise_fields()
 
@@ -110,7 +110,7 @@ class MetaInfo:
             return None
 
         field = self.fields_map[field_name]
-        source_field = field.source_field or field_name
+        db_column = field.db_column or field_name
 
         if isinstance(field, ManyToManyField):
             if comparision not in RELATED_FILTER_FUNC_MAP:
@@ -132,7 +132,7 @@ class MetaInfo:
         return BaseFieldFilter(
             field_name,
             field,
-            source_field,
+            db_column,
             *self.db.executor_class.FILTER_FUNC_MAP[comparision])
 
     def get_filter(self, key: str) -> Optional[FieldFilter]:
@@ -146,7 +146,7 @@ class MetaInfo:
 
     def finalise_pk(self) -> None:
         self.pk = self.fields_map[self.pk_attr]
-        self.db_pk_field = self.pk.source_field or self.pk_attr
+        self.db_pk_field = self.pk.db_column or self.pk_attr
 
     def finalise_model(self) -> None:
         """
@@ -162,7 +162,7 @@ class MetaInfo:
         }
 
         self.fetch_fields = {key for key, field in self.fields_map.items() if not field.has_db_field}
-        self.generated_column_names = [field.source_field or field.model_field_name
+        self.generated_column_names = [field.db_column or field.model_field_name
             for field in self.fields_map.values() if field.generated]
 
     def _generate_relation_properties(self) -> None:
@@ -256,7 +256,7 @@ class ModelMeta(type):
                     value.model_field_name = key
 
                     if value.has_db_field:
-                        field_to_db_column_name_map[key] = value.source_field or key
+                        field_to_db_column_name_map[key] = value.db_column or key
 
         # Clean the class attributes
         for slot in fields_map:
@@ -303,7 +303,7 @@ class Model(metaclass=ModelMeta):
                             f"You should first call .save() on {value} before referring to it"
                         )
                     setattr(self, key, value)
-                    passed_fields.add(meta.fields_map[key].source_field)  # type: ignore
+                    passed_fields.add(meta.fields_map[key].db_column)  # type: ignore
 
                 elif key in meta.field_to_db_column_name_map:
                     field_object = meta.fields_map[key]

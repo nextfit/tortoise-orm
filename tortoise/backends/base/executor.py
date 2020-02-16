@@ -62,8 +62,7 @@ class BaseExecutor:
         if key not in EXECUTOR_CACHE:
             self.regular_columns, columns = self._prepare_insert_columns()
             self.insert_query = self._prepare_insert_statement(columns)
-            self.regular_columns_all = self.regular_columns
-            self.insert_query_all = self.insert_query
+
             if self.model._meta.generated_column_names:
                 self.regular_columns_all, columns_all = self._prepare_insert_columns(
                     include_generated=True
@@ -71,6 +70,9 @@ class BaseExecutor:
                 self.insert_query_all = self._prepare_insert_statement(
                     columns_all, no_generated=True
                 )
+            else:
+                self.regular_columns_all = self.regular_columns
+                self.insert_query_all = self.insert_query
 
             self.column_map: Dict[str, Callable[[Any, Any], Any]] = {}
             for column in self.regular_columns_all:

@@ -187,7 +187,7 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
                 field_object = model._meta.fields_map.get(field_name)
                 if not field_object:
                     raise FieldError(f"Unknown field {field_name} for model {model.__name__}")
-                field_name = field_object.source_field or field_name
+                field_name = field_object.db_column or field_name
                 field = getattr(table, field_name)
 
                 func = field_object.get_for_dialect(model._meta.db.capabilities.dialect, "function_cast")
@@ -619,8 +619,8 @@ class UpdateQuery(AwaitableStatement):
                 raise IntegrityError(f"Field {key} is PK and can not be updated")
 
             if isinstance(field_object, (ForeignKeyField, OneToOneField)):
-                fk_field: str = field_object.source_field  # type: ignore
-                column_name = self.model._meta.fields_map[fk_field].source_field
+                fk_field: str = field_object.db_column  # type: ignore
+                column_name = self.model._meta.fields_map[fk_field].db_column
                 value = executor.column_map[fk_field](value.pk, None)
             else:
                 try:

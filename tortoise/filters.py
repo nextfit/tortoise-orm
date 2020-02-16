@@ -100,7 +100,7 @@ class FieldFilter:
 
 
 class BaseFieldFilter(FieldFilter):
-    def __init__(self, field_name: str, field: Optional[Field], source_field: str, opr, value_encoder=None):
+    def __init__(self, field_name: str, field: Optional[Field], db_column: str, opr, value_encoder=None):
         super().__init__(
             field.model_field_name if field_name == "pk" and field else field_name,
             field,
@@ -108,7 +108,7 @@ class BaseFieldFilter(FieldFilter):
             value_encoder
         )
 
-        self.source_field = source_field
+        self.db_column = db_column
 
     def __call__(self, context: QueryContext, value) -> QueryModifier:
         context_item = context.stack[-1]
@@ -134,7 +134,7 @@ class BaseFieldFilter(FieldFilter):
         else:
             encoded_value = model._meta.db.executor_class._field_to_db(field_object, value, model)
 
-        encoded_key = table[self.source_field]
+        encoded_key = table[self.db_column]
         criterion = self.opr(encoded_key, encoded_value)
         return QueryModifier(where_criterion=criterion, joins=joins)
 

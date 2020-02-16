@@ -41,7 +41,7 @@ class Field(metaclass=_FieldMeta):
 
     def __init__(
         self,
-        source_field: Optional[str] = None,
+        db_column: Optional[str] = None,
         generated: bool = False,
         pk: bool = False,
         null: bool = False,
@@ -61,7 +61,7 @@ class Field(metaclass=_FieldMeta):
             index = True
             unique = True
 
-        self.source_field = source_field
+        self.db_column = db_column
         self.generated = generated
         self.pk = pk
         self.default = default

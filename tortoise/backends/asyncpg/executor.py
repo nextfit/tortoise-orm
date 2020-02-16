@@ -25,6 +25,7 @@ class AsyncpgExecutor(BaseExecutor):
             generated_column_names = self.model._meta.generated_column_names
             if generated_column_names:
                 query = query.returning(*generated_column_names)
+
         return str(query)
 
     async def _process_insert_result(self, instance: Model, results: Optional[asyncpg.Record]):

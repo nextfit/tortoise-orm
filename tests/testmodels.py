@@ -286,17 +286,17 @@ class UUIDM2MRelatedModel(Model):
 
 
 class UUIDPkSourceModel(Model):
-    id = fields.UUIDField(pk=True, source_field="a")
+    id = fields.UUIDField(pk=True, db_column="a")
 
     class Meta:
         table = "upsm"
 
 
 class UUIDFkRelatedSourceModel(Model):
-    id = fields.UUIDField(pk=True, source_field="b")
-    name = fields.CharField(max_length=50, null=True, source_field="c")
+    id = fields.UUIDField(pk=True, db_column="b")
+    name = fields.CharField(max_length=50, null=True, db_column="c")
     model = fields.ForeignKeyField(
-        "models.UUIDPkSourceModel", related_name="children", source_field="d"
+        "models.UUIDPkSourceModel", related_name="children", db_column="d"
     )
 
     class Meta:
@@ -304,10 +304,10 @@ class UUIDFkRelatedSourceModel(Model):
 
 
 class UUIDFkRelatedNullSourceModel(Model):
-    id = fields.UUIDField(pk=True, source_field="i")
-    name = fields.CharField(max_length=50, null=True, source_field="j")
+    id = fields.UUIDField(pk=True, db_column="i")
+    name = fields.CharField(max_length=50, null=True, db_column="j")
     model = fields.ForeignKeyField(
-        "models.UUIDPkSourceModel", related_name="children_null", source_field="k", null=True
+        "models.UUIDPkSourceModel", related_name="children_null", db_column="k", null=True
     )
 
     class Meta:
@@ -315,8 +315,8 @@ class UUIDFkRelatedNullSourceModel(Model):
 
 
 class UUIDM2MRelatedSourceModel(Model):
-    id = fields.UUIDField(pk=True, source_field="e")
-    value = fields.TextField(default="test", source_field="f")
+    id = fields.UUIDField(pk=True, db_column="e")
+    value = fields.TextField(default="test", db_column="f")
     models = fields.ManyToManyField(
         "models.UUIDPkSourceModel", related_name="peers", forward_key="e", backward_key="h"
     )
@@ -453,17 +453,17 @@ class StraightFields(Model):
 
 
 class SourceFields(Model):
-    eyedee = fields.IntField(pk=True, source_field="sometable_id", description="Da PK")
+    eyedee = fields.IntField(pk=True, db_column="sometable_id", description="Da PK")
     chars = fields.CharField(
-        max_length=50, source_field="some_chars_table", index=True, description="Some chars"
+        max_length=50, db_column="some_chars_table", index=True, description="Some chars"
     )
-    blip = fields.CharField(max_length=50, default="BLIP", source_field="da_blip")
+    blip = fields.CharField(max_length=50, default="BLIP", db_column="da_blip")
 
     fk: fields.ForeignKeyNullableRelation["SourceFields"] = fields.ForeignKeyField(
         "models.SourceFields",
         related_name="fkrev",
         null=True,
-        source_field="fk_sometable",
+        db_column="fk_sometable",
         description="Tree!",
     )
     fkrev: fields.ReverseRelation["SourceFields"]
@@ -472,7 +472,7 @@ class SourceFields(Model):
         "models.SourceFields",
         related_name="o2o_rev",
         null=True,
-        source_field="o2o_sometable",
+        db_column="o2o_sometable",
         description="Line",
     )
     o2o_rev: fields.Field
