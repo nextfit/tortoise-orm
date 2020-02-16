@@ -440,6 +440,7 @@ class ForeignKeyField(RelationField):
         key_fk_object.default = self.default
         key_fk_object.null = self.null
         key_fk_object.generated = self.generated
+        key_fk_object.auto_created = True
         key_fk_object.reference = self
         key_fk_object.description = self.description
 
@@ -484,7 +485,7 @@ class BackwardFKRelation(RelationField):
         self.model_class: "Type[Model]" = field_type
         self.relation_field: str = relation_field
         self.description: Optional[str] = description
-        self.generated = True
+        self.auto_created = True
 
     def attribute_property(self):
         _key = f"_{self.model_field_name}"
@@ -604,6 +605,7 @@ class OneToOneField(RelationField):
         key_o2o_object.null = self.null
         key_o2o_object.unique = self.unique
         key_o2o_object.generated = self.generated
+        key_o2o_object.auto_created = True
         key_o2o_object.reference = self
         key_o2o_object.description = self.description
         if self.db_column:
@@ -764,7 +766,7 @@ class ManyToManyField(RelationField):
             field_type=self.model,
             description=self.description,
         )
-        m2m_relation.generated = True
+        m2m_relation.auto_created = True
         m2m_relation.model_field_name = backward_relation_name
         related_model._meta.add_field(backward_relation_name, m2m_relation)
 

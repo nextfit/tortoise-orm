@@ -260,7 +260,7 @@ class BaseSchemaGenerator:
 
         from tortoise import ManyToManyField
         for field in model._meta.fields_map.values():
-            if isinstance(field, ManyToManyField) and not field.generated:
+            if isinstance(field, ManyToManyField) and not field.auto_created:
                 m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
                     exists="IF NOT EXISTS " if safe else "",
                     table_name=field.through,
