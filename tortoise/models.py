@@ -78,11 +78,11 @@ class MetaInfo:
         self.basequery: Query = Query()
         self.basetable: Table = Table("")
         self.pk_attr: str = getattr(meta, "pk_attr", "")
-        self.generated_column_names: Tuple[str] = None  # type: ignore
-        self._model: "Model" = None  # type: ignore
+        self.generated_column_names: Tuple[str]
+        self._model: "Model"
         self.table_description: str = getattr(meta, "table_description", "")
-        self.pk: Field = None  # type: ignore
-        self.db_pk_field: str = ""
+        self.pk: Field
+        self.db_pk_field: str
 
         self._filter_cache: Dict[str, Optional[FieldFilter]] = {}
 
