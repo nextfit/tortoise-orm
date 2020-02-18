@@ -137,7 +137,7 @@ class TextField(Field, str):  # type: ignore
     SQL_TYPE = "TEXT"
 
     def __init__(
-        self, pk: bool = False, unique: bool = False, index: bool = False, **kwargs
+        self, pk: bool = False, unique: bool = False, db_index: bool = False, **kwargs
     ) -> None:
         if pk:
             warnings.warn(
@@ -149,7 +149,7 @@ class TextField(Field, str):  # type: ignore
             raise ConfigurationError(
                 f"TextField doesn't support unique indexes, consider CharField or another strategy"
             )
-        if index:
+        if db_index:
             raise ConfigurationError(f"TextField can't be indexed, consider CharField")
 
         super().__init__(pk=pk, **kwargs)

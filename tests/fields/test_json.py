@@ -50,4 +50,4 @@ class TestJSONFields(test.TestCase):
 
     def test_index_fail(self):
         with self.assertRaisesRegex(ConfigurationError, "can't be indexed"):
-            JSONField(index=True)
+            JSONField(db_index=True)

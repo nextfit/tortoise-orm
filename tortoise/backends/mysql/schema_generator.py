@@ -43,7 +43,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         return f" COMMENT '{self._escape_comment(comment)}'"
 
     def _get_index_sql(self, model, field_names: List[str], safe: bool) -> str:
-        """ Get index SQLs, but keep them for ourselves """
+        """ Get db_index SQLs, but keep them for ourselves """
         self._field_indexes.append(
             self.INDEX_CREATE_TEMPLATE.format(
                 exists="IF NOT EXISTS " if safe else "",

@@ -18,7 +18,7 @@ class Tournament(Model):
     id = fields.SmallIntField(pk=True)
     name = fields.CharField(max_length=255)
     desc = fields.TextField(null=True)
-    created = fields.DatetimeField(auto_now_add=True, index=True)
+    created = fields.DatetimeField(auto_now_add=True, db_index=True)
 
     events: fields.ReverseRelation["Event"]
     minrelations: fields.ReverseRelation["MinRelation"]
@@ -429,7 +429,7 @@ class Employee(Model):
 
 class StraightFields(Model):
     eyedee = fields.IntField(pk=True, description="Da PK")
-    chars = fields.CharField(max_length=50, index=True, description="Some chars")
+    chars = fields.CharField(max_length=50, db_index=True, description="Some chars")
     blip = fields.CharField(max_length=50, default="BLIP")
 
     fk: fields.ForeignKeyNullableRelation["StraightFields"] = fields.ForeignKeyField(
@@ -455,7 +455,7 @@ class StraightFields(Model):
 class SourceFields(Model):
     eyedee = fields.IntField(pk=True, db_column="sometable_id", description="Da PK")
     chars = fields.CharField(
-        max_length=50, db_column="some_chars_table", index=True, description="Some chars"
+        max_length=50, db_column="some_chars_table", db_index=True, description="Some chars"
     )
     blip = fields.CharField(max_length=50, default="BLIP", db_column="da_blip")
 

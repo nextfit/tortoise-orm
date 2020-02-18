@@ -47,29 +47,32 @@ class Field(metaclass=_FieldMeta):
         null: bool = False,
         default: Any = None,
         unique: bool = False,
-        index: bool = False,
+        db_index: bool = False,
         reference: Optional[str] = None,
         model: "Optional[Model]" = None,
         description: Optional[str] = None,
         **kwargs,
     ) -> None:
 
-        if not self.indexable and (unique or index):
+        if not self.indexable and (unique or db_index):
             raise ConfigurationError(f"{self.__class__.__name__} can't be indexed")
 
         if pk:
-            index = True
+            db_index = True
             unique = True
 
+        self.db_index = db_index
         self.db_column = db_column
+        self.unique = unique
+
         self.generated = generated
         self.pk = pk
         self.default = default
         self.null = null
-        self.unique = unique
-        self.index = index
+
         self.model_field_name = None
         self.model = model
+
         self.reference = reference
         self.description = description
         self.auto_created = False

@@ -94,7 +94,7 @@ class BaseSchemaGenerator:
         return sha256(";".join(args).encode("utf-8")).hexdigest()[:length]
 
     def _generate_index_name(self, prefix, model, field_names: List[str]) -> str:
-        # NOTE: for compatibility, index name should not be longer than 30
+        # NOTE: for compatibility, db_index name should not be longer than 30
         # characters (Oracle limit).
         # That's why we slice some of the strings here.
         table_name = model._meta.table
@@ -107,7 +107,7 @@ class BaseSchemaGenerator:
         return index_name
 
     def _generate_fk_name(self, from_table, from_field, to_table, to_field) -> str:
-        # NOTE: for compatibility, index name should not be longer than 30
+        # NOTE: for compatibility, db_index name should not be longer than 30
         # characters (Oracle limit).
         # That's why we slice some of the strings here.
         index_name = "fk_{f}_{t}_{h}".format(
@@ -204,7 +204,7 @@ class BaseSchemaGenerator:
 
             fields_to_create.append(field_creation_string)
 
-            if field_object.index and not field_object.pk:
+            if field_object.db_index and not field_object.pk:
                 fields_with_index.append(column_name)
 
         if model._meta.unique_together:

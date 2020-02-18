@@ -240,7 +240,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
 
         select_query = select_query.where(criterion)
 
-        # TODO: This is highly inefficient. Should use UNIQUE index by default.
+        # TODO: This is highly inefficient. Should use UNIQUE db_index by default.
         #  And optionally allow duplicates.
         _, already_existing_relations_raw = await db.execute_query(str(select_query))
         already_existing_relations = {
@@ -436,7 +436,7 @@ class ForeignKeyField(RelationField):
         key_fk_object = deepcopy(related_model._meta.pk)
         key_fk_object.pk = False
         key_fk_object.unique = False
-        key_fk_object.index = self.index
+        key_fk_object.db_index = self.db_index
         key_fk_object.default = self.default
         key_fk_object.null = self.null
         key_fk_object.generated = self.generated
@@ -600,7 +600,7 @@ class OneToOneField(RelationField):
         key_field = f"{self.model_field_name}_id"
         key_o2o_object = deepcopy(related_model._meta.pk)
         key_o2o_object.pk = self.pk
-        key_o2o_object.index = self.index
+        key_o2o_object.db_index = self.db_index
         key_o2o_object.default = self.default
         key_o2o_object.null = self.null
         key_o2o_object.unique = self.unique

@@ -36,7 +36,7 @@ class TestTextFields(test.TestCase):
 
     def test_index_fail(self):
         with self.assertRaisesRegex(ConfigurationError, "can't be indexed, consider CharField"):
-            TextField(index=True)
+            TextField(db_index=True)
 
     def test_pk_deprecated(self):
         with self.assertWarnsRegex(

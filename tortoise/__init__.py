@@ -160,7 +160,7 @@ class Tortoise:
                 "auto_created": field.auto_created,
                 "nullable": field.null,
                 "unique": field.unique,
-                "db_index": field.index or field.unique,
+                "db_index": field.db_index or field.unique,
                 "default": default_name(field.default) if serializable else field.default,
                 "description": field.description,
             }

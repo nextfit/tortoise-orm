@@ -37,4 +37,4 @@ class TestBinaryFields(test.TestCase):
 
     def test_index_fail(self):
         with self.assertRaisesRegex(ConfigurationError, "can't be indexed"):
-            BinaryField(index=True)
+            BinaryField(db_index=True)

@@ -9,7 +9,7 @@ from tortoise.models import Model
 class BadTournament(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
-    created = fields.DatetimeField(auto_now_add=True, index=True)
+    created = fields.DatetimeField(auto_now_add=True, db_index=True)
 
     def __str__(self):
         return self.name
@@ -18,7 +18,7 @@ class BadTournament(Model):
 class GoodTournament(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
-    created = fields.DatetimeField(auto_now_add=True, index=True)
+    created = fields.DatetimeField(auto_now_add=True, db_index=True)
 
     def __str__(self):
         return self.name
@@ -28,7 +28,7 @@ class Tmp:
     class InAClassTournament(Model):
         id = fields.IntField(pk=True)
         name = fields.TextField()
-        created = fields.DatetimeField(auto_now_add=True, index=True)
+        created = fields.DatetimeField(auto_now_add=True, db_index=True)
 
         def __str__(self):
             return self.name
