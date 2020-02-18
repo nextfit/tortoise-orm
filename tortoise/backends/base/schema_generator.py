@@ -31,12 +31,12 @@ class BaseSchemaGenerator:
         self.client = client
 
     def _create_string(
-        self, db_field: str, field_type: str, nullable: str, unique: str, is_pk: bool, comment: str
+        self, db_column: str, field_type: str, nullable: str, unique: str, is_pk: bool, comment: str
     ) -> str:
         # children can override this function to customize their sql queries
 
         return self.FIELD_TEMPLATE.format(
-            name=db_field,
+            name=db_column,
             type=field_type,
             nullable=nullable,
             unique="" if is_pk else unique,
@@ -47,14 +47,14 @@ class BaseSchemaGenerator:
     def _create_fk_string(
         self,
         constraint_name: str,
-        db_field: str,
+        db_column: str,
         table: str,
         field: str,
         on_delete: str,
         comment: str,
     ) -> str:
         return self.FK_TEMPLATE.format(
-            db_field=db_field, table=table, field=field, on_delete=on_delete, comment=comment
+            db_column=db_column, table=table, field=field, on_delete=on_delete, comment=comment
         )
 
     def _table_comment_generator(self, table: str, comment: str) -> str:
@@ -173,7 +173,7 @@ class BaseSchemaGenerator:
                 )
 
                 field_creation_string = self._create_string(
-                    db_field=column_name,
+                    db_column=column_name,
                     field_type=field_object.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                     nullable=nullable,
                     unique=unique,
@@ -186,7 +186,7 @@ class BaseSchemaGenerator:
                         field_object.reference.model_class._meta.table,
                         field_object.reference.model_class._meta.pk_db_column,
                     ),
-                    db_field=column_name,
+                    db_column=column_name,
                     table=field_object.reference.model_class._meta.table,
                     field=field_object.reference.model_class._meta.pk_db_column,
                     on_delete=field_object.reference.on_delete,
@@ -197,7 +197,7 @@ class BaseSchemaGenerator:
 
             else:
                 field_creation_string = self._create_string(
-                    db_field=column_name,
+                    db_column=column_name,
                     field_type=field_object.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                     nullable=nullable,
                     unique=unique,

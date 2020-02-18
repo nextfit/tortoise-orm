@@ -743,8 +743,8 @@ class FieldSelectQuery(AwaitableQuery):
             field = self.model._meta.pk_attr
 
         if field in self.model._meta.field_to_db_column_name_map:
-            db_field = self.model._meta.field_to_db_column_name_map[field]
-            self.query._select_field(getattr(table, db_field).as_(return_as))
+            db_column = self.model._meta.field_to_db_column_name_map[field]
+            self.query._select_field(getattr(table, db_column).as_(return_as))
             return
 
         if field in self.model._meta.fetch_fields:

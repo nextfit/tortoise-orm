@@ -201,10 +201,10 @@ class BaseExecutor:
         query = self.db.query_class.update(table)
         count = 0
         for field in update_fields or self.model._meta.field_to_db_column_name_map.keys():
-            db_field = self.model._meta.field_to_db_column_name_map[field]
+            db_column = self.model._meta.field_to_db_column_name_map[field]
             field_object = self.model._meta.fields_map[field]
             if not field_object.pk:
-                query = query.set(db_field, self.parameter(count))
+                query = query.set(db_column, self.parameter(count))
                 count += 1
 
         query = query.where(table[self.model._meta.pk_db_column] == self.parameter(count))
