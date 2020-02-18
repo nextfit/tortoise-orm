@@ -97,7 +97,7 @@ class Tortoise:
                     "auto_created": bool    # Is the field auto created by Tortoise?
                     "nullable":     bool    # Is the column nullable?
                     "unique":       bool    # Is the field unique?
-                    "indexed":      bool    # Is the field indexed?
+                    "db_index":     bool    # Is the field indexed?
                     "default":      ...     # The default value (coerced to int/float/str/bool/null)
                     "description":  str     # Description of the field (nullable)
                 }
@@ -160,7 +160,7 @@ class Tortoise:
                 "auto_created": field.auto_created,
                 "nullable": field.null,
                 "unique": field.unique,
-                "indexed": field.index or field.unique,
+                "db_index": field.index or field.unique,
                 "default": default_name(field.default) if serializable else field.default,
                 "description": field.description,
             }
