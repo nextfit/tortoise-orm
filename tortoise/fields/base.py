@@ -1,9 +1,7 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
+from typing import Any, Dict, Optional, Type
 from tortoise.exceptions import ConfigurationError
 
-if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.models import Model
 
 CASCADE = "CASCADE"
 RESTRICT = "RESTRICT"
@@ -48,8 +46,6 @@ class Field(metaclass=_FieldMeta):
         default: Any = None,
         unique: bool = False,
         db_index: bool = False,
-        reference: Optional[str] = None,
-        model: "Optional[Model]" = None,
         description: Optional[str] = None,
         **kwargs,
     ) -> None:
@@ -69,13 +65,12 @@ class Field(metaclass=_FieldMeta):
         self.pk = pk
         self.default = default
         self.null = null
-
-        self.model_field_name = None
-        self.model = model
-
-        self.reference = reference
         self.description = description
         self.auto_created = False
+
+        self.model_field_name: str
+        self.model: "Model"
+        self.reference = None
 
     def to_db_value(self, value: Any, instance) -> Any:
         if value is None or isinstance(value, self.field_type):

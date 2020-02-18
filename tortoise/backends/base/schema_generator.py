@@ -161,7 +161,7 @@ class BaseSchemaGenerator:
             nullable = "NOT NULL" if not field_object.null else ""
             unique = "UNIQUE" if field_object.unique else ""
 
-            if hasattr(field_object, "reference") and field_object.reference:
+            if getattr(field_object, "reference", None):
                 comment = (
                     self._column_comment_generator(
                         table=model._meta.table,
@@ -171,6 +171,7 @@ class BaseSchemaGenerator:
                     if field_object.reference.description
                     else ""
                 )
+
                 field_creation_string = self._create_string(
                     db_field=column_name,
                     field_type=field_object.get_for_dialect(self.DIALECT, "SQL_TYPE"),
@@ -191,7 +192,9 @@ class BaseSchemaGenerator:
                     on_delete=field_object.reference.on_delete,
                     comment=comment,
                 )
+
                 references.add(field_object.reference.model_class._meta.table)
+
             else:
                 field_creation_string = self._create_string(
                     db_field=column_name,
@@ -255,7 +258,6 @@ class BaseSchemaGenerator:
         )
 
         table_create_string = "\n".join([table_create_string, *field_indexes_sqls])
-
         table_create_string += self._post_table_hook()
 
         from tortoise import ManyToManyField
@@ -288,32 +290,32 @@ class BaseSchemaGenerator:
             "m2m_tables": m2m_tables_for_create,
         }
 
-    def _get_models_to_create(self, models_to_create) -> None:
+    def _get_models_to_create(self) -> list:
         from tortoise import Tortoise
 
+        models_to_create = []
         for app in Tortoise.apps.values():
             for model in app.values():
                 if model._meta.db == self.client:
                     model.check()
                     models_to_create.append(model)
 
+        return models_to_create
+
     def get_create_schema_sql(self, safe=True) -> str:
-        models_to_create: list = []
+        models_to_create = self._get_models_to_create()
 
-        self._get_models_to_create(models_to_create)
-
-        tables_to_create = []
-        for model in models_to_create:
-            tables_to_create.append(self._get_table_sql(model, safe))
-
+        tables_to_create = [self._get_table_sql(model, safe) for model in models_to_create]
         tables_to_create_count = len(tables_to_create)
 
         created_tables: Set[dict] = set()
         ordered_tables_for_create: List[str] = []
         m2m_tables_to_create: List[str] = []
+
         while True:
             if len(created_tables) == tables_to_create_count:
                 break
+
             try:
                 next_table_for_create = next(
                     t
@@ -322,6 +324,7 @@ class BaseSchemaGenerator:
                 )
             except StopIteration:
                 raise ConfigurationError("Can't create schema due to cyclic fk references")
+
             tables_to_create.remove(next_table_for_create)
             created_tables.add(next_table_for_create["table"])
             ordered_tables_for_create.append(next_table_for_create["table_creation_string"])
