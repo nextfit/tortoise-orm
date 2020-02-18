@@ -762,11 +762,11 @@ class FieldSelectQuery(AwaitableQuery):
         field_split = field.split("__")
         if field_split[0] in self.model._meta.fetch_fields:
             context.push(model=self.model, table=self.model._meta.basetable)
-            related_table, related_db_field = self._join_table_with_forwarded_fields(
+            related_table, related_db_column = self._join_table_with_forwarded_fields(
                 context=context, field=field_split[0], forwarded_fields="__".join(field_split[1:])
             )
             context.pop()
-            self.query._select_field(getattr(related_table, related_db_field).as_(return_as))
+            self.query._select_field(getattr(related_table, related_db_column).as_(return_as))
             return
 
         raise FieldError(f'Unknown field "{field}" for model "{self.model.__name__}"')

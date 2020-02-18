@@ -151,10 +151,10 @@ class RelationFilter(FieldFilter):
         model = context_item.model
         table = context_item.table
 
-        pk_db_field = model._meta.db_pk_field
+        pk_db_column = model._meta.pk_db_column
         joins = [(
             self.table,
-            table[pk_db_field] == getattr(self.table, self.backward_key),
+            table[pk_db_column] == getattr(self.table, self.backward_key),
         )]
 
         if isinstance(value, OuterRef):

@@ -73,7 +73,7 @@ class Function(Annotation):
                 related_field_meta = related_field.model_class._meta
                 join = (table, field_split[0], related_field)
                 function_joins.append(join)
-                field = related_field_meta.basetable[related_field_meta.db_pk_field]
+                field = related_field_meta.basetable[related_field_meta.pk_db_column]
             else:
                 field = table[field_split[0]]
 

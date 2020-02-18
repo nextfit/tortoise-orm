@@ -57,7 +57,7 @@ class MetaInfo:
         "_model",
         "table_description",
         "pk",
-        "db_pk_field",
+        "pk_db_column",
         "_filter_cache",
     )
 
@@ -82,7 +82,7 @@ class MetaInfo:
         self._model: "Model"
         self.table_description: str = getattr(meta, "table_description", "")
         self.pk: Field
-        self.db_pk_field: str
+        self.pk_db_column: str
 
         self._filter_cache: Dict[str, Optional[FieldFilter]] = {}
 
@@ -146,7 +146,7 @@ class MetaInfo:
 
     def finalise_pk(self) -> None:
         self.pk = self.fields_map[self.pk_attr]
-        self.db_pk_field = self.pk.db_column or self.pk_attr
+        self.pk_db_column = self.pk.db_column or self.pk_attr
 
     def finalise_model(self) -> None:
         """

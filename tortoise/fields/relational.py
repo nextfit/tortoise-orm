@@ -789,7 +789,7 @@ class ManyToManyField(RelationField):
         )
 
         related_query_table = related_query.model._meta.basetable
-        related_pk_field = related_query.model._meta.db_pk_field
+        related_pk_field = related_query.model._meta.pk_db_column
         related_query.query = related_query.create_base_query_all_fields(alias=None)
         related_query.query = (
             related_query.query.join(subquery)
