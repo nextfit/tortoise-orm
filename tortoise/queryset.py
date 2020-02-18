@@ -111,7 +111,7 @@ class AwaitableStatement(Generic[MODEL]):
             return self.model._meta.db.query_class.from_(table)
 
     def create_base_query_all_fields(self, alias):
-        return self.create_base_query(alias).select(*self.model._meta.db_fields)
+        return self.create_base_query(alias).select(*self.model._meta.db_columns)
 
     def _make_query(self, context: QueryContext, alias=None) -> None:
         raise NotImplementedError()  # pragma: nocoverage
@@ -212,7 +212,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
     def __init__(self, model: Type[MODEL]) -> None:
         super().__init__(model)
-        self.fields = model._meta.db_fields
+        self.fields = model._meta.db_columns
 
         self._prefetch_map: Dict[str, Set[str]] = {}
         self._prefetch_queries: Dict[str, QuerySet] = {}
@@ -357,7 +357,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             or [
                 field
                 for field in self.model._meta.fields_map.keys()
-                if field in self.model._meta.db_fields
+                if field in self.model._meta.db_columns
             ],
             distinct=self._distinct,
             limit=self._limit,
@@ -389,7 +389,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             fields_for_select = {
                 field: field
                 for field in self.model._meta.fields_map.keys()
-                if field in self.model._meta.db_fields
+                if field in self.model._meta.db_columns
             }
 
         return ValuesQuery(

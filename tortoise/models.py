@@ -41,7 +41,7 @@ class MetaInfo:
         "table",
         "ordering",
         "app",
-        "db_fields",
+        "db_columns",
         "fetch_fields",
         "field_to_db_column_name_map",
         "_inited",
@@ -68,7 +68,7 @@ class MetaInfo:
         self.app: Optional[str] = getattr(meta, "app", None)
         self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
         self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")
-        self.db_fields: Set[str] = set()
+        self.db_columns: Set[str] = set()
         self.fetch_fields: Set[str] = set()
         self.field_to_db_column_name_map: Dict[str, str] = {}
         self.db_column_to_field_name_map: Dict[str, str] = {}
@@ -92,7 +92,7 @@ class MetaInfo:
         value.model = self._model
         self.fields_map[name] = value
 
-        if value.has_db_field:
+        if value.has_db_column:
             self.field_to_db_column_name_map[name] = value.db_column or name
 
         self.finalise_fields()
@@ -156,12 +156,12 @@ class MetaInfo:
         self._generate_relation_properties()
 
     def finalise_fields(self) -> None:
-        self.db_fields = set(self.field_to_db_column_name_map.values())
+        self.db_columns = set(self.field_to_db_column_name_map.values())
         self.db_column_to_field_name_map = {
             value: key for key, value in self.field_to_db_column_name_map.items()
         }
 
-        self.fetch_fields = {key for key, field in self.fields_map.items() if not field.has_db_field}
+        self.fetch_fields = {key for key, field in self.fields_map.items() if not field.has_db_column}
         self.generated_column_names = [field.db_column or field.model_field_name
             for field in self.fields_map.values() if field.generated]
 
@@ -255,7 +255,7 @@ class ModelMeta(type):
                     fields_map[key] = value
                     value.model_field_name = key
 
-                    if value.has_db_field:
+                    if value.has_db_column:
                         field_to_db_column_name_map[key] = value.db_column or key
 
         # Clean the class attributes
@@ -343,7 +343,7 @@ class Model(metaclass=ModelMeta):
         self._saved_in_db = True
 
         meta = self._meta
-        for key in meta.db_fields:
+        for key in meta.db_columns:
             field_name = meta.db_column_to_field_name_map[key]
             field_object = meta.fields_map[field_name]
 

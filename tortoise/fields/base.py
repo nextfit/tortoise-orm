@@ -28,7 +28,7 @@ class Field(metaclass=_FieldMeta):
     # Field_type is a readonly property for the instance, it is set by _FieldMeta
     field_type: Type[Any] = None  # type: ignore
     indexable: bool = True
-    has_db_field = True
+    has_db_column = True
     skip_to_python_if_native = False
     allows_generated = False
     function_cast = None
@@ -97,7 +97,7 @@ class Field(metaclass=_FieldMeta):
         }
 
     def get_db_field_types(self) -> Optional[Dict[str, str]]:
-        if not self.has_db_field:
+        if not self.has_db_column:
             return None
         return {
             "": getattr(self, "SQL_TYPE"),

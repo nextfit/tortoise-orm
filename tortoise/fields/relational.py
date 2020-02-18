@@ -314,7 +314,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
 
 
 class RelationField(Field):
-    has_db_field = False
+    has_db_column = False
 
     def attribute_property(self):
         raise NotImplementedError()
