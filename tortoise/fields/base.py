@@ -96,7 +96,7 @@ class Field(metaclass=_FieldMeta):
             for dialect in [key for key in dir(self) if key.startswith("_db_")]
         }
 
-    def get_db_field_types(self) -> Optional[Dict[str, str]]:
+    def get_db_column_types(self) -> Optional[Dict[str, str]]:
         if not self.has_db_column:
             return None
         return {
