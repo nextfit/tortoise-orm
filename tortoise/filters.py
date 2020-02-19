@@ -64,6 +64,7 @@ class QueryModifier:
                 joins=self.joins + other.joins,
                 having_criterion=result_having_criterion
             )
+
         if self.where_criterion and other.where_criterion:
             return QueryModifier(
                 where_criterion=self.where_criterion | other.where_criterion,
@@ -78,20 +79,20 @@ class QueryModifier:
     def __invert__(self) -> "QueryModifier":
         if not self.where_criterion and not self.having_criterion:
             return QueryModifier(joins=self.joins)
+
         if self.having_criterion:
             # TODO: This could be optimized?
             return QueryModifier(
                 joins=self.joins,
                 having_criterion=_and(self.where_criterion, self.having_criterion).negate(),
             )
+
         return QueryModifier(where_criterion=self.where_criterion.negate(), joins=self.joins)
 
 
 class FieldFilter:
-    def __init__(self, field_name: str, field: Optional[Field], opr, value_encoder):
+    def __init__(self, field_name: str, opr, value_encoder):
         self.field_name = field_name
-        self.field = field
-
         self.opr = opr
         self.value_encoder = value_encoder
 
@@ -100,14 +101,8 @@ class FieldFilter:
 
 
 class BaseFieldFilter(FieldFilter):
-    def __init__(self, field_name: str, field: Optional[Field], db_column: str, opr, value_encoder=None):
-        super().__init__(
-            field.model_field_name if field_name == "pk" and field else field_name,
-            field,
-            opr,
-            value_encoder
-        )
-
+    def __init__(self, field: Field, db_column: str, opr, value_encoder=None):
+        super().__init__(field.model_field_name, opr, value_encoder)
         self.db_column = db_column
 
     def __call__(self, context: QueryContext, value) -> QueryModifier:
@@ -140,8 +135,8 @@ class BaseFieldFilter(FieldFilter):
 
 
 class RelationFilter(FieldFilter):
-    def __init__(self, field_name: str, field: Optional[Field], opr, value_encoder, table, backward_key):
-        super().__init__(field_name, field, opr, value_encoder)
+    def __init__(self, field_name: str, opr, value_encoder, table, backward_key):
+        super().__init__(field_name, opr, value_encoder)
 
         self.table = table
         self.backward_key = backward_key
@@ -190,14 +185,18 @@ class RelationFilter(FieldFilter):
 
 
 class BackwardFKFilter(RelationFilter):
-    def __init__(self, field: Optional[Field], opr, value_encoder):
-        super().__init__(field.model_class._meta.pk_attr, field, opr, value_encoder,
-            Table(field.model_class._meta.table), field.relation_field)
+    def __init__(self, field: BackwardFKRelation, opr, value_encoder):
+        super().__init__(
+            field.model_class._meta.pk.model_field_name,
+            opr,
+            value_encoder,
+            Table(field.model_class._meta.table),
+            field.relation_field)
 
 
 class ManyToManyRelationFilter(RelationFilter):
-    def __init__(self, field: Optional[Field], opr, value_encoder):
-        super().__init__(field.forward_key, field, opr, value_encoder,
+    def __init__(self, field: ManyToManyField, opr, value_encoder):
+        super().__init__(field.forward_key, opr, value_encoder,
             Table(field.through), field.backward_key)
 
 

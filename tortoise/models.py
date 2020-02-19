@@ -89,9 +89,11 @@ class MetaInfo:
     def add_field(self, name: str, value: Field):
         if name in self.fields_map:
             raise ConfigurationError(f"Field {name} already present in meta")
-        value.model = self._model
-        self.fields_map[name] = value
 
+        value.model_field_name = name
+        value.model = self._model
+
+        self.fields_map[name] = value
         if value.has_db_column:
             self.field_to_db_column_name_map[name] = value.db_column or name
 
@@ -130,7 +132,6 @@ class MetaInfo:
             return None
 
         return BaseFieldFilter(
-            field_name,
             field,
             db_column,
             *self.db.executor_class.FILTER_FUNC_MAP[comparision])
@@ -261,6 +262,7 @@ class ModelMeta(type):
         # Clean the class attributes
         for slot in fields_map:
             attrs.pop(slot, None)
+
         attrs["_meta"] = meta = MetaInfo(meta_class)
 
         meta.fields_map = fields_map

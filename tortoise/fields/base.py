@@ -68,9 +68,12 @@ class Field(metaclass=_FieldMeta):
         self.description = description
         self.auto_created = False
 
-        self.model_field_name: str
-        self.model: "Model"
+        self.model_field_name = None
+        self.model = None
         self.reference = None
+
+    def __str__(self):
+        return f"{self.model_field_name} ({self.db_column})"
 
     def to_db_value(self, value: Any, instance) -> Any:
         if value is None or isinstance(value, self.field_type):

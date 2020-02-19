@@ -466,10 +466,7 @@ class ForeignKeyField(RelationField):
                     f" model {related_model_name}"
                 )
 
-            fk_relation = BackwardFKRelation(
-                self.model, key_field, self.null, self.description
-            )
-            fk_relation.model_field_name = backward_relation_name
+            fk_relation = BackwardFKRelation(self.model, key_field, self.null, self.description)
             related_model._meta.add_field(backward_relation_name, fk_relation)
 
 
@@ -630,9 +627,7 @@ class OneToOneField(RelationField):
                 )
 
             o2o_relation = BackwardOneToOneRelation(
-                self.model, key_field, null=True, description=self.description
-            )
-            o2o_relation.model_field_name = backward_relation_name
+                self.model, key_field, null=True, description=self.description)
             related_model._meta.add_field(backward_relation_name, o2o_relation)
 
         if self.primary_key:
@@ -767,7 +762,6 @@ class ManyToManyField(RelationField):
             description=self.description,
         )
         m2m_relation.auto_created = True
-        m2m_relation.model_field_name = backward_relation_name
         related_model._meta.add_field(backward_relation_name, m2m_relation)
 
     async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
