@@ -6,7 +6,7 @@ from tortoise.models import Model
 
 
 class Tournament(Model):
-    tid = fields.SmallIntField(pk=True)
+    tid = fields.SmallIntField(primary_key=True)
     name = fields.CharField(max_length=100, description="Tournament name", db_index=True)
     created = fields.DatetimeField(auto_now_add=True, description="Created */'`/* datetime")
 
@@ -15,7 +15,7 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.BigIntField(pk=True, description="Event ID")
+    id = fields.BigIntField(primary_key=True, description="Event ID")
     name = fields.TextField()
     tournament = fields.ForeignKeyField(
         "models.Tournament", related_name="events", description="FK to tournament"
@@ -37,7 +37,7 @@ class Event(Model):
 
 
 class Team(Model):
-    name = fields.CharField(max_length=50, pk=True, description="The TEAM name (and PK)")
+    name = fields.CharField(max_length=50, primary_key=True, description="The TEAM name (and PK)")
     key = fields.IntField()
     manager = fields.ForeignKeyField("models.Team", related_name="team_members", null=True)
     talks_to = fields.ManyToManyField("models.Team", related_name="gets_talked_to")
@@ -52,7 +52,7 @@ class TeamAddress(Model):
     country = fields.CharField(max_length=50, description="Country")
     street = fields.CharField(max_length=128, description="Street Address")
     team = fields.OneToOneField(
-        "models.Team", related_name="address", on_delete=fields.CASCADE, pk=True
+        "models.Team", related_name="address", on_delete=fields.CASCADE, primary_key=True
     )
 
 
@@ -64,7 +64,7 @@ class VenueInformation(Model):
 
 
 class SourceFields(Model):
-    id = fields.IntField(pk=True, db_column="sometable_id")
+    id = fields.IntField(primary_key=True, db_column="sometable_id")
     chars = fields.CharField(max_length=255, db_column="some_chars_table", db_index=True)
 
     fk = fields.ForeignKeyField(

@@ -11,7 +11,7 @@ from tortoise.models import Model
 
 
 class Tournament(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     events: fields.ReverseRelation["Event"]
@@ -21,7 +21,7 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
         "models.Tournament", related_name="events"
@@ -39,7 +39,7 @@ class Address(Model):
     street = fields.CharField(max_length=128)
 
     event: fields.OneToOneRelation[Event] = fields.OneToOneField(
-        "models.Event", on_delete=fields.CASCADE, related_name="address", pk=True
+        "models.Event", on_delete=fields.CASCADE, related_name="address", primary_key=True
     )
 
     def __str__(self):
@@ -47,7 +47,7 @@ class Address(Model):
 
 
 class Team(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     events: fields.ManyToManyRelation[Event]

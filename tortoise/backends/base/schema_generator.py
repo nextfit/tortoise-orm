@@ -31,7 +31,7 @@ class BaseSchemaGenerator:
         self.client = client
 
     def _create_string(
-        self, db_column: str, field_type: str, nullable: str, unique: str, is_pk: bool, comment: str
+        self, db_column: str, field_type: str, nullable: str, unique: str, is_primary_key: bool, comment: str
     ) -> str:
         # children can override this function to customize their sql queries
 
@@ -39,9 +39,9 @@ class BaseSchemaGenerator:
             name=db_column,
             type=field_type,
             nullable=nullable,
-            unique="" if is_pk else unique,
+            unique="" if is_primary_key else unique,
             comment=comment if self.client.capabilities.inline_comment else "",
-            primary=" PRIMARY KEY" if is_pk else "",
+            primary=" PRIMARY KEY" if is_primary_key else "",
         ).strip()
 
     def _create_fk_string(
@@ -147,7 +147,7 @@ class BaseSchemaGenerator:
                 else ""
             )
             # TODO: PK generation needs to move out of schema generator.
-            if field_object.pk:
+            if field_object.primary_key:
                 if field_object.generated:
                     generated_sql = field_object.get_for_dialect(self.DIALECT, "GENERATED_SQL")
                     if generated_sql:  # pragma: nobranch
@@ -177,7 +177,7 @@ class BaseSchemaGenerator:
                     field_type=field_object.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                     nullable=nullable,
                     unique=unique,
-                    is_pk=field_object.pk,
+                    is_primary_key=field_object.primary_key,
                     comment="",
                 ) + self._create_fk_string(
                     constraint_name=self._generate_fk_name(
@@ -201,13 +201,13 @@ class BaseSchemaGenerator:
                     field_type=field_object.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                     nullable=nullable,
                     unique=unique,
-                    is_pk=field_object.pk,
+                    is_primary_key=field_object.primary_key,
                     comment=comment,
                 )
 
             fields_to_create.append(field_creation_string)
 
-            if field_object.db_index and not field_object.pk:
+            if field_object.db_index and not field_object.primary_key:
                 fields_with_index.append(column_name)
 
         if model._meta.unique_together:

@@ -41,7 +41,7 @@ class Field(metaclass=_FieldMeta):
         self,
         db_column: Optional[str] = None,
         generated: bool = False,
-        pk: bool = False,
+        primary_key: bool = False,
         null: bool = False,
         default: Any = None,
         unique: bool = False,
@@ -53,7 +53,7 @@ class Field(metaclass=_FieldMeta):
         if not self.indexable and (unique or db_index):
             raise ConfigurationError(f"{self.__class__.__name__} can't be indexed")
 
-        if pk:
+        if primary_key:
             db_index = True
             unique = True
 
@@ -62,7 +62,7 @@ class Field(metaclass=_FieldMeta):
         self.unique = unique
 
         self.generated = generated
-        self.pk = pk
+        self.primary_key = primary_key
         self.default = default
         self.null = null
         self.description = description

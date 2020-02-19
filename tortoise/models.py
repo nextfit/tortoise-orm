@@ -224,11 +224,11 @@ class ModelMeta(type):
             custom_pk_present = False
             for key, value in attrs.items():
                 if isinstance(value, Field):
-                    if value.pk:
+                    if value.primary_key:
                         if custom_pk_present:
                             raise ConfigurationError(
                                 f"Can't create model {name} with two primary keys,"
-                                " only single pk are supported"
+                                " only single primary key is supported"
                             )
                         if value.generated and not value.allows_generated:
                             raise ConfigurationError(
@@ -239,9 +239,9 @@ class ModelMeta(type):
 
             if not custom_pk_present and not getattr(meta_class, "abstract", None):
                 if "id" not in attrs:
-                    attrs = {"id": IntField(pk=True), **attrs}
+                    attrs = {"id": IntField(primary_key=True), **attrs}
 
-                if not isinstance(attrs["id"], Field) or not attrs["id"].pk:
+                if not isinstance(attrs["id"], Field) or not attrs["id"].primary_key:
                     raise ConfigurationError(
                         f"Can't create model {name} without explicit primary key if field 'id'"
                         " already present"
@@ -379,6 +379,7 @@ class Model(metaclass=ModelMeta):
         setattr(self, self._meta.pk_attr, value)
 
     pk = property(_get_pk_val, _set_pk_val)
+
     """
     Alias to the models Primary Key.
     Can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc...

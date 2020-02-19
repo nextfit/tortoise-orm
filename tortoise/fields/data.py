@@ -33,17 +33,17 @@ class IntField(Field, int):
     """
     Integer field. (32-bit signed)
 
-    ``pk`` (bool):
+    ``primary_key`` (bool):
         True if field is Primary Key.
     """
 
     SQL_TYPE = "INT"
     allows_generated = True
 
-    def __init__(self, pk: bool = False, **kwargs) -> None:
-        if pk:
+    def __init__(self, primary_key: bool = False, **kwargs) -> None:
+        if primary_key:
             kwargs["generated"] = bool(kwargs.get("generated", True))
-        super().__init__(pk=pk, **kwargs)
+        super().__init__(primary_key=primary_key, **kwargs)
 
     class _db_postgres:
         GENERATED_SQL = "SERIAL NOT NULL PRIMARY KEY"
@@ -59,17 +59,17 @@ class BigIntField(Field, int):
     """
     Big integer field. (64-bit signed)
 
-    ``pk`` (bool):
+    ``primary_key`` (bool):
         True if field is Primary Key.
     """
 
     SQL_TYPE = "BIGINT"
     allows_generated = True
 
-    def __init__(self, pk: bool = False, **kwargs) -> None:
-        if pk:
+    def __init__(self, primary_key: bool = False, **kwargs) -> None:
+        if primary_key:
             kwargs["generated"] = bool(kwargs.get("generated", True))
-        super().__init__(pk=pk, **kwargs)
+        super().__init__(primary_key=primary_key, **kwargs)
 
     class _db_postgres:
         GENERATED_SQL = "BIGSERIAL NOT NULL PRIMARY KEY"
@@ -85,17 +85,17 @@ class SmallIntField(Field, int):
     """
     Small integer field. (16-bit signed)
 
-    ``pk`` (bool):
+    ``primary_key`` (bool):
         True if field is Primary Key.
     """
 
     SQL_TYPE = "SMALLINT"
     allows_generated = True
 
-    def __init__(self, pk: bool = False, **kwargs) -> None:
-        if pk:
+    def __init__(self, primary_key: bool = False, **kwargs) -> None:
+        if primary_key:
             kwargs["generated"] = bool(kwargs.get("generated", True))
-        super().__init__(pk=pk, **kwargs)
+        super().__init__(primary_key=primary_key, **kwargs)
 
     class _db_postgres:
         GENERATED_SQL = "SMALLSERIAL NOT NULL PRIMARY KEY"
@@ -137,9 +137,9 @@ class TextField(Field, str):  # type: ignore
     SQL_TYPE = "TEXT"
 
     def __init__(
-        self, pk: bool = False, unique: bool = False, db_index: bool = False, **kwargs
+        self, primary_key: bool = False, unique: bool = False, db_index: bool = False, **kwargs
     ) -> None:
-        if pk:
+        if primary_key:
             warnings.warn(
                 "TextField as a PrimaryKey is Deprecated, use CharField instead",
                 DeprecationWarning,
@@ -152,7 +152,7 @@ class TextField(Field, str):  # type: ignore
         if db_index:
             raise ConfigurationError(f"TextField can't be indexed, consider CharField")
 
-        super().__init__(pk=pk, **kwargs)
+        super().__init__(primary_key=primary_key, **kwargs)
 
     class _db_mysql:
         SQL_TYPE = "LONGTEXT"
@@ -354,7 +354,7 @@ class UUIDField(Field, UUID):
         SQL_TYPE = "UUID"
 
     def __init__(self, **kwargs) -> None:
-        if kwargs.get("pk", False):
+        if kwargs.get("primary_key", False):
             if "default" not in kwargs:
                 kwargs["default"] = uuid4
         super().__init__(**kwargs)

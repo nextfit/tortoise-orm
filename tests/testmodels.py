@@ -15,7 +15,7 @@ def generate_token():
 
 
 class Tournament(Model):
-    id = fields.SmallIntField(pk=True)
+    id = fields.SmallIntField(primary_key=True)
     name = fields.CharField(max_length=255)
     desc = fields.TextField(null=True)
     created = fields.DatetimeField(auto_now_add=True, db_index=True)
@@ -29,7 +29,7 @@ class Tournament(Model):
 
 
 class Reporter(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     events: fields.ReverseRelation["Event"]
@@ -42,7 +42,7 @@ class Reporter(Model):
 
 
 class Event(Model):
-    id = fields.BigIntField(pk=True)
+    id = fields.BigIntField(primary_key=True)
     name = fields.TextField()
     tournament: fields.ForeignKeyRelation["Tournament"] = fields.ForeignKeyField(
         "models.Tournament", related_name="events"
@@ -71,7 +71,7 @@ class Address(Model):
 
 
 class Team(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     events: fields.ManyToManyRelation[Event]
@@ -83,7 +83,7 @@ class Team(Model):
 
 
 class EventTwo(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     tournament_id = fields.IntField()
     # Here we make link to events.Team, not models.Team
@@ -97,7 +97,7 @@ class EventTwo(Model):
 
 
 class TeamTwo(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     eventtwo_through: fields.ManyToManyRelation[EventTwo]
@@ -110,56 +110,56 @@ class TeamTwo(Model):
 
 
 class IntFields(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     intnum = fields.IntField()
     intnum_null = fields.IntField(null=True)
 
 
 class BigIntFields(Model):
-    id = fields.BigIntField(pk=True)
+    id = fields.BigIntField(primary_key=True)
     intnum = fields.BigIntField()
     intnum_null = fields.BigIntField(null=True)
 
 
 class SmallIntFields(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     smallintnum = fields.SmallIntField()
     smallintnum_null = fields.SmallIntField(null=True)
 
 
 class CharFields(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     char = fields.CharField(max_length=255)
     char_null = fields.CharField(max_length=255, null=True)
 
 
 class TextFields(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     text = fields.TextField()
     text_null = fields.TextField(null=True)
 
 
 class BooleanFields(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     boolean = fields.BooleanField()
     boolean_null = fields.BooleanField(null=True)
 
 
 class BinaryFields(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     binary = fields.BinaryField()
     binary_null = fields.BinaryField(null=True)
 
 
 class DecimalFields(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     decimal = fields.DecimalField(max_digits=18, decimal_places=4)
     decimal_nodec = fields.DecimalField(max_digits=18, decimal_places=0)
     decimal_null = fields.DecimalField(max_digits=18, decimal_places=4, null=True)
 
 
 class DatetimeFields(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     datetime = fields.DatetimeField()
     datetime_null = fields.DatetimeField(null=True)
     datetime_auto = fields.DatetimeField(auto_now=True)
@@ -167,45 +167,45 @@ class DatetimeFields(Model):
 
 
 class TimeDeltaFields(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     timedelta = fields.TimeDeltaField()
     timedelta_null = fields.TimeDeltaField(null=True)
 
 
 class DateFields(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     date = fields.DateField()
     date_null = fields.DateField(null=True)
 
 
 class FloatFields(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     floatnum = fields.FloatField()
     floatnum_null = fields.FloatField(null=True)
 
 
 class JSONFields(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     data = fields.JSONField()
     data_null = fields.JSONField(null=True)
     data_default = fields.JSONField(default={"a": 1})
 
 
 class UUIDFields(Model):
-    id = fields.UUIDField(pk=True, default=uuid.uuid1)
+    id = fields.UUIDField(primary_key=True, default=uuid.uuid1)
     data = fields.UUIDField()
     data_auto = fields.UUIDField(default=uuid.uuid4)
     data_null = fields.UUIDField(null=True)
 
 
 class MinRelation(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField("models.Tournament")
     participants: fields.ManyToManyRelation[Team] = fields.ManyToManyField("models.Team")
 
 
 class M2MOne(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=255, null=True)
     two: fields.ManyToManyRelation["M2MTwo"] = fields.ManyToManyField(
         "models.M2MTwo", related_name="one"
@@ -213,7 +213,7 @@ class M2MOne(Model):
 
 
 class M2MTwo(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=255, null=True)
 
     one: fields.ManyToManyRelation[M2MOne]
@@ -229,7 +229,7 @@ class UniqueName(Model):
 
 
 class UniqueTogetherFields(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     first_name = fields.CharField(max_length=64)
     last_name = fields.CharField(max_length=64)
 
@@ -238,7 +238,7 @@ class UniqueTogetherFields(Model):
 
 
 class UniqueTogetherFieldsWithFK(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     text = fields.CharField(max_length=64)
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField("models.Tournament")
 
@@ -251,7 +251,7 @@ class ImplicitPkModel(Model):
 
 
 class UUIDPkModel(Model):
-    id = fields.UUIDField(pk=True)
+    id = fields.UUIDField(primary_key=True)
 
     children: fields.ReverseRelation["UUIDFkRelatedModel"]
     children_null: fields.ReverseRelation["UUIDFkRelatedNullModel"]
@@ -259,7 +259,7 @@ class UUIDPkModel(Model):
 
 
 class UUIDFkRelatedModel(Model):
-    id = fields.UUIDField(pk=True)
+    id = fields.UUIDField(primary_key=True)
     name = fields.CharField(max_length=50, null=True)
     model: fields.ForeignKeyRelation[UUIDPkModel] = fields.ForeignKeyField(
         "models.UUIDPkModel", related_name="children"
@@ -267,7 +267,7 @@ class UUIDFkRelatedModel(Model):
 
 
 class UUIDFkRelatedNullModel(Model):
-    id = fields.UUIDField(pk=True)
+    id = fields.UUIDField(primary_key=True)
     name = fields.CharField(max_length=50, null=True)
     model: fields.ForeignKeyNullableRelation[UUIDPkModel] = fields.ForeignKeyField(
         "models.UUIDPkModel", related_name=False, null=True
@@ -278,7 +278,7 @@ class UUIDFkRelatedNullModel(Model):
 
 
 class UUIDM2MRelatedModel(Model):
-    id = fields.UUIDField(pk=True)
+    id = fields.UUIDField(primary_key=True)
     value = fields.TextField(default="test")
     models: fields.ManyToManyRelation[UUIDPkModel] = fields.ManyToManyField(
         "models.UUIDPkModel", related_name="peers"
@@ -286,14 +286,14 @@ class UUIDM2MRelatedModel(Model):
 
 
 class UUIDPkSourceModel(Model):
-    id = fields.UUIDField(pk=True, db_column="a")
+    id = fields.UUIDField(primary_key=True, db_column="a")
 
     class Meta:
         table = "upsm"
 
 
 class UUIDFkRelatedSourceModel(Model):
-    id = fields.UUIDField(pk=True, db_column="b")
+    id = fields.UUIDField(primary_key=True, db_column="b")
     name = fields.CharField(max_length=50, null=True, db_column="c")
     model = fields.ForeignKeyField(
         "models.UUIDPkSourceModel", related_name="children", db_column="d"
@@ -304,7 +304,7 @@ class UUIDFkRelatedSourceModel(Model):
 
 
 class UUIDFkRelatedNullSourceModel(Model):
-    id = fields.UUIDField(pk=True, db_column="i")
+    id = fields.UUIDField(primary_key=True, db_column="i")
     name = fields.CharField(max_length=50, null=True, db_column="j")
     model = fields.ForeignKeyField(
         "models.UUIDPkSourceModel", related_name="children_null", db_column="k", null=True
@@ -315,7 +315,7 @@ class UUIDFkRelatedNullSourceModel(Model):
 
 
 class UUIDM2MRelatedSourceModel(Model):
-    id = fields.UUIDField(pk=True, db_column="e")
+    id = fields.UUIDField(primary_key=True, db_column="e")
     value = fields.TextField(default="test", db_column="f")
     models = fields.ManyToManyField(
         "models.UUIDPkSourceModel", related_name="peers", forward_key="e", backward_key="h"
@@ -326,7 +326,7 @@ class UUIDM2MRelatedSourceModel(Model):
 
 
 class CharPkModel(Model):
-    id = fields.CharField(max_length=64, pk=True)
+    id = fields.CharField(max_length=64, primary_key=True)
 
 
 class CharFkRelatedModel(Model):
@@ -348,7 +348,7 @@ class NameMixin:
 
 
 class MyAbstractBaseModel(NameMixin, Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
 
     class Meta:
         abstract = True
@@ -363,7 +363,7 @@ class CommentModel(Model):
         table = "comments"
         table_description = "Test Table comment"
 
-    id = fields.IntField(pk=True, description="Primary key \r*/'`/*\n field for the comments")
+    id = fields.IntField(primary_key=True, description="Primary key \r*/'`/*\n field for the comments")
     message = fields.TextField(description="Comment messages entered in the blog post")
     rating = fields.IntField(description="Upvotes done on the comment")
     escaped_comment_field = fields.TextField(description="This column acts as it's own comment")
@@ -428,7 +428,7 @@ class Employee(Model):
 
 
 class StraightFields(Model):
-    eyedee = fields.IntField(pk=True, description="Da PK")
+    eyedee = fields.IntField(primary_key=True, description="Da PK")
     chars = fields.CharField(max_length=50, db_index=True, description="Some chars")
     blip = fields.CharField(max_length=50, default="BLIP")
 
@@ -453,7 +453,7 @@ class StraightFields(Model):
 
 
 class SourceFields(Model):
-    eyedee = fields.IntField(pk=True, db_column="sometable_id", description="Da PK")
+    eyedee = fields.IntField(primary_key=True, db_column="sometable_id", description="Da PK")
     chars = fields.CharField(
         max_length=50, db_column="some_chars_table", db_index=True, description="Some chars"
     )

@@ -203,7 +203,7 @@ class BaseExecutor:
         for field in update_fields or self.model._meta.field_to_db_column_name_map.keys():
             db_column = self.model._meta.field_to_db_column_name_map[field]
             field_object = self.model._meta.fields_map[field]
-            if not field_object.pk:
+            if not field_object.primary_key:
                 query = query.set(db_column, self.parameter(count))
                 count += 1
 
@@ -216,7 +216,7 @@ class BaseExecutor:
         values = [
             self.column_map[field](getattr(instance, field), instance)
             for field in update_fields or self.model._meta.field_to_db_column_name_map.keys()
-            if not self.model._meta.fields_map[field].pk
+            if not self.model._meta.fields_map[field].primary_key
         ]
         values.append(self.model._meta.pk.to_db_value(instance.pk, instance))
         return (await self.db.execute_query(self.get_update_sql(update_fields), values))[0]

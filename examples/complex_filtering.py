@@ -9,7 +9,7 @@ from tortoise.query_utils import Q
 
 
 class Tournament(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     events: fields.ReverseRelation["Event"]
@@ -19,7 +19,7 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
         "models.Tournament", related_name="events"
@@ -33,7 +33,7 @@ class Event(Model):
 
 
 class Team(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     events: fields.ManyToManyRelation[Event]

@@ -615,8 +615,8 @@ class UpdateQuery(AwaitableStatement):
             if not field_object:
                 raise FieldError(f"Unknown keyword argument {key} for model {self.model}")
 
-            if field_object.pk:
-                raise IntegrityError(f"Field {key} is PK and can not be updated")
+            if field_object.primary_key:
+                raise IntegrityError(f"Field {key} is primary key and can not be updated")
 
             if isinstance(field_object, (ForeignKeyField, OneToOneField)):
                 fk_field: str = field_object.db_column  # type: ignore
@@ -736,30 +736,30 @@ class FieldSelectQuery(AwaitableQuery):
         context.pop()
         return output
 
-    def add_field_to_select_query(self, context: QueryContext, field, return_as) -> None:
+    def add_field_to_select_query(self, context: QueryContext, field_name, return_as) -> None:
         table = context.stack[-1].table
 
-        if field == "pk":
-            field = self.model._meta.pk_attr
+        if field_name == "pk":
+            field_name = self.model._meta.pk_attr
 
-        if field in self.model._meta.field_to_db_column_name_map:
-            db_column = self.model._meta.field_to_db_column_name_map[field]
+        if field_name in self.model._meta.field_to_db_column_name_map:
+            db_column = self.model._meta.field_to_db_column_name_map[field_name]
             self.query._select_field(getattr(table, db_column).as_(return_as))
             return
 
-        if field in self.model._meta.fetch_fields:
+        if field_name in self.model._meta.fetch_fields:
             raise ValueError(
                 'Selecting relation "{}" is not possible, select '
-                "concrete field on related model".format(field)
+                "concrete field on related model".format(field_name)
             )
 
-        if field in self.annotations:
-            annotation = self.annotations[field]
+        if field_name in self.annotations:
+            annotation = self.annotations[field_name]
             annotation_info = annotation.resolve(context=context)
             self.query._select_other(annotation_info.field.as_(return_as))
             return
 
-        field_split = field.split("__")
+        field_split = field_name.split("__")
         if field_split[0] in self.model._meta.fetch_fields:
             context.push(model=self.model, table=self.model._meta.basetable)
             related_table, related_db_column = self._join_table_with_forwarded_fields(
@@ -769,7 +769,7 @@ class FieldSelectQuery(AwaitableQuery):
             self.query._select_field(getattr(related_table, related_db_column).as_(return_as))
             return
 
-        raise FieldError(f'Unknown field "{field}" for model "{self.model.__name__}"')
+        raise FieldError(f'Unknown field "{field_name}" for model "{self.model.__name__}"')
 
     def resolve_to_python_value(self, model: "Type[Model]", field_name: str) -> Callable:
         if field_name in model._meta.fetch_fields:
@@ -823,8 +823,8 @@ class ValuesListQuery(FieldSelectQuery):
     def _make_query(self, context: QueryContext, alias=None) -> None:
         self.query = self.create_base_query(alias)
         context.push(self.model, self.query._from[-1])
-        for positional_number, field in self.fields.items():
-            self.add_field_to_select_query(context, field, positional_number)
+        for positional_number, field_name in self.fields.items():
+            self.add_field_to_select_query(context, field_name, positional_number)
 
         self.resolve_filters(context=context)
         if self._limit:
@@ -880,8 +880,8 @@ class ValuesQuery(FieldSelectQuery):
         self.query = self.create_base_query(alias)
         context.push(self.model, self.query._from[-1])
 
-        for return_as, field in self.fields_for_select.items():
-            self.add_field_to_select_query(context, field, return_as)
+        for return_as, field_name in self.fields_for_select.items():
+            self.add_field_to_select_query(context, field_name, return_as)
 
         self.resolve_filters(context=context)
         if self._limit:

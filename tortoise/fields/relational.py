@@ -434,7 +434,7 @@ class ForeignKeyField(RelationField):
 
         key_field = f"{self.model_field_name}_id"
         key_fk_object = deepcopy(related_model._meta.pk)
-        key_fk_object.pk = False
+        key_fk_object.primary_key = False
         key_fk_object.unique = False
         key_fk_object.db_index = self.db_index
         key_fk_object.default = self.default
@@ -599,7 +599,7 @@ class OneToOneField(RelationField):
 
         key_field = f"{self.model_field_name}_id"
         key_o2o_object = deepcopy(related_model._meta.pk)
-        key_o2o_object.pk = self.pk
+        key_o2o_object.primary_key = self.primary_key
         key_o2o_object.db_index = self.db_index
         key_o2o_object.default = self.default
         key_o2o_object.null = self.null
@@ -635,7 +635,7 @@ class OneToOneField(RelationField):
             o2o_relation.model_field_name = backward_relation_name
             related_model._meta.add_field(backward_relation_name, o2o_relation)
 
-        if self.pk:
+        if self.primary_key:
             self.model._meta.pk_attr = key_field
 
 
