@@ -133,6 +133,7 @@ class Tortoise:
                     return model_name(typ)
             except TypeError:
                 pass
+
             try:
                 return _type_name(typ)
             except AttributeError:

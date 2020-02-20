@@ -523,7 +523,7 @@ class ForeignKeyField(RelationField):
                 )
 
             backward_relation_field = self.backward_relation_class(
-                self.model, key_field_name, self.null, self.description)
+                self.model, key_field_name, True, self.description)
             related_model._meta.add_field(backward_relation_name, backward_relation_field)
 
         if self.primary_key:
@@ -641,8 +641,6 @@ class ManyToManyField(RelationField):
         The attribute name on the related model to reverse resolve the many to many.
     """
 
-    field_type = ManyToManyRelation
-
     def __init__(
         self,
         model_name: str,
@@ -653,10 +651,13 @@ class ManyToManyField(RelationField):
         field_type: "Type[Model]" = None,  # type: ignore
         **kwargs,
     ) -> None:
+
         super().__init__(**kwargs)
+
         self.model_class: "Type[Model]" = field_type
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
+
         self.model_name: str = model_name
         self.related_name: str = related_name
         self.forward_key: str = forward_key or f"{model_name.split('.')[1].lower()}_id"
@@ -693,12 +694,7 @@ class ManyToManyField(RelationField):
             )
 
         if not self.through:
-            related_model_table_name = (
-                related_model._meta.table
-                if related_model._meta.table
-                else related_model.__name__.lower()
-            )
-
+            related_model_table_name = related_model._meta.table or related_model.__name__.lower()
             self.through = f"{self.model._meta.table}_{related_model_table_name}"
 
         m2m_relation = ManyToManyField(
