@@ -63,12 +63,12 @@ class Q:
         model = context_item.model
         table = context_item.table
 
-        related_field_name = key.split("__")[0]
-        related_field = model._meta.fields_map[related_field_name]
-        required_joins = related_field.get_joins(table)
+        relation_field_name = key.split("__")[0]
+        relation_field = model._meta.fields_map[relation_field_name]
+        required_joins = relation_field.get_joins(table)
 
         related_table = required_joins[-1][0]
-        context.push(related_field.model_class, related_table)
+        context.push(relation_field.model_class, related_table)
         modifier = Q(**{"__".join(key.split("__")[1:]): value}).resolve(
             context=context, annotations=self._annotations)
         context.pop()

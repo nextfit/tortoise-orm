@@ -91,14 +91,14 @@ class AwaitableStatement(Generic[MODEL]):
         self.query._wheres = modifier.where_criterion
         self.query._havings = modifier.having_criterion
 
-    def _join_table_by_field(self, table, related_field) -> Table:
+    def _join_table_by_field(self, table, relation_field) -> Table:
         """
         :param table:
-        :param related_field:
+        :param relation_field:
         :return: related_table
         """
 
-        joins = related_field.get_joins(table)
+        joins = relation_field.get_joins(table)
         for join in joins:
             if join[0] not in self._joined_tables:
                 self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
@@ -170,10 +170,10 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
                 )
 
             if field_name.split("__")[0] in model._meta.fetch_fields:
-                related_field_name = field_name.split("__")[0]
-                related_field = model._meta.fields_map[related_field_name]
-                related_table = self._join_table_by_field(table, related_field)
-                context.push(related_field.model_class, related_table)
+                relation_field_name = field_name.split("__")[0]
+                relation_field = model._meta.fields_map[relation_field_name]
+                related_table = self._join_table_by_field(table, relation_field)
+                context.push(relation_field.model_class, related_table)
                 self.__resolve_ordering(
                     context,
                     [QueryOrdering("__".join(field_name.split("__")[1:]), ordering.direction)],
