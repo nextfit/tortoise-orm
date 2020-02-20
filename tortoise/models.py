@@ -239,12 +239,12 @@ class ModelMeta(type):
                         pk_attr = key
 
             if not custom_pk_present and not getattr(meta_class, "abstract", None):
-                if "id" not in attrs:
-                    attrs = {"id": IntField(primary_key=True), **attrs}
+                if pk_attr not in attrs:
+                    attrs = {pk_attr: IntField(primary_key=True), **attrs}
 
-                if not isinstance(attrs["id"], Field) or not attrs["id"].primary_key:
+                if not isinstance(attrs[pk_attr], Field) or not attrs[pk_attr].primary_key:
                     raise ConfigurationError(
-                        f"Can't create model {name} without explicit primary key if field 'id'"
+                        f"Can't create model {name} without explicit primary key if field '{pk_attr}'"
                         " already present"
                     )
 
