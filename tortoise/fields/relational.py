@@ -84,7 +84,7 @@ def _ro2o_getter(self, _key, ftype, frelfield):
 def _m2m_getter(self, _key, field_object):
     val = getattr(self, _key, None)
     if val is None:
-        val = ManyToManyRelation(field_object.remote_model, self, field_object)
+        val = ManyToManyRelation(self, field_object)
         setattr(self, _key, val)
     return val
 
@@ -94,10 +94,11 @@ class ReverseRelation(Generic[MODEL]):
     Relation container for :func:`.ForeignKeyField`.
     """
 
-    def __init__(self, model, relation_field: str, instance) -> None:
-        self.model = model
-        self.relation_field = relation_field
+    def __init__(self, remote_model: "Type[MODEL]", remote_field_name: str, instance) -> None:
+        self.remote_model = remote_model
+        self.remote_field_name = remote_field_name
         self.instance = instance
+
         self._fetched = False
         self._custom_query = False
         self.related_objects: list = []
@@ -108,7 +109,7 @@ class ReverseRelation(Generic[MODEL]):
             raise OperationalError(
                 "This objects hasn't been instanced, call .save() before calling related queries"
             )
-        return self.model.filter(**{self.relation_field: self.instance.pk})
+        return self.remote_model.filter(**{self.remote_field_name: self.instance.pk})
 
     def __contains__(self, item) -> bool:
         if not self._fetched:
@@ -196,11 +197,9 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
     Many to many relation container for :func:`.ManyToManyField`.
     """
 
-    def __init__(self, model, instance, m2m_field: "ManyToManyField") -> None:
-        super().__init__(model, m2m_field.related_name, instance)
+    def __init__(self, instance, m2m_field: "ManyToManyField") -> None:
+        super().__init__(m2m_field.remote_model, m2m_field.related_name, instance)
         self.field = m2m_field
-        self.model = m2m_field.remote_model
-        self.instance = instance
 
     async def add(self, *instances, using_db=None) -> None:
         """
@@ -212,7 +211,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
             return
         if not self.instance._saved_in_db:
             raise OperationalError(f"You should first call .save() on {self.instance}")
-        db = using_db if using_db else self.model._meta.db
+        db = using_db if using_db else self.remote_model._meta.db
         pk_formatting_func = type(self.instance)._meta.pk.to_db_value
         related_pk_formatting_func = type(instances[0])._meta.pk.to_db_value
         through_table = Table(self.field.through)
@@ -268,7 +267,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         """
         Clears ALL relations.
         """
-        db = using_db if using_db else self.model._meta.db
+        db = using_db if using_db else self.remote_model._meta.db
         through_table = Table(self.field.through)
         pk_formatting_func = type(self.instance)._meta.pk.to_db_value
         query = (
@@ -285,7 +284,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         """
         Removes one or more of ``instances`` from the relation.
         """
-        db = using_db if using_db else self.model._meta.db
+        db = using_db if using_db else self.remote_model._meta.db
         if not instances:
             raise OperationalError("remove() called on no instances")
         through_table = Table(self.field.through)
@@ -664,8 +663,8 @@ class ManyToManyField(RelationField):
         model_name: str,
         through: Optional[str] = None,
         forward_key: Optional[str] = None,
-        backward_key: str = "",
-        related_name: str = "",
+        backward_key: Optional[str] = None,
+        related_name: Optional[str] = None,
         field_type: "Type[Model]" = None,  # type: ignore
         **kwargs,
     ) -> None:
