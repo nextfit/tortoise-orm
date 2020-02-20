@@ -94,9 +94,9 @@ class ReverseRelation(Generic[MODEL]):
     Relation container for :func:`.ForeignKeyField`.
     """
 
-    def __init__(self, remote_model: "Type[MODEL]", remote_field_name: str, instance) -> None:
+    def __init__(self, remote_model: "Type[MODEL]", related_name: str, instance) -> None:
         self.remote_model = remote_model
-        self.remote_field_name = remote_field_name
+        self.related_name = related_name
         self.instance = instance
 
         self._fetched = False
@@ -109,7 +109,7 @@ class ReverseRelation(Generic[MODEL]):
             raise OperationalError(
                 "This objects hasn't been instanced, call .save() before calling related queries"
             )
-        return self.remote_model.filter(**{self.remote_field_name: self.instance.pk})
+        return self.remote_model.filter(**{self.related_name: self.instance.pk})
 
     def __contains__(self, item) -> bool:
         if not self._fetched:
