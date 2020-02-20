@@ -714,7 +714,7 @@ class ManyToManyField(RelationField):
             self.through = through_model._meta.table
 
         m2m_relation = ManyToManyField(
-            f"{self.model._meta.app}.{self.model.__name__}",
+            self.model.full_name(),
             self.through,
             forward_key=self.backward_key,
             backward_key=self.forward_key,
