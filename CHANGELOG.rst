@@ -2,6 +2,30 @@
 
 Changelog
 =========
+0.15.14
+-------
+- add F expression support in queryset.update()
+
+0.15.13
+-------
+- Applies default ordering on related queries
+- Fix post-ManyToMany related queries not being evaluated correctly
+- Ordering is now preserved on ManyToMany related fetches
+- Fix aggregate function on joined table to use correct primary key
+- Fix filtering by backwards FK to use correct primary key
+
+0.15.12
+-------
+- Added ``range`` filter to support ``between and`` syntax
+
+0.15.11
+-------
+- Added ``ordering`` option for model ``Meta`` class to apply default ordering
+
+0.15.10
+-------
+- Bumped requirements to cater for newer feature use (#282)
+
 0.15.9
 ------
 - Alias Foreign Key joins as we can have both self-referencing and duplicate joins to the same table.

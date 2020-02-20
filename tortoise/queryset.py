@@ -20,14 +20,18 @@ from typing import (
 from pypika import JoinType, Table, EmptyCriterion
 from pypika.functions import Count
 from pypika.queries import QueryBuilder
+from pypika.terms import ArithmeticExpression
 from typing_extensions import Protocol
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.context import QueryContext
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
+
 from tortoise.fields.relational import ForeignKeyField, OneToOneField
 from tortoise.filters import EmptyCriterion as TortoiseEmptyCriterion
 from tortoise.functions import Annotation
+from tortoise.expressions import F
+
 from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
 
 # Empty placeholder - Should never be edited.
@@ -627,7 +631,12 @@ class UpdateQuery(AwaitableStatement):
                     column_name = self.model._meta.field_to_db_column_name_map[key]
                 except KeyError:
                     raise FieldError(f"Field {key} is virtual and can not be updated")
-                value = executor.column_map[key](value, None)
+
+                if isinstance(value, (F, ArithmeticExpression)):
+                    value = F.resolve(self.model._meta.field_to_db_column_name_map, value)
+
+                else:
+                    value = executor.column_map[key](value, None)  # type: ignore
 
             self.query = self.query.set(column_name, value)
 
