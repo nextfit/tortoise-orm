@@ -173,7 +173,7 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
                 relation_field_name = field_name.split("__")[0]
                 relation_field = model._meta.fields_map[relation_field_name]
                 related_table = self._join_table_by_field(table, relation_field)
-                context.push(relation_field.model_class, related_table)
+                context.push(relation_field.remote_model, related_table)
                 self.__resolve_ordering(
                     context,
                     [QueryOrdering("__".join(field_name.split("__")[1:]), ordering.direction)],
@@ -735,7 +735,7 @@ class FieldSelectQuery(AwaitableQuery):
         field_table = self._join_table_by_field(table, field_object)
         forwarded_fields_split = forwarded_fields.split("__")
 
-        context.push(field_object.model_class, field_table)
+        context.push(field_object.remote_model, field_table)
         output = self._join_table_with_forwarded_fields(
             context=context,
             field_name=forwarded_fields_split[0],
@@ -801,8 +801,8 @@ class FieldSelectQuery(AwaitableQuery):
 
         field_split = field_name.split("__")
         if field_split[0] in model._meta.fetch_fields:
-            new_model = model._meta.fields_map[field_split[0]].model_class  # type: ignore
-            return self.resolve_to_python_value(new_model, "__".join(field_split[1:]))
+            remote_model = model._meta.fields_map[field_split[0]].remote_model  # type: ignore
+            return self.resolve_to_python_value(remote_model, "__".join(field_split[1:]))
 
         raise FieldError(f'Unknown field "{field_name}" for model "{model}"')
 

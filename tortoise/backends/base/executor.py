@@ -229,18 +229,18 @@ class BaseExecutor:
         )[0]
 
     def _make_prefetch_queries(self) -> None:
-        for field, forwarded_prefetches in self.prefetch_map.items():
-            if field in self._prefetch_queries:
-                related_query = self._prefetch_queries.get(field)
+        for field_name, forwarded_prefetches in self.prefetch_map.items():
+            if field_name in self._prefetch_queries:
+                related_query = self._prefetch_queries.get(field_name)
             else:
-                related_model_field = self.model._meta.fields_map[field]
-                related_model: "Type[Model]" = related_model_field.model_class  # type: ignore
-                related_query = related_model.all().using_db(self.db)
+                relation_field = self.model._meta.fields_map[field_name]
+                remote_model: "Type[Model]" = relation_field.remote_model  # type: ignore
+                related_query = remote_model.all().using_db(self.db)
 
             if forwarded_prefetches:
                 related_query = related_query.prefetch_related(*forwarded_prefetches)
 
-            self._prefetch_queries[field] = related_query
+            self._prefetch_queries[field_name] = related_query
 
     async def _execute_prefetch_queries(self, instance_list: list) -> list:
         if instance_list and (self.prefetch_map or self._prefetch_queries):

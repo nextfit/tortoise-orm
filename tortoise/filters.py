@@ -187,10 +187,10 @@ class RelationFilter(FieldFilter):
 class BackwardFKFilter(RelationFilter):
     def __init__(self, field: BackwardFKRelation, opr, value_encoder):
         super().__init__(
-            field.model_class._meta.pk.model_field_name,
+            field.remote_model._meta.pk.model_field_name,
             opr,
             value_encoder,
-            Table(field.model_class._meta.table),
+            Table(field.remote_model._meta.table),
             field.relation_field)
 
 
@@ -276,12 +276,12 @@ def insensitive_ends_with(field, value):
 
 
 def __field_to_db_value(field):
-    target_table_pk = field.model_class._meta.pk
+    target_table_pk = field.remote_model._meta.pk
     return target_table_pk.to_db_value
 
 
 def __field_to_list(field):
-    target_table_pk = field.model_class._meta.pk
+    target_table_pk = field.remote_model._meta.pk
     return partial(related_list_encoder, field=target_table_pk)
 
 

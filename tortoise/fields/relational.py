@@ -84,7 +84,7 @@ def _ro2o_getter(self, _key, ftype, frelfield):
 def _m2m_getter(self, _key, field_object):
     val = getattr(self, _key, None)
     if val is None:
-        val = ManyToManyRelation(field_object.model_class, self, field_object)
+        val = ManyToManyRelation(field_object.remote_model, self, field_object)
         setattr(self, _key, val)
     return val
 
@@ -199,7 +199,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
     def __init__(self, model, instance, m2m_field: "ManyToManyField") -> None:
         super().__init__(model, m2m_field.related_name, instance)
         self.field = m2m_field
-        self.model = m2m_field.model_class
+        self.model = m2m_field.remote_model
         self.instance = instance
 
     async def add(self, *instances, using_db=None) -> None:
@@ -323,8 +323,8 @@ class RelationField(Field):
         raise NotImplementedError()
 
     def get_joins(self, table: Table):
-        related_table_pk = self.model_class._meta.pk_db_column
-        related_table = self.model_class._meta.basetable
+        related_table_pk = self.remote_model._meta.pk_db_column
+        related_table = self.remote_model._meta.basetable
         related_table = related_table.as_(f"{table.get_table_name()}__{self.model_field_name}")
         return [
             (related_table,
@@ -377,7 +377,7 @@ class BackwardFKRelation(RelationField):
         description: Optional[str]
     ) -> None:
         super().__init__(null=null)
-        self.model_class: "Type[Model]" = field_type
+        self.remote_model: "Type[Model]" = field_type
         self.relation_field: str = relation_field
         self.description: Optional[str] = description
         self.auto_created = True
@@ -388,7 +388,7 @@ class BackwardFKRelation(RelationField):
             partial(
                 _rfk_getter,
                 _key=_key,
-                ftype=self.model_class,
+                ftype=self.remote_model,
                 frelfield=self.relation_field,
             )
         )
@@ -423,7 +423,7 @@ class BackwardFKRelation(RelationField):
 
     def get_joins(self, table: Table):
         table_pk = self.model._meta.pk_db_column
-        related_table = self.model_class._meta.basetable
+        related_table = self.remote_model._meta.basetable
 
         return [
             (related_table,
@@ -482,7 +482,7 @@ class ForeignKeyField(RelationField):
         if len(model_name.split(".")) != 2:
             raise ConfigurationError(f'{self.__class__.__name__} accepts model name in format "app.Model"')
 
-        self.model_class: "Type[Model]" = None  # type: ignore
+        self.remote_model: "Type[Model]" = None  # type: ignore
         self.model_name = model_name
         self.related_name = related_name
 
@@ -501,7 +501,7 @@ class ForeignKeyField(RelationField):
             partial(
                 _fk_getter,
                 _key=_key,
-                ftype=self.model_class,  # type: ignore
+                ftype=self.remote_model,  # type: ignore
                 relation_field=relation_field,
             ),
             partial(_fk_setter, _key=_key, relation_field=relation_field),
@@ -527,7 +527,7 @@ class ForeignKeyField(RelationField):
 
         self.db_column = key_field_name
         self.model._meta.add_field(key_field_name, key_field_object)
-        self.model_class = related_model
+        self.remote_model = related_model
 
         backward_relation_name = self.related_name
         if backward_relation_name is not False:
@@ -555,7 +555,7 @@ class BackwardOneToOneRelation(BackwardFKRelation):
             partial(
                 _ro2o_getter,
                 _key=_key,
-                ftype=self.model_class,
+                ftype=self.remote_model,
                 frelfield=self.relation_field,
             ),
         )
@@ -672,7 +672,7 @@ class ManyToManyField(RelationField):
 
         super().__init__(**kwargs)
 
-        self.model_class: "Type[Model]" = field_type
+        self.remote_model: "Type[Model]" = field_type
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
 
@@ -699,7 +699,7 @@ class ManyToManyField(RelationField):
         related_app_name, related_model_name = self.model_name.split(".")
         related_model = RelationField.get_related_model(related_app_name, related_model_name)
 
-        self.model_class = related_model
+        self.remote_model = related_model
 
         backward_relation_name = self.related_name
         if not backward_relation_name:
@@ -790,8 +790,8 @@ class ManyToManyField(RelationField):
 
     def get_joins(self, table: Table):
         table_pk = self.model._meta.pk_db_column
-        related_table_pk = self.model_class._meta.pk_db_column
-        related_table = self.model_class._meta.basetable
+        related_table_pk = self.remote_model._meta.pk_db_column
+        related_table = self.remote_model._meta.basetable
         through_table = Table(self.through)
         return [
             (through_table,

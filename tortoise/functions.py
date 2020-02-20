@@ -70,7 +70,7 @@ class Function(Annotation):
             function_joins = []
             if field_split[0] in model._meta.fetch_fields:
                 relation_field = model._meta.fields_map[field_split[0]]
-                relation_field_meta = relation_field.model_class._meta
+                relation_field_meta = relation_field.remote_model._meta
                 join = (table, relation_field)
                 function_joins.append(join)
                 field = relation_field_meta.basetable[relation_field_meta.pk_db_column]
@@ -92,13 +92,13 @@ class Function(Annotation):
 
         relation_field = model._meta.fields_map[field_split[0]]
 
-        related_model = relation_field.model_class
-        related_table = related_model._meta.basetable
+        remote_model = relation_field.remote_model
+        remote_table = remote_model._meta.basetable
         if isinstance(relation_field, ForeignKeyField):
             # Only FK's can be to same table, so we only auto-alias FK join tables
-            related_table = related_table.as_(f"{table.get_table_name()}__{field_split[0]}")
+            remote_table = remote_table.as_(f"{table.get_table_name()}__{field_split[0]}")
 
-        context.push(related_model, related_table)
+        context.push(remote_model, remote_table)
         annotation_info = self._resolve_field(
             context, "__".join(field_split[1:]), *default_values
         )

@@ -68,7 +68,7 @@ class Q:
         required_joins = relation_field.get_joins(table)
 
         related_table = required_joins[-1][0]
-        context.push(relation_field.model_class, related_table)
+        context.push(relation_field.remote_model, related_table)
         modifier = Q(**{"__".join(key.split("__")[1:]): value}).resolve(
             context=context, annotations=self._annotations)
         context.pop()

@@ -149,7 +149,7 @@ class Tortoise:
         def describe_field(name: str) -> dict:
             # TODO: db_type
             field = model._meta.fields_map[name]
-            field_type = getattr(field, "model_class", field.field_type)
+            field_type = getattr(field, "remote_model", field.field_type)
             desc = {
                 "name": name,
                 "field_type": field.__class__.__name__ if serializable else field.__class__,

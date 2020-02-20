@@ -182,17 +182,17 @@ class BaseSchemaGenerator:
                     constraint_name=self._generate_fk_name(
                         model._meta.table,
                         column_name,
-                        field_object.reference.model_class._meta.table,
-                        field_object.reference.model_class._meta.pk_db_column,
+                        field_object.reference.remote_model._meta.table,
+                        field_object.reference.remote_model._meta.pk_db_column,
                     ),
                     db_column=column_name,
-                    table=field_object.reference.model_class._meta.table,
-                    field=field_object.reference.model_class._meta.pk_db_column,
+                    table=field_object.reference.remote_model._meta.table,
+                    field=field_object.reference.remote_model._meta.pk_db_column,
                     on_delete=field_object.reference.on_delete,
                     comment=comment,
                 )
 
-                references.add(field_object.reference.model_class._meta.table)
+                references.add(field_object.reference.remote_model._meta.table)
 
             else:
                 field_creation_string = self._create_string(
@@ -266,13 +266,13 @@ class BaseSchemaGenerator:
                     exists="IF NOT EXISTS " if safe else "",
                     table_name=field.through,
                     backward_table=model._meta.table,
-                    forward_table=field.model_class._meta.table,
+                    forward_table=field.remote_model._meta.table,
                     backward_field=model._meta.pk_db_column,
-                    forward_field=field.model_class._meta.pk_db_column,
+                    forward_field=field.remote_model._meta.pk_db_column,
                     backward_key=field.backward_key,
                     backward_type=model._meta.pk.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                     forward_key=field.forward_key,
-                    forward_type=field.model_class._meta.pk.get_for_dialect(self.DIALECT, "SQL_TYPE"),
+                    forward_type=field.remote_model._meta.pk.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                     extra=self._table_generate_extra(table=field.through),
                     comment=
                         self._table_comment_generator(table=field.through, comment=field.description)
