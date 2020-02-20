@@ -359,111 +359,6 @@ class RelationField(Field):
         return related_app[related_model_name]
 
 
-class ForeignKeyField(RelationField):
-    """
-    ForeignKey relation field.
-
-    This field represents a foreign key relation to another model.
-
-    See :ref:`foreign_key` for usage information.
-
-    You must provide the following:
-
-    ``model_name``:
-        The name of the related model in a :samp:`'{app}.{model}'` format.
-
-    The following is optional:
-
-    ``related_name``:
-        The attribute name on the related model to reverse resolve the foreign key.
-    ``on_delete``:
-        One of:
-            ``field.CASCADE``:
-                Indicate that the model should be cascade deleted if related model gets deleted.
-            ``field.RESTRICT``:
-                Indicate that the related model delete will be restricted as long as a
-                foreign key points to it.
-            ``field.SET_NULL``:
-                Resets the field to NULL in case the related model gets deleted.
-                Can only be set if field has ``null=True`` set.
-            ``field.SET_DEFAULT``:
-                Resets the field to ``default`` value in case the related model gets deleted.
-                Can only be set is field has a ``default`` set.
-    """
-
-    def __init__(
-        self,
-        model_name: str,
-        related_name: Union[Optional[str], Literal[False]] = None,
-        on_delete=CASCADE,
-        **kwargs,
-    ) -> None:
-        super().__init__(**kwargs)
-        if len(model_name.split(".")) != 2:
-            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
-
-        self.model_class: "Type[Model]" = None  # type: ignore
-        self.model_name = model_name
-        self.related_name = related_name
-
-        if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
-            raise ConfigurationError("on_delete can only be CASCADE, RESTRICT or SET_NULL")
-
-        if on_delete == SET_NULL and not bool(kwargs.get("null")):
-            raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
-
-        self.on_delete = on_delete
-
-    def attribute_property(self):
-        _key = f"_{self.model_field_name}"
-        relation_field = self.db_column
-        return property(
-            partial(
-                _fk_getter,
-                _key=_key,
-                ftype=self.model_class,  # type: ignore
-                relation_field=relation_field,
-            ),
-            partial(_fk_setter, _key=_key, relation_field=relation_field),
-            partial(_fk_setter, value=None, _key=_key, relation_field=relation_field),
-        )
-
-    def create_relation(self):
-        related_app_name, related_model_name = self.model_name.split(".")
-        related_model = RelationField.get_related_model(related_app_name, related_model_name)
-
-        key_field = f"{self.model_field_name}_id"
-        key_fk_object = deepcopy(related_model._meta.pk)
-        key_fk_object.primary_key = False
-        key_fk_object.unique = False
-        key_fk_object.db_index = self.db_index
-        key_fk_object.default = self.default
-        key_fk_object.null = self.null
-        key_fk_object.generated = self.generated
-        key_fk_object.auto_created = True
-        key_fk_object.reference = self
-        key_fk_object.description = self.description
-        key_fk_object.db_column = self.db_column if self.db_column else key_field
-
-        self.db_column = key_field
-        self.model._meta.add_field(key_field, key_fk_object)
-        self.model_class = related_model
-
-        backward_relation_name = self.related_name
-        if backward_relation_name is not False:
-            if not backward_relation_name:
-                backward_relation_name = f"{self.model._meta.table}s"
-
-            if backward_relation_name in related_model._meta.fields_map:
-                raise ConfigurationError(
-                    f'backward relation "{backward_relation_name}" duplicates in'
-                    f" model {related_model_name}"
-                )
-
-            fk_relation = BackwardFKRelation(self.model, key_field, self.null, self.description)
-            related_model._meta.add_field(backward_relation_name, fk_relation)
-
-
 class BackwardFKRelation(RelationField):
     def __init__(
         self,
@@ -518,13 +413,13 @@ class BackwardFKRelation(RelationField):
         return instance_list
 
 
-class OneToOneField(RelationField):
+class ForeignKeyField(RelationField):
     """
-    OneToOne relation field.
+    ForeignKey relation field.
 
     This field represents a foreign key relation to another model.
 
-    See :ref:`one_to_one` for usage information.
+    See :ref:`foreign_key` for usage information.
 
     You must provide the following:
 
@@ -550,24 +445,35 @@ class OneToOneField(RelationField):
                 Can only be set is field has a ``default`` set.
     """
 
+    backward_relation_class = BackwardFKRelation
+
     def __init__(
         self,
         model_name: str,
+        primary_key: bool = False,
+        unique: bool = False,
         related_name: Union[Optional[str], Literal[False]] = None,
         on_delete=CASCADE,
         **kwargs,
     ) -> None:
-        kwargs["unique"] = True
-        super().__init__(**kwargs)
+
+        super().__init__(primary_key=primary_key, unique=unique, **kwargs)
+        if primary_key and not unique:
+            raise ConfigurationError(f"{self.__class__.__name__} cannot be a primary key if not unique")
+
         if len(model_name.split(".")) != 2:
-            raise ConfigurationError('OneToOneField accepts model name in format "app.Model"')
+            raise ConfigurationError(f'{self.__class__.__name__} accepts model name in format "app.Model"')
+
         self.model_class: "Type[Model]" = None  # type: ignore
         self.model_name = model_name
         self.related_name = related_name
+
         if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
             raise ConfigurationError("on_delete can only be CASCADE, RESTRICT or SET_NULL")
+
         if on_delete == SET_NULL and not bool(kwargs.get("null")):
             raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
+
         self.on_delete = on_delete
 
     def attribute_property(self):
@@ -589,26 +495,26 @@ class OneToOneField(RelationField):
         related_model = RelationField.get_related_model(related_app_name, related_model_name)
 
         key_field = f"{self.model_field_name}_id"
-        key_o2o_object = deepcopy(related_model._meta.pk)
-        key_o2o_object.primary_key = self.primary_key
-        key_o2o_object.db_index = self.db_index
-        key_o2o_object.default = self.default
-        key_o2o_object.null = self.null
-        key_o2o_object.unique = self.unique
-        key_o2o_object.generated = self.generated
-        key_o2o_object.auto_created = True
-        key_o2o_object.reference = self
-        key_o2o_object.description = self.description
-        key_o2o_object.db_column = self.db_column if self.db_column else key_field
+        key_fk_object = deepcopy(related_model._meta.pk)
+        key_fk_object.primary_key = self.primary_key
+        key_fk_object.unique = self.unique
+        key_fk_object.db_index = self.db_index
+        key_fk_object.default = self.default
+        key_fk_object.null = self.null
+        key_fk_object.generated = self.generated
+        key_fk_object.auto_created = True
+        key_fk_object.reference = self
+        key_fk_object.description = self.description
+        key_fk_object.db_column = self.db_column if self.db_column else key_field
 
         self.db_column = key_field
-        self.model._meta.add_field(key_field, key_o2o_object)
+        self.model._meta.add_field(key_field, key_fk_object)
         self.model_class = related_model
 
         backward_relation_name = self.related_name
         if backward_relation_name is not False:
             if not backward_relation_name:
-                backward_relation_name = f"{self.model._meta.table}"
+                backward_relation_name = f"{self.model._meta.table}s"
 
             if backward_relation_name in related_model._meta.fields_map:
                 raise ConfigurationError(
@@ -616,9 +522,8 @@ class OneToOneField(RelationField):
                     f" model {related_model_name}"
                 )
 
-            o2o_relation = BackwardOneToOneRelation(
-                self.model, key_field, null=True, description=self.description)
-            related_model._meta.add_field(backward_relation_name, o2o_relation)
+            fk_relation = self.backward_relation_class(self.model, key_field, self.null, self.description)
+            related_model._meta.add_field(backward_relation_name, fk_relation)
 
         if self.primary_key:
             self.model._meta.pk_attr = key_field
@@ -652,6 +557,59 @@ class BackwardOneToOneRelation(BackwardFKRelation):
             setattr(instance, f"_{self.model_field_name}", related_object_map.get(instance.pk, None))
 
         return instance_list
+
+
+class OneToOneField(ForeignKeyField):
+    """
+    OneToOne relation field.
+
+    This field represents a foreign key relation to another model.
+
+    See :ref:`one_to_one` for usage information.
+
+    You must provide the following:
+
+    ``model_name``:
+        The name of the related model in a :samp:`'{app}.{model}'` format.
+
+    The following is optional:
+
+    ``related_name``:
+        The attribute name on the related model to reverse resolve the foreign key.
+    ``on_delete``:
+        One of:
+            ``field.CASCADE``:
+                Indicate that the model should be cascade deleted if related model gets deleted.
+            ``field.RESTRICT``:
+                Indicate that the related model delete will be restricted as long as a
+                foreign key points to it.
+            ``field.SET_NULL``:
+                Resets the field to NULL in case the related model gets deleted.
+                Can only be set if field has ``null=True`` set.
+            ``field.SET_DEFAULT``:
+                Resets the field to ``default`` value in case the related model gets deleted.
+                Can only be set is field has a ``default`` set.
+    """
+
+    backward_relation_class = BackwardOneToOneRelation
+
+    def __init__(
+        self,
+        model_name: str,
+        primary_key: bool = False,
+        related_name: Union[Optional[str], Literal[False]] = None,
+        on_delete=CASCADE,
+        **kwargs,
+
+    ) -> None:
+        kwargs.pop("unique", None)
+        super().__init__(
+            model_name=model_name,
+            primary_key=primary_key,
+            unique=True,
+            related_name=related_name,
+            on_delete=on_delete,
+            **kwargs)
 
 
 class ManyToManyField(RelationField):

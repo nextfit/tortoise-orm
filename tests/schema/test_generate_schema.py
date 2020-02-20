@@ -94,7 +94,7 @@ class TestGenerateSchema(test.SimpleTestCase):
 
     async def test_fk_bad_model_name(self):
         with self.assertRaisesRegex(
-            ConfigurationError, 'Foreign key accepts model name in format "app.Model"'
+            ConfigurationError, 'ForeignKeyField accepts model name in format "app.Model"'
         ):
             await self.init_for("tests.schema.models_fk_1")
 
