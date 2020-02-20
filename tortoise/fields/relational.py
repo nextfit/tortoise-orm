@@ -355,10 +355,10 @@ class RelationField(Field):
         helpful message. If successful, returns the requested model.
         """
         from tortoise import Tortoise
-        if related_app_name not in Tortoise.apps:
+        if related_app_name not in Tortoise.app_models_map:
             raise ConfigurationError(f"No app with name '{related_app_name}' registered.")
 
-        related_app = Tortoise.apps[related_app_name]
+        related_app = Tortoise.app_models_map[related_app_name]
         if related_model_name not in related_app:
             raise ConfigurationError(
                 f"No model with name '{related_model_name}' registered in app '{related_app_name}'."
@@ -713,6 +713,11 @@ class ManyToManyField(RelationField):
         if not self.through:
             related_model_table_name = related_model._meta.table or related_model.__name__.lower()
             self.through = f"{self.model._meta.table}_{related_model_table_name}"
+
+        elif "." in self.through:
+            through_app_name, through_model_name = self.through.split(".")
+            through_model = RelationField.get_related_model(through_app_name, through_model_name)
+
 
         m2m_relation = ManyToManyField(
             f"{self.model._meta.app}.{self.model.__name__}",

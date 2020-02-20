@@ -293,8 +293,8 @@ class BaseSchemaGenerator:
         from tortoise import Tortoise
 
         models_to_create = []
-        for app in Tortoise.apps.values():
-            for model in app.values():
+        for models_map in Tortoise.app_models_map.values():
+            for model in models_map.values():
                 if model._meta.db == self.client:
                     model.check()
                     models_to_create.append(model)

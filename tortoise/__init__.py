@@ -34,7 +34,7 @@ logger = logging.getLogger("tortoise")
 
 
 class Tortoise:
-    apps: Dict[str, Dict[str, Type[Model]]] = {}
+    app_models_map: Dict[str, Dict[str, Type[Model]]] = {}
     _connections: Dict[str, BaseDBAsyncClient] = {}
     _inited: bool = False
 
@@ -119,13 +119,8 @@ class Tortoise:
                 return typ.__name__
             return f"{typ.__module__}.{typ.__name__}"
 
-        def model_name(typ: Type[Model]) -> str:
-            name = typ._meta.table
-            for app in cls.apps.values():  # pragma: nobranch
-                for _name, _model in app.items():  # pragma: nobranch
-                    if typ == _model:
-                        name = _name
-            return f"{typ._meta.app}.{name}"
+        def model_name(model: Type[Model]) -> str:
+            return f"{model._meta.app}.{model.__name__}"
 
         def type_name(typ: Any) -> Union[str, List[str]]:
             try:
@@ -225,8 +220,8 @@ class Tortoise:
 
         if not models:
             models = []
-            for app in cls.apps.values():
-                for model in app.values():
+            for models_map in cls.app_models_map.values():
+                for model in models_map.values():
                     models.append(model)
 
         return {
@@ -236,21 +231,19 @@ class Tortoise:
 
     @classmethod
     def _init_relations(cls) -> None:
-        for app_name, app in cls.apps.items():
-            for model_name, model in app.items():
-                if model._meta._inited:
-                    continue
+        for app_name, app_models_map in cls.app_models_map.items():
+            for model in app_models_map.values():
+                if not model._meta._inited:
+                    model._meta._inited = True
+                    if not model._meta.table:
+                        model._meta.table = f"{app_name}_{model.__name__.lower()}"
 
-                model._meta._inited = True
-                if not model._meta.table:
-                    model._meta.table = model.__name__.lower()
+                    field_objects = list(model._meta.fields_map.values())
+                    for field in field_objects:
+                        if isinstance(field, RelationField) and not field.auto_created:
+                            field.create_relation()
 
-                field_objects = list(model._meta.fields_map.values())
-                for field in field_objects:
-                    if isinstance(field, RelationField) and not field.auto_created:
-                        field.create_relation()
-
-                model._meta.finalise_pk()
+                    model._meta.finalise_pk()
 
     @classmethod
     def _discover_client_class(cls, engine: str) -> BaseDBAsyncClient:
@@ -269,14 +262,18 @@ class Tortoise:
             module = importlib.import_module(models_path)
         except ImportError:
             raise ConfigurationError(f'Module "{models_path}" not found')
+
         discovered_models = []
         possible_models = getattr(module, "__models__", None)
+
         try:
             possible_models = [*possible_models]
         except TypeError:
             possible_models = None
+
         if not possible_models:
             possible_models = [getattr(module, attr_name) for attr_name in dir(module)]
+
         for attr in possible_models:
             if isclass(attr) and issubclass(attr, Model) and not attr._meta.abstract:
                 if attr._meta.app and attr._meta.app != app_label:
@@ -284,46 +281,48 @@ class Tortoise:
                 attr._meta.app = app_label
                 attr._meta.finalise_pk()
                 discovered_models.append(attr)
+
         if not discovered_models:
             warnings.warn(f'Module "{models_path}" has no models', RuntimeWarning, stacklevel=4)
+
         return discovered_models
 
     @classmethod
     async def _init_connections(cls, connections_config: dict, create_db: bool) -> None:
-        for name, info in connections_config.items():
-            if isinstance(info, str):
-                info = expand_db_url(info)
-            client_class = cls._discover_client_class(info.get("engine"))
-            db_params = info["credentials"].copy()
-            db_params.update({"connection_name": name})
+        for connection_name, conn_config in connections_config.items():
+            if isinstance(conn_config, str):
+                conn_config = expand_db_url(conn_config)
+
+            client_class = cls._discover_client_class(conn_config.get("engine"))
+            db_params = conn_config["credentials"].copy()
+            db_params.update({"connection_name": connection_name})
             connection = client_class(**db_params)  # type: ignore
+
             if create_db:
                 await connection.db_create()
+
             await connection.create_connection(with_db=True)
-            cls._connections[name] = connection
-            current_transaction_map[name] = ContextVar(name, default=connection)
+            cls._connections[connection_name] = connection
+            current_transaction_map[connection_name] = ContextVar(connection_name, default=connection)
 
     @classmethod
     def _init_apps(cls, apps_config: dict) -> None:
-        for name, info in apps_config.items():
+        for app_name, app_config in apps_config.items():
+            connection_name = app_config.get("default_connection", "default")
             try:
-                cls.get_connection(info.get("default_connection", "default"))
+                cls.get_connection(connection_name)
             except KeyError:
                 raise ConfigurationError(
-                    'Unknown connection "{}" for app "{}"'.format(
-                        info.get("default_connection", "default"), name
-                    )
-                )
+                    'Unknown connection "{}" for app "{}"'.format(connection_name, app_name))
+
             app_models: List[Type[Model]] = []
-            for module in info["models"]:
-                app_models += cls._discover_models(module, name)
+            for module in app_config["models"]:
+                app_models += cls._discover_models(module, app_name)
 
-            models_map = {}
             for model in app_models:
-                model._meta.default_connection = info.get("default_connection", "default")
-                models_map[model.__name__] = model
+                model._meta.default_connection = connection_name
 
-            cls.apps[name] = models_map
+            cls.app_models_map[app_name] = {model.__name__: model for model in app_models}
 
         cls._init_relations()
         cls._build_initial_querysets()
@@ -336,6 +335,7 @@ class Tortoise:
 
             with open(config_file, "r") as f:
                 config = yaml.safe_load(f)
+
         elif extension == ".json":
             with open(config_file, "r") as f:
                 config = json.load(f)
@@ -347,8 +347,8 @@ class Tortoise:
 
     @classmethod
     def _build_initial_querysets(cls) -> None:
-        for app in cls.apps.values():
-            for model in app.values():
+        for models_map in cls.app_models_map.values():
+            for model in models_map.values():
                 model._meta.finalise_model()
                 model._meta.basetable = Table(model._meta.table)
                 model._meta.basequery = model._meta.db.query_class.from_(model._meta.table)
@@ -370,7 +370,7 @@ class Tortoise:
 
         Parameters
         ----------
-        config:
+        :param config:
             Dict containing config:
 
             Example
@@ -403,17 +403,20 @@ class Tortoise:
                     }
                 }
 
-        config_file:
+        :param config_file:
             Path to .json or .yml (if PyYAML installed) file containing config with
             same format as above.
-        db_url:
-            Use a DB_URL string. See :ref:`db_url`
-        modules:
-            Dictionary of ``key``: [``list_of_modules``] that defined "apps" and modules that
-            should be discovered for models.
-        _create_db:
+
+        :param _create_db:
             If ``True`` tries to create database for specified connections,
             could be used for testing purposes.
+
+        :param db_url:
+            Use a DB_URL string. See :ref:`db_url`
+
+        :param modules:
+            Dictionary of ``key``: [``list_of_modules``] that defined "apps" and modules that
+            should be discovered for models.
 
         Raises
         ------
@@ -423,6 +426,7 @@ class Tortoise:
         if cls._inited:
             await cls.close_connections()
             await cls._reset_apps()
+
         if int(bool(config) + bool(config_file) + bool(db_url)) != 1:
             raise ConfigurationError(
                 'You should init either from "config", "config_file" or "db_url"'
@@ -436,16 +440,14 @@ class Tortoise:
                 raise ConfigurationError('You must specify "db_url" and "modules" together')
             config = generate_config(db_url, modules)
 
-        try:
-            connections_config = config["connections"]  # type: ignore
-        except KeyError:
+        if "connections" not in config:
             raise ConfigurationError('Config must define "connections" section')
 
-        try:
-            apps_config = config["apps"]  # type: ignore
-        except KeyError:
+        if "apps" not in config:
             raise ConfigurationError('Config must define "apps" section')
 
+        connections_config = config["connections"]  # type: ignore
+        apps_config = config["apps"]  # type: ignore
         logger.info(
             "Tortoise-ORM startup\n    connections: %s\n    apps: %s",
             str(connections_config),
@@ -454,7 +456,6 @@ class Tortoise:
 
         await cls._init_connections(connections_config, _create_db)
         cls._init_apps(apps_config)
-
         cls._inited = True
 
     @classmethod
@@ -473,10 +474,11 @@ class Tortoise:
 
     @classmethod
     async def _reset_apps(cls) -> None:
-        for app in cls.apps.values():
-            for model in app.values():
+        for models_map in cls.app_models_map.values():
+            for model in models_map.values():
                 model._meta.default_connection = None
-        cls.apps.clear()
+
+        cls.app_models_map.clear()
         current_transaction_map.clear()
 
     @classmethod

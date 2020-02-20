@@ -1,6 +1,6 @@
 from tests.testmodels import Address, Event, Team, Tournament
 from tortoise.contrib import test
-from tortoise.exceptions import FieldError, OperationalError
+from tortoise.exceptions import FieldError
 from tortoise.functions import Count
 from tortoise.query_utils import Prefetch
 

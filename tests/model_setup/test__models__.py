@@ -15,7 +15,7 @@ from tortoise.utils import get_schema_sql
 class TestGenerateSchema(test.SimpleTestCase):
     async def setUp(self):
         try:
-            Tortoise.apps = {}
+            Tortoise.app_models_map = {}
             Tortoise._connections = {}
             Tortoise._inited = False
         except ConfigurationError:
