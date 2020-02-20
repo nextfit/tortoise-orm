@@ -189,9 +189,9 @@ class Prefetch:
         first_level_field = relation_split[0]
         if first_level_field not in queryset.model._meta.fetch_fields:
             if first_level_field in queryset.model._meta.fields_map:
-                msg = f"Field {first_level_field} on {queryset.model._meta.table} is not a relation"
+                msg = f"Field {first_level_field} on {queryset.model.full_name()} is not a relation"
             else:
-                msg = f"Relation {first_level_field} for {queryset.model._meta.table} not found"
+                msg = f"Relation {first_level_field} for {queryset.model.full_name()} not found"
 
             raise FieldError(msg)
 

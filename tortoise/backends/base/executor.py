@@ -263,7 +263,7 @@ class BaseExecutor:
 
             if first_level_field not in self.model._meta.fetch_fields:
                 raise OperationalError(
-                    f"relation {first_level_field} for {self.model._meta.table} not found"
+                    f"relation {first_level_field} for {self.model.full_name()} not found"
                 )
 
             if first_level_field not in self.prefetch_map.keys():

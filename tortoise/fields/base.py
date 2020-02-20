@@ -1,5 +1,5 @@
 
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Optional, Type, Union, List
 from tortoise.exceptions import ConfigurationError
 
 
@@ -117,3 +117,52 @@ class Field(metaclass=_FieldMeta):
     def get_for_dialect(self, dialect: str, key: str) -> Any:
         dialect_data = self._get_dialects().get(dialect, {})
         return dialect_data.get(key, getattr(self, key, None))
+
+    def describe(self, serializable: bool = True) -> dict:
+        def default_name(default: Any) -> Optional[Union[int, float, str, bool]]:
+            if isinstance(default, (int, float, str, bool, type(None))):
+                return default
+            if callable(default):
+                return f"<function {default.__module__}.{default.__name__}>"
+            return str(default)
+
+        def _type_name(typ) -> str:
+            if typ.__module__ == "builtins":
+                return typ.__name__
+            return f"{typ.__module__}.{typ.__name__}"
+
+        def type_name(typ: Any) -> Union[str, List[str]]:
+            try:
+                from tortoise import Model
+                if issubclass(typ, Model):
+                    return typ.full_name()
+            except TypeError:
+                pass
+
+            try:
+                return _type_name(typ)
+            except AttributeError:
+                return [_type_name(_typ) for _typ in typ]
+
+        # TODO: db_type
+        field_type = getattr(self, "remote_model", self.field_type)
+        desc = {
+            "name": self.model_field_name,
+            "field_type": self.__class__.__name__ if serializable else self.__class__,
+            "db_column": self.db_column or self.model_field_name,
+            "db_column_types": self.get_db_column_types(),
+            "python_type": type_name(field_type) if serializable else field_type,
+            "generated": self.generated,
+            "auto_created": self.auto_created,
+            "nullable": self.null,
+            "unique": self.unique,
+            "db_index": self.db_index or self.unique,
+            "default": default_name(self.default) if serializable else self.default,
+            "description": self.description,
+        }
+
+        # Delete db fields for non-db fields
+        if not desc["db_column_types"]:
+            del desc["db_column_types"]
+
+        return desc

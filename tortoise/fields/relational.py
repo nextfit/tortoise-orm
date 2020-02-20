@@ -348,23 +348,12 @@ class RelationField(Field):
 
         return instance_list
 
-    @staticmethod
-    def get_related_model(related_app_name: str, related_model_name: str):
-        """
-        Test, if app and model really exist. Throws a ConfigurationError with a hopefully
-        helpful message. If successful, returns the requested model.
-        """
-        from tortoise import Tortoise
-        if related_app_name not in Tortoise.app_models_map:
-            raise ConfigurationError(f"No app with name '{related_app_name}' registered.")
+    def describe(self, serializable: bool = True) -> dict:
+        desc = super().describe(serializable)
 
-        related_app = Tortoise.app_models_map[related_app_name]
-        if related_model_name not in related_app:
-            raise ConfigurationError(
-                f"No model with name '{related_model_name}' registered in app '{related_app_name}'."
-            )
-
-        return related_app[related_model_name]
+        # RelationFields are entirely "virtual", so no direct DB representation
+        del desc["db_column"]
+        return desc
 
 
 class BackwardFKRelation(RelationField):
@@ -508,11 +497,11 @@ class ForeignKeyField(RelationField):
         )
 
     def create_relation(self):
-        related_app_name, related_model_name = self.model_name.split(".")
-        related_model = RelationField.get_related_model(related_app_name, related_model_name)
+        from tortoise import Tortoise
+        remote_model = Tortoise.get_model(self.model_name)
 
         key_field_name = f"{self.model_field_name}_id"
-        key_field_object = deepcopy(related_model._meta.pk)
+        key_field_object = deepcopy(remote_model._meta.pk)
         key_field_object.primary_key = self.primary_key
         key_field_object.unique = self.unique
         key_field_object.db_index = self.db_index
@@ -526,14 +515,15 @@ class ForeignKeyField(RelationField):
 
         self.db_column = key_field_name
         self.model._meta.add_field(key_field_name, key_field_object)
-        self.remote_model = related_model
+        self.remote_model = remote_model
 
         backward_relation_name = self.related_name
         if backward_relation_name is not False:
             if not backward_relation_name:
                 backward_relation_name = f"{self.model._meta.table}s"
 
-            if backward_relation_name in related_model._meta.fields_map:
+            if backward_relation_name in remote_model._meta.fields_map:
+                related_app_name, related_model_name = self.model_name.split(".")
                 raise ConfigurationError(
                     f'backward relation "{backward_relation_name}" duplicates in'
                     f" model {related_model_name}"
@@ -541,10 +531,15 @@ class ForeignKeyField(RelationField):
 
             backward_relation_field = self.backward_relation_class(
                 self.model, key_field_name, True, self.description)
-            related_model._meta.add_field(backward_relation_name, backward_relation_field)
+            remote_model._meta.add_field(backward_relation_name, backward_relation_field)
 
         if self.primary_key:
             self.model._meta.pk_attr = key_field_name
+
+    def describe(self, serializable: bool = True) -> dict:
+        desc = super().describe(serializable)
+        desc["raw_field"] = self.db_column
+        return desc
 
 
 class BackwardOneToOneRelation(BackwardFKRelation):
@@ -686,6 +681,8 @@ class ManyToManyField(RelationField):
         return property(partial(_m2m_getter, _key=_key, field_object=self))
 
     def create_relation(self):
+        from tortoise import Tortoise
+
         backward_key = self.backward_key
         if not backward_key:
             backward_key = f"{self.model._meta.table}_id"
@@ -695,29 +692,27 @@ class ManyToManyField(RelationField):
 
             self.backward_key = backward_key
 
-        related_app_name, related_model_name = self.model_name.split(".")
-        related_model = RelationField.get_related_model(related_app_name, related_model_name)
-
-        self.remote_model = related_model
+        remote_model = Tortoise.get_model(self.model_name)
+        self.remote_model = remote_model
 
         backward_relation_name = self.related_name
         if not backward_relation_name:
             backward_relation_name = self.related_name = f"{self.model._meta.table}s"
 
-        if backward_relation_name in related_model._meta.fields_map:
+        if backward_relation_name in remote_model._meta.fields_map:
+            related_app_name, related_model_name = self.model_name.split(".")
             raise ConfigurationError(
                 f'backward relation "{backward_relation_name}" duplicates in'
                 f" model {related_model_name}"
             )
 
         if not self.through:
-            related_model_table_name = related_model._meta.table or related_model.__name__.lower()
+            related_model_table_name = remote_model._meta.table or remote_model.__name__.lower()
             self.through = f"{self.model._meta.table}_{related_model_table_name}"
 
         elif "." in self.through:
-            through_app_name, through_model_name = self.through.split(".")
-            through_model = RelationField.get_related_model(through_app_name, through_model_name)
-
+            through_model = Tortoise.get_model(self.through)
+            self.through = through_model._meta.table
 
         m2m_relation = ManyToManyField(
             f"{self.model._meta.app}.{self.model.__name__}",
@@ -729,7 +724,7 @@ class ManyToManyField(RelationField):
             description=self.description,
         )
         m2m_relation.auto_created = True
-        related_model._meta.add_field(backward_relation_name, m2m_relation)
+        remote_model._meta.add_field(backward_relation_name, m2m_relation)
 
     async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
         instance_id_set = [
