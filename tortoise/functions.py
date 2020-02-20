@@ -71,18 +71,16 @@ class Function(Annotation):
             if field_split[0] in model._meta.fetch_fields:
                 relation_field = model._meta.fields_map[field_split[0]]
                 relation_field_meta = relation_field.model_class._meta
-                join = (table, field_split[0], relation_field)
+                join = (table, relation_field)
                 function_joins.append(join)
                 field = relation_field_meta.basetable[relation_field_meta.pk_db_column]
             else:
                 field = table[field_split[0]]
-
                 if self.populate_field_object:
                     self.field_object = model._meta.fields_map.get(field_split[0], None)
                     if self.field_object:
                         func = self.field_object.get_for_dialect(
-                            model._meta.db.capabilities.dialect, "function_cast"
-                        )
+                            model._meta.db.capabilities.dialect, "function_cast")
                         if func:
                             field = func(self.field_object, field)
 
@@ -106,7 +104,7 @@ class Function(Annotation):
         )
         context.pop()
 
-        join = (table, field_split[0], relation_field)
+        join = (table, relation_field)
         annotation_info.joins.append(join)
         return annotation_info
 

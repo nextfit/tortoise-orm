@@ -1,58 +1,11 @@
 from copy import copy
-from typing import Any, Dict, List, Tuple
-
-from pypika import Table
-from pypika.terms import Criterion
+from typing import Any, Dict, Tuple
 
 from tortoise.context import QueryContext
 from tortoise.exceptions import FieldError, OperationalError
-from tortoise.fields.relational import BackwardFKRelation, ManyToManyField, ForeignKeyField, OneToOneField
+from tortoise.fields.relational import ForeignKeyField, OneToOneField
 from tortoise.filters import FieldFilter, QueryModifier
 from tortoise.functions import OuterRef
-
-
-def _get_joins_for_related_field(table, related_field, related_field_name) -> List[Tuple[Table, Criterion]]:
-    required_joins = []
-
-    table_pk = related_field.model._meta.pk_db_column
-    related_table_pk = related_field.model_class._meta.pk_db_column
-    related_table = related_field.model_class._meta.basetable
-
-    if isinstance(related_field, ManyToManyField):
-        through_table = Table(related_field.through)
-        required_joins.append(
-            (
-                through_table,
-                getattr(table, table_pk) == getattr(through_table, related_field.backward_key),
-            )
-        )
-        required_joins.append(
-            (
-                related_table,
-                getattr(through_table, related_field.forward_key)
-                == getattr(related_table, related_table_pk),
-            )
-        )
-
-    elif isinstance(related_field, BackwardFKRelation):
-        required_joins.append(
-            (
-                related_table,
-                getattr(table, table_pk) == getattr(related_table, related_field.relation_field),
-            )
-        )
-
-    else:
-        related_table = related_table.as_(f"{table.get_table_name()}__{related_field_name}")
-        required_joins.append(
-            (
-                related_table,
-                getattr(related_table, related_table_pk)
-                == getattr(table, f"{related_field_name}_id"),
-            )
-        )
-
-    return required_joins
 
 
 class Q:
@@ -112,8 +65,7 @@ class Q:
 
         related_field_name = key.split("__")[0]
         related_field = model._meta.fields_map[related_field_name]
-
-        required_joins = _get_joins_for_related_field(table, related_field, related_field_name)
+        required_joins = related_field.get_joins(table)
 
         related_table = required_joins[-1][0]
         context.push(related_field.model_class, related_table)

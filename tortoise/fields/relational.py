@@ -322,6 +322,15 @@ class RelationField(Field):
     def create_relation(self):
         raise NotImplementedError()
 
+    def get_joins(self, table: Table):
+        related_table_pk = self.model_class._meta.pk_db_column
+        related_table = self.model_class._meta.basetable
+        related_table = related_table.as_(f"{table.get_table_name()}__{self.model_field_name}")
+        return [
+            (related_table,
+             getattr(related_table, related_table_pk) == getattr(table, f"{self.model_field_name}_id"),)
+        ]
+
     async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
         related_objects_for_fetch = set()
         relation_key_field = f"{self.model_field_name}_id"
@@ -411,6 +420,15 @@ class BackwardFKRelation(RelationField):
             relation_container._set_result_for_query(related_object_map.get(instance.pk, []))
 
         return instance_list
+
+    def get_joins(self, table: Table):
+        table_pk = self.model._meta.pk_db_column
+        related_table = self.model_class._meta.basetable
+
+        return [
+            (related_table,
+             getattr(table, table_pk) == getattr(related_table, self.relation_field),)
+        ]
 
 
 class ForeignKeyField(RelationField):
@@ -769,3 +787,15 @@ class ManyToManyField(RelationField):
             relation_container._set_result_for_query(relation_map.get(instance.pk, []))
 
         return instance_list
+
+    def get_joins(self, table: Table):
+        table_pk = self.model._meta.pk_db_column
+        related_table_pk = self.model_class._meta.pk_db_column
+        related_table = self.model_class._meta.basetable
+        through_table = Table(self.through)
+        return [
+            (through_table,
+                getattr(table, table_pk) == getattr(through_table, self.backward_key),),
+            (related_table,
+                getattr(through_table, self.forward_key) == getattr(related_table, related_table_pk),)
+        ]

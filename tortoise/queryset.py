@@ -32,7 +32,7 @@ from tortoise.filters import EmptyCriterion as TortoiseEmptyCriterion
 from tortoise.functions import Annotation
 from tortoise.expressions import F
 
-from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
+from tortoise.query_utils import Prefetch, Q, QueryModifier
 
 # Empty placeholder - Should never be edited.
 from tortoise.ordering import QueryOrdering
@@ -91,15 +91,14 @@ class AwaitableStatement(Generic[MODEL]):
         self.query._wheres = modifier.where_criterion
         self.query._havings = modifier.having_criterion
 
-    def _join_table_by_field(self, table, related_field_name, related_field) -> Table:
+    def _join_table_by_field(self, table, related_field) -> Table:
         """
         :param table:
-        :param related_field_name:
         :param related_field:
         :return: related_table
         """
 
-        joins = _get_joins_for_related_field(table, related_field, related_field_name)
+        joins = related_field.get_joins(table)
         for join in joins:
             if join[0] not in self._joined_tables:
                 self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
@@ -173,7 +172,7 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
             if field_name.split("__")[0] in model._meta.fetch_fields:
                 related_field_name = field_name.split("__")[0]
                 related_field = model._meta.fields_map[related_field_name]
-                related_table = self._join_table_by_field(table, related_field_name, related_field)
+                related_table = self._join_table_by_field(table, related_field)
                 context.push(related_field.model_class, related_table)
                 self.__resolve_ordering(
                     context,
@@ -710,36 +709,36 @@ class FieldSelectQuery(AwaitableQuery):
             orderings, distinct, limit, offset)
 
     def _join_table_with_forwarded_fields(
-        self, context: QueryContext, field: str, forwarded_fields: str
+        self, context: QueryContext, field_name: str, forwarded_fields: str
     ) -> Tuple[Table, str]:
 
         context_item = context.stack[-1]
         model = context_item.model
         table = context_item.table
 
-        if field in model._meta.field_to_db_column_name_map and not forwarded_fields:
-            return table, model._meta.field_to_db_column_name_map[field]
+        if field_name in model._meta.field_to_db_column_name_map and not forwarded_fields:
+            return table, model._meta.field_to_db_column_name_map[field_name]
 
-        if field in model._meta.field_to_db_column_name_map and forwarded_fields:
-            raise FieldError(f'Field "{field}" for model "{model.__name__}" is not relation')
+        if field_name in model._meta.field_to_db_column_name_map and forwarded_fields:
+            raise FieldError(f'Field "{field_name}" for model "{model.__name__}" is not relation')
 
-        if field in self.model._meta.fetch_fields and not forwarded_fields:
+        if field_name in self.model._meta.fetch_fields and not forwarded_fields:
             raise ValueError(
                 'Selecting relation "{}" is not possible, select concrete '
-                "field on related model".format(field)
+                "field on related model".format(field_name)
             )
 
-        field_object = model._meta.fields_map.get(field)
+        field_object = model._meta.fields_map.get(field_name)
         if not field_object:
-            raise FieldError(f'Unknown field "{field}" for model "{model.__name__}"')
+            raise FieldError(f'Unknown field "{field_name}" for model "{model.__name__}"')
 
-        field_table = self._join_table_by_field(table, field, field_object)
+        field_table = self._join_table_by_field(table, field_object)
         forwarded_fields_split = forwarded_fields.split("__")
 
         context.push(field_object.model_class, field_table)
         output = self._join_table_with_forwarded_fields(
             context=context,
-            field=forwarded_fields_split[0],
+            field_name=forwarded_fields_split[0],
             forwarded_fields="__".join(forwarded_fields_split[1:]),
         )
         context.pop()
@@ -772,7 +771,7 @@ class FieldSelectQuery(AwaitableQuery):
         if field_split[0] in self.model._meta.fetch_fields:
             context.push(model=self.model, table=self.model._meta.basetable)
             related_table, related_db_column = self._join_table_with_forwarded_fields(
-                context=context, field=field_split[0], forwarded_fields="__".join(field_split[1:])
+                context=context, field_name=field_split[0], forwarded_fields="__".join(field_split[1:])
             )
             context.pop()
             self.query._select_field(getattr(related_table, related_db_column).as_(return_as))
