@@ -359,13 +359,13 @@ class RelationField(Field):
 class BackwardFKRelation(RelationField):
     def __init__(
         self,
-        field_type: "Type[Model]",
+        remote_model: "Type[Model]",
         relation_field: str,
         null: bool,
         description: Optional[str]
     ) -> None:
         super().__init__(null=null)
-        self.remote_model: "Type[Model]" = field_type
+        self.remote_model: "Type[Model]" = remote_model
         self.relation_field: str = relation_field
         self.description: Optional[str] = description
         self.auto_created = True
@@ -660,13 +660,12 @@ class ManyToManyField(RelationField):
         forward_key: Optional[str] = None,
         backward_key: Optional[str] = None,
         related_name: Optional[str] = None,
-        field_type: "Type[Model]" = None,  # type: ignore
         **kwargs,
     ) -> None:
 
         super().__init__(**kwargs)
 
-        self.remote_model: "Type[Model]" = field_type
+        self.remote_model: "Type[Model]" = None
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
 
@@ -720,10 +719,10 @@ class ManyToManyField(RelationField):
             forward_key=self.backward_key,
             backward_key=self.forward_key,
             related_name=self.model_field_name,
-            field_type=self.model,
             description=self.description,
         )
         m2m_relation.auto_created = True
+        m2m_relation.remote_model = self.model
         remote_model._meta.add_field(backward_relation_name, m2m_relation)
 
     async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
