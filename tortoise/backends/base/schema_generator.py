@@ -141,8 +141,7 @@ class BaseSchemaGenerator:
             field_object = model._meta.fields_map[field_name]
             comment = (
                 self._column_comment_generator(
-                    table=model._meta.table, column=column_name, comment=field_object.description
-                )
+                    table=model._meta.table, column=column_name, comment=field_object.description)
                 if field_object.description
                 else ""
             )

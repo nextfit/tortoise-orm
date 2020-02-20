@@ -443,19 +443,13 @@ class ForeignKeyField(RelationField):
         key_fk_object.auto_created = True
         key_fk_object.reference = self
         key_fk_object.description = self.description
+        key_fk_object.db_column = self.db_column if self.db_column else key_field
 
-        if self.db_column:
-            key_fk_object.db_column = self.db_column
-            self.db_column = key_field
-
-        else:
-            self.db_column = key_field
-            key_fk_object.db_column = key_field
-
+        self.db_column = key_field
         self.model._meta.add_field(key_field, key_fk_object)
         self.model_class = related_model
-        backward_relation_name = self.related_name
 
+        backward_relation_name = self.related_name
         if backward_relation_name is not False:
             if not backward_relation_name:
                 backward_relation_name = f"{self.model._meta.table}s"
@@ -605,16 +599,12 @@ class OneToOneField(RelationField):
         key_o2o_object.auto_created = True
         key_o2o_object.reference = self
         key_o2o_object.description = self.description
-        if self.db_column:
-            key_o2o_object.db_column = self.db_column
-            self.db_column = key_field
-        else:
-            self.db_column = key_field
-            key_o2o_object.db_column = key_field
+        key_o2o_object.db_column = self.db_column if self.db_column else key_field
 
+        self.db_column = key_field
         self.model._meta.add_field(key_field, key_o2o_object)
-
         self.model_class = related_model
+
         backward_relation_name = self.related_name
         if backward_relation_name is not False:
             if not backward_relation_name:
