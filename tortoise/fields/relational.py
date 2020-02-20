@@ -494,21 +494,21 @@ class ForeignKeyField(RelationField):
         related_app_name, related_model_name = self.model_name.split(".")
         related_model = RelationField.get_related_model(related_app_name, related_model_name)
 
-        key_field = f"{self.model_field_name}_id"
-        key_fk_object = deepcopy(related_model._meta.pk)
-        key_fk_object.primary_key = self.primary_key
-        key_fk_object.unique = self.unique
-        key_fk_object.db_index = self.db_index
-        key_fk_object.default = self.default
-        key_fk_object.null = self.null
-        key_fk_object.generated = self.generated
-        key_fk_object.auto_created = True
-        key_fk_object.reference = self
-        key_fk_object.description = self.description
-        key_fk_object.db_column = self.db_column if self.db_column else key_field
+        key_field_name = f"{self.model_field_name}_id"
+        key_field_object = deepcopy(related_model._meta.pk)
+        key_field_object.primary_key = self.primary_key
+        key_field_object.unique = self.unique
+        key_field_object.db_index = self.db_index
+        key_field_object.default = self.default
+        key_field_object.null = self.null
+        key_field_object.generated = self.generated
+        key_field_object.auto_created = True
+        key_field_object.reference = self
+        key_field_object.description = self.description
+        key_field_object.db_column = self.db_column if self.db_column else key_field_name
 
-        self.db_column = key_field
-        self.model._meta.add_field(key_field, key_fk_object)
+        self.db_column = key_field_name
+        self.model._meta.add_field(key_field_name, key_field_object)
         self.model_class = related_model
 
         backward_relation_name = self.related_name
@@ -522,11 +522,12 @@ class ForeignKeyField(RelationField):
                     f" model {related_model_name}"
                 )
 
-            fk_relation = self.backward_relation_class(self.model, key_field, self.null, self.description)
-            related_model._meta.add_field(backward_relation_name, fk_relation)
+            backward_relation_field = self.backward_relation_class(
+                self.model, key_field_name, self.null, self.description)
+            related_model._meta.add_field(backward_relation_name, backward_relation_field)
 
         if self.primary_key:
-            self.model._meta.pk_attr = key_field
+            self.model._meta.pk_attr = key_field_name
 
 
 class BackwardOneToOneRelation(BackwardFKRelation):
