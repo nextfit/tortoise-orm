@@ -96,18 +96,24 @@ class Tortoise:
         return related_app[model_name]
 
     @classmethod
-    def _init_relations(cls) -> None:
+    def _init_models(cls) -> None:
         for app_name, app_models_map in cls.app_models_map.items():
             for model in app_models_map.values():
                 if not model._meta._inited:
-                    model._meta._inited = True
                     if not model._meta.table:
                         model._meta.table = model.__name__.lower()  # default table name
+
+                    model._meta.basetable = Table(model._meta.table)
+                    model._meta.basequery = model._meta.db.query_class.from_(model._meta.table)
 
                     field_objects = list(model._meta.fields_map.values())
                     for field in field_objects:
                         if isinstance(field, RelationField) and not field.auto_created:
                             field.create_relation()
+
+                    model._meta.finalise_model()
+                    model._meta._inited = True
+
 
     @classmethod
     def _discover_client_class(cls, engine: str) -> BaseDBAsyncClient:
@@ -186,9 +192,6 @@ class Tortoise:
 
             cls.app_models_map[app_name] = {model.__name__: model for model in app_models}
 
-        cls._init_relations()
-        cls._build_initial_querysets()
-
     @classmethod
     def _get_config_from_config_file(cls, config_file: str) -> dict:
         _, extension = os.path.splitext(config_file)
@@ -206,14 +209,6 @@ class Tortoise:
                 f"Unknown config extension {extension}, only .yml and .json are supported"
             )
         return config
-
-    @classmethod
-    def _build_initial_querysets(cls) -> None:
-        for models_map in cls.app_models_map.values():
-            for model in models_map.values():
-                model._meta.finalise_model()
-                model._meta.basetable = Table(model._meta.table)
-                model._meta.basequery = model._meta.db.query_class.from_(model._meta.table)
 
     @classmethod
     async def init(
@@ -318,6 +313,7 @@ class Tortoise:
 
         await cls._init_connections(connections_config, _create_db)
         cls._init_apps(apps_config)
+        cls._init_models()
         cls._inited = True
 
     @classmethod
