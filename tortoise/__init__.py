@@ -45,6 +45,27 @@ class Tortoise:
         return cls._connections[connection_name]
 
     @classmethod
+    def get_model(cls, full_name: str):
+        """
+        Test, if app and model really exist. Throws a ConfigurationError with a hopefully
+        helpful message. If successful, returns the requested model.
+        """
+        if len(full_name.split(".")) != 2:
+            raise ConfigurationError('Model name needs to be in format "app.Model"')
+
+        app_name, model_name = full_name.split(".")
+        if app_name not in cls.app_models_map:
+            raise ConfigurationError(f"No app with name '{app_name}' registered.")
+
+        related_app = cls.app_models_map[app_name]
+        if model_name not in related_app:
+            raise ConfigurationError(
+                f"No model with name '{model_name}' registered in app '{app_name}'."
+            )
+
+        return related_app[model_name]
+
+    @classmethod
     def describe_models(cls,
         models: Optional[List[Type[Model]]] = None, serializable: bool = True) -> Dict[str, dict]:
         """
@@ -75,47 +96,6 @@ class Tortoise:
         return {model.full_name(): model.describe(serializable) for model in models}
 
     @classmethod
-    def get_model(cls, full_name: str):
-        """
-        Test, if app and model really exist. Throws a ConfigurationError with a hopefully
-        helpful message. If successful, returns the requested model.
-        """
-        if len(full_name.split(".")) != 2:
-            raise ConfigurationError('Model name needs to be in format "app.Model"')
-
-        app_name, model_name = full_name.split(".")
-        if app_name not in cls.app_models_map:
-            raise ConfigurationError(f"No app with name '{app_name}' registered.")
-
-        related_app = cls.app_models_map[app_name]
-        if model_name not in related_app:
-            raise ConfigurationError(
-                f"No model with name '{model_name}' registered in app '{app_name}'."
-            )
-
-        return related_app[model_name]
-
-    @classmethod
-    def _init_models(cls) -> None:
-        for app_name, app_models_map in cls.app_models_map.items():
-            for model in app_models_map.values():
-                if not model._meta._inited:
-                    if not model._meta.table:
-                        model._meta.table = model.__name__.lower()  # default table name
-
-                    model._meta.basetable = Table(model._meta.table)
-                    model._meta.basequery = model._meta.db.query_class.from_(model._meta.table)
-
-                    field_objects = list(model._meta.fields_map.values())
-                    for field in field_objects:
-                        if isinstance(field, RelationField) and not field.auto_created:
-                            field.create_relation()
-
-                    model._meta.finalise_model()
-                    model._meta._inited = True
-
-
-    @classmethod
     def _discover_client_class(cls, engine: str) -> BaseDBAsyncClient:
         # Let exception bubble up for transparency
         engine_module = importlib.import_module(engine)
@@ -125,6 +105,24 @@ class Tortoise:
         except AttributeError:
             raise ConfigurationError(f'Backend for engine "{engine}" does not implement db client')
         return client_class
+
+    @classmethod
+    async def _init_connections(cls, connections_config: dict, create_db: bool) -> None:
+        for connection_name, conn_config in connections_config.items():
+            if isinstance(conn_config, str):
+                conn_config = expand_db_url(conn_config)
+
+            client_class = cls._discover_client_class(conn_config.get("engine"))
+            db_params = conn_config["credentials"].copy()
+            db_params.update({"connection_name": connection_name})
+            connection = client_class(**db_params)  # type: ignore
+
+            if create_db:
+                await connection.db_create()
+
+            await connection.create_connection(with_db=True)
+            cls._connections[connection_name] = connection
+            current_transaction_map[connection_name] = ContextVar(connection_name, default=connection)
 
     @classmethod
     def _discover_models(cls, models_path: str, app_label: str) -> List[Type[Model]]:
@@ -156,24 +154,6 @@ class Tortoise:
         return discovered_models
 
     @classmethod
-    async def _init_connections(cls, connections_config: dict, create_db: bool) -> None:
-        for connection_name, conn_config in connections_config.items():
-            if isinstance(conn_config, str):
-                conn_config = expand_db_url(conn_config)
-
-            client_class = cls._discover_client_class(conn_config.get("engine"))
-            db_params = conn_config["credentials"].copy()
-            db_params.update({"connection_name": connection_name})
-            connection = client_class(**db_params)  # type: ignore
-
-            if create_db:
-                await connection.db_create()
-
-            await connection.create_connection(with_db=True)
-            cls._connections[connection_name] = connection
-            current_transaction_map[connection_name] = ContextVar(connection_name, default=connection)
-
-    @classmethod
     def _init_apps(cls, apps_config: dict) -> None:
         for app_name, app_config in apps_config.items():
             connection_name = app_config.get("default_connection", "default")
@@ -191,6 +171,25 @@ class Tortoise:
                 model._meta.default_connection = connection_name
 
             cls.app_models_map[app_name] = {model.__name__: model for model in app_models}
+
+    @classmethod
+    def _init_models(cls) -> None:
+        for app_name, app_models_map in cls.app_models_map.items():
+            for model in app_models_map.values():
+                if not model._meta._inited:
+                    if not model._meta.table:
+                        model._meta.table = model.__name__.lower()  # default table name
+
+                    model._meta.basetable = Table(model._meta.table)
+                    model._meta.basequery = model._meta.db.query_class.from_(model._meta.table)
+
+                    field_objects = list(model._meta.fields_map.values())
+                    for field in field_objects:
+                        if isinstance(field, RelationField) and not field.auto_created:
+                            field.create_relation()
+
+                    model._meta.finalise_model()
+                    model._meta._inited = True
 
     @classmethod
     def _get_config_from_config_file(cls, config_file: str) -> dict:
@@ -280,9 +279,6 @@ class Tortoise:
         ConfigurationError
             For any configuration error
         """
-        if cls._inited:
-            await cls.close_connections()
-            await cls._reset_apps()
 
         if int(bool(config) + bool(config_file) + bool(db_url)) != 1:
             raise ConfigurationError(
@@ -302,6 +298,10 @@ class Tortoise:
 
         if "apps" not in config:
             raise ConfigurationError('Config must define "apps" section')
+
+        if cls._inited:
+            await cls.close_connections()
+            await cls._reset_apps()
 
         connections_config = config["connections"]  # type: ignore
         apps_config = config["apps"]  # type: ignore
