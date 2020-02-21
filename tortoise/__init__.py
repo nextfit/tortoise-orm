@@ -1,3 +1,4 @@
+
 import asyncio
 import importlib
 import json
@@ -23,11 +24,8 @@ from tortoise.fields.relational import (
 from tortoise.models import Model
 from tortoise.queryset import QuerySet
 from tortoise.transactions import current_transaction_map
+from contextvars import ContextVar
 
-try:
-    from contextvars import ContextVar
-except ImportError:  # pragma: nocoverage
-    from aiocontextvars import ContextVar  # type: ignore
 
 logger = logging.getLogger("tortoise")
 
@@ -111,8 +109,6 @@ class Tortoise:
                         if isinstance(field, RelationField) and not field.auto_created:
                             field.create_relation()
 
-                    model._meta.finalise_pk()
-
     @classmethod
     def _discover_client_class(cls, engine: str) -> BaseDBAsyncClient:
         # Let exception bubble up for transparency
@@ -131,7 +127,6 @@ class Tortoise:
         except ImportError:
             raise ConfigurationError(f'Module "{models_path}" not found')
 
-        discovered_models = []
         possible_models = getattr(module, "__models__", None)
 
         try:
@@ -142,13 +137,12 @@ class Tortoise:
         if not possible_models:
             possible_models = [getattr(module, attr_name) for attr_name in dir(module)]
 
-        for attr in possible_models:
-            if isclass(attr) and issubclass(attr, Model) and not attr._meta.abstract:
-                if attr._meta.app and attr._meta.app != app_label:
-                    continue
-                attr._meta.app = app_label
-                attr._meta.finalise_pk()
-                discovered_models.append(attr)
+        discovered_models = []
+        for model in possible_models:
+            if isclass(model) and issubclass(model, Model) and not model._meta.abstract:
+                if not model._meta.app or model._meta.app == app_label:
+                    model._meta.app = app_label
+                    discovered_models.append(model)
 
         if not discovered_models:
             warnings.warn(f'Module "{models_path}" has no models', RuntimeWarning, stacklevel=4)

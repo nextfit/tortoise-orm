@@ -56,8 +56,6 @@ class MetaInfo:
         "generated_column_names",
         "_model",
         "table_description",
-        "pk",
-        "pk_db_column",
         "_filter_cache",
     )
 
@@ -81,8 +79,6 @@ class MetaInfo:
         self.generated_column_names: Tuple[str]
         self._model: "Model"
         self.table_description: str = getattr(meta, "table_description", "")
-        self.pk: Field
-        self.pk_db_column: str
 
         self._filter_cache: Dict[str, Optional[FieldFilter]] = {}
 
@@ -145,9 +141,13 @@ class MetaInfo:
             self._filter_cache[key] = key_filter
             return key_filter
 
-    def finalise_pk(self) -> None:
-        self.pk = self.fields_map[self.pk_attr]
-        self.pk_db_column = self.pk.db_column or self.pk_attr
+    @property
+    def pk(self) -> Field:
+        return self.fields_map[self.pk_attr]
+
+    @property
+    def pk_db_column(self) -> str:
+        return self.pk.db_column or self.pk_attr
 
     def finalise_model(self) -> None:
         """
