@@ -215,12 +215,12 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
 
     async def commit(self) -> None:
         if self._finalized:
-            raise TransactionManagementError("Transaction already finalised")
+            raise TransactionManagementError("Transaction already finalized")
         await self.transaction.commit()
         self._finalized = True
 
     async def rollback(self) -> None:
         if self._finalized:
-            raise TransactionManagementError("Transaction already finalised")
+            raise TransactionManagementError("Transaction already finalized")
         await self.transaction.rollback()
         self._finalized = True

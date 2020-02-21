@@ -76,7 +76,7 @@ class MetaInfo:
         self.basequery: Query = Query()
         self.basetable: Table = Table("")
         self.pk_attr: str = getattr(meta, "pk_attr", "")
-        self.generated_column_names: Tuple[str]
+        self.generated_column_names: List[str] = []
         self._model: "Model"
         self.table_description: str = getattr(meta, "table_description", "")
 
@@ -92,8 +92,6 @@ class MetaInfo:
         self.fields_map[name] = value
         if value.has_db_column:
             self.field_to_db_column_name_map[name] = value.db_column or name
-
-        self.finalise_fields()
 
     @property
     def db(self) -> "BaseDBAsyncClient":
@@ -149,14 +147,14 @@ class MetaInfo:
     def pk_db_column(self) -> str:
         return self.pk.db_column or self.pk_attr
 
-    def finalise_model(self) -> None:
+    def finalize_model(self) -> None:
         """
         Finalise the model after it had been fully loaded.
         """
-        self.finalise_fields()
-        self._generate_relation_properties()
+        self._setup_relation_properties()
+        self.finalize_model_data()
 
-    def finalise_fields(self) -> None:
+    def finalize_model_data(self) -> None:
         self.db_columns = set(self.field_to_db_column_name_map.values())
         self.db_column_to_field_name_map = {
             value: key for key, value in self.field_to_db_column_name_map.items()
@@ -166,7 +164,7 @@ class MetaInfo:
         self.generated_column_names = [field.db_column or field.model_field_name
             for field in self.fields_map.values() if field.generated]
 
-    def _generate_relation_properties(self) -> None:
+    def _setup_relation_properties(self) -> None:
         for key, field in self.fields_map.items():
             if isinstance(field, RelationField):
                 setattr(self._model, key, field.attribute_property())
@@ -278,7 +276,6 @@ class ModelMeta(type):
             field.model = new_class
 
         meta._model = new_class
-        meta.finalise_fields()
         return new_class
 
 
@@ -513,6 +510,7 @@ class Model(metaclass=ModelMeta):
             ])
 
         :param objects: List of objects to bulk create
+
         """
         db = using_db or cls._meta.db
         await db.executor_class(model=cls, db=db).execute_bulk_insert(objects)  # type: ignore

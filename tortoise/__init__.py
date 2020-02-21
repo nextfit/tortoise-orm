@@ -188,7 +188,7 @@ class Tortoise:
                         if isinstance(field, RelationField) and not field.auto_created:
                             field.create_relation()
 
-                    model._meta.finalise_model()
+                    model._meta.finalize_model()
                     model._meta._inited = True
 
     @classmethod
