@@ -1,7 +1,6 @@
-from typing import List
 
+from typing import List
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
-from tortoise.utils import get_escape_translation_table
 
 
 class AsyncpgSchemaGenerator(BaseSchemaGenerator):
@@ -15,7 +14,7 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
         self.comments_array: List[str] = []
 
     def _escape_comment(self, comment: str) -> str:
-        table = get_escape_translation_table()
+        table = BaseSchemaGenerator._get_escape_translation_table()
         table[ord("'")] = "''"
         return comment.translate(table)
 

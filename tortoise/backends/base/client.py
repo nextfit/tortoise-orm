@@ -1,5 +1,8 @@
+
+
 import asyncio
 import logging
+
 from typing import Any, List, Optional, Sequence, Tuple, Type, Union
 
 from pypika import Query
@@ -8,6 +11,8 @@ from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.exceptions import TransactionManagementError
 from tortoise.transactions import current_transaction_map
+
+logger = logging.getLogger("tortoise")
 
 
 class Capabilities:
@@ -73,6 +78,18 @@ class BaseDBAsyncClient:
         self.log = logging.getLogger("db_client")
         self.connection_name = connection_name
         self.fetch_inserted = fetch_inserted
+
+    def get_schema_sql(self, safe: bool) -> str:
+        generator = self.schema_generator(self)
+        return generator.get_create_schema_sql(safe)
+
+    async def generate_schema_for_client(self, safe: bool) -> None:
+        generator = self.schema_generator(self)
+        schema = generator.get_create_schema_sql(safe)
+        logger.debug("Creating schema: %s", schema)
+
+        if schema:  # pragma: nobranch
+            await generator.generate_from_string(schema)
 
     async def create_connection(self, with_db: bool) -> None:
         raise NotImplementedError()  # pragma: nocoverage

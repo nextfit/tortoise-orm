@@ -6,7 +6,6 @@ from asynctest.mock import CoroutineMock, patch
 from tortoise import Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
-from tortoise.utils import get_schema_sql
 
 
 class TestGenerateSchema(test.SimpleTestCase):
@@ -43,7 +42,7 @@ class TestGenerateSchema(test.SimpleTestCase):
                     "apps": {"models": {"models": [module], "default_connection": "default"}},
                 }
             )
-            self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split(";\n")
+            self.sqls = Tortoise._connections["default"].get_schema_sql(safe).split(";\n")
 
     def get_sql(self, text: str) -> str:
         return re.sub(r"[ \t\n\r]+", " ", " ".join([sql for sql in self.sqls if text in sql]))
@@ -138,7 +137,7 @@ class TestGenerateSchema(test.SimpleTestCase):
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = Tortoise.get_connection("default").get_schema_sql(safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -215,7 +214,7 @@ CREATE TABLE "teamevents" (
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        sql = Tortoise.get_connection("default").get_schema_sql(safe=True)
         self.assertEqual(
             sql.strip(),
             """
@@ -313,7 +312,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
                         "apps": {"models": {"models": [module], "default_connection": "default"}},
                     }
                 )
-                self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+                self.sqls = Tortoise._connections["default"].get_schema_sql(safe).split("; ")
         except ImportError:
             raise test.SkipTest("aiomysql not installed")
 
@@ -356,7 +355,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = Tortoise.get_connection("default").get_schema_sql(safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -444,7 +443,7 @@ CREATE TABLE `teamevents` (
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        sql = Tortoise.get_connection("default").get_schema_sql(safe=True)
 
         self.assertEqual(
             sql.strip(),
@@ -552,7 +551,7 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
                         "apps": {"models": {"models": [module], "default_connection": "default"}},
                     }
                 )
-                self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+                self.sqls = Tortoise._connections["default"].get_schema_sql(safe).split("; ")
         except ImportError:
             raise test.SkipTest("asyncpg not installed")
 
@@ -578,7 +577,7 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = Tortoise.get_connection("default").get_schema_sql(safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -668,7 +667,7 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        sql = Tortoise.get_connection("default").get_schema_sql(safe=True)
         self.assertEqual(
             sql.strip(),
             """

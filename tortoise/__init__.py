@@ -23,7 +23,6 @@ from tortoise.fields.relational import (
 from tortoise.models import Model
 from tortoise.queryset import QuerySet
 from tortoise.transactions import current_transaction_map
-from tortoise.utils import generate_schema_for_client
 
 try:
     from contextvars import ContextVar
@@ -83,6 +82,9 @@ class Tortoise:
         Test, if app and model really exist. Throws a ConfigurationError with a hopefully
         helpful message. If successful, returns the requested model.
         """
+        if len(full_name.split(".")) != 2:
+            raise ConfigurationError('Model name needs to be in format "app.Model"')
+
         app_name, model_name = full_name.split(".")
         if app_name not in cls.app_models_map:
             raise ConfigurationError(f"No app with name '{app_name}' registered.")
@@ -335,6 +337,7 @@ class Tortoise:
         """
         for connection in cls._connections.values():
             await connection.close()
+
         cls._connections = {}
         logger.info("Tortoise-ORM shutdown")
 
@@ -362,7 +365,7 @@ class Tortoise:
         if not cls._inited:
             raise ConfigurationError("You have to call .init() first before generating schemas")
         for connection in cls._connections.values():
-            await generate_schema_for_client(connection, safe)
+            await connection.generate_schema_for_client(safe)
 
     @classmethod
     async def _drop_databases(cls) -> None:
@@ -375,6 +378,7 @@ class Tortoise:
         for connection in cls._connections.values():
             await connection.close()
             await connection.db_delete()
+
         cls._connections = {}
         await cls._reset_apps()
 
