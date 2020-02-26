@@ -9,7 +9,7 @@ from tortoise.models import Model
 class Event(Model):
     id = fields.IntegerField(primary_key=True)
     name = fields.TextField(description="Name of the event that corresponds to an action")
-    datetime = fields.DatetimeField(
+    datetime = fields.DateTimeField(
         null=True, description="Datetime of when the event was generated"
     )
 

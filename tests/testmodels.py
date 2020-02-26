@@ -18,7 +18,7 @@ class Tournament(Model):
     id = fields.SmallIntegerField(primary_key=True)
     name = fields.CharField(max_length=255)
     desc = fields.TextField(null=True)
-    created = fields.DatetimeField(auto_now_add=True, db_index=True)
+    created = fields.DateTimeField(auto_now_add=True, db_index=True)
 
     events: fields.ReverseRelation["Event"]
     minrelations: fields.ReverseRelation["MinRelation"]
@@ -53,7 +53,7 @@ class Event(Model):
     participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team", related_name="events", through="event_team", backward_key="idEvent"
     )
-    modified = fields.DatetimeField(auto_now=True)
+    modified = fields.DateTimeField(auto_now=True)
     token = fields.TextField(default=generate_token)
     alias = fields.IntegerField(null=True)
 
@@ -160,10 +160,10 @@ class DecimalFields(Model):
 
 class DatetimeFields(Model):
     id = fields.IntegerField(primary_key=True)
-    datetime = fields.DatetimeField()
-    datetime_null = fields.DatetimeField(null=True)
-    datetime_auto = fields.DatetimeField(auto_now=True)
-    datetime_add = fields.DatetimeField(auto_now_add=True)
+    datetime = fields.DateTimeField()
+    datetime_null = fields.DateTimeField(null=True)
+    datetime_auto = fields.DateTimeField(auto_now=True)
+    datetime_add = fields.DateTimeField(auto_now_add=True)
 
 
 class TimeDeltaFields(Model):
@@ -339,8 +339,8 @@ class CharM2MRelatedModel(Model):
 
 
 class TimestampMixin:
-    created_at = fields.DatetimeField(null=True, auto_now_add=True)
-    modified_at = fields.DatetimeField(null=True, auto_now=True)
+    created_at = fields.DateTimeField(null=True, auto_now_add=True)
+    modified_at = fields.DateTimeField(null=True, auto_now=True)
 
 
 class NameMixin:

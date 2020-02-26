@@ -39,7 +39,7 @@ class SqliteExecutor(BaseExecutor):
     TO_DB_OVERRIDE = {
         fields.BooleanField: to_db_bool,
         fields.DecimalField: to_db_decimal,
-        fields.DatetimeField: to_db_datetime,
+        fields.DateTimeField: to_db_datetime,
     }
     EXPLAIN_PREFIX = "EXPLAIN QUERY PLAN"
     DB_NATIVE = {bytes, str, int, bool, float}

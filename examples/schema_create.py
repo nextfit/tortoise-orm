@@ -8,7 +8,7 @@ from tortoise.models import Model
 class Tournament(Model):
     id = fields.IntegerField(primary_key=True)
     name = fields.CharField(max_length=255, description="Tournament name", db_index=True)
-    created = fields.DatetimeField(auto_now_add=True, description="Created datetime")
+    created = fields.DateTimeField(auto_now_add=True, description="Created datetime")
 
     events: fields.ReverseRelation["Event"]
 
@@ -28,7 +28,7 @@ class Event(Model):
         through="event_team",
         description="How participants relate",
     )
-    modified = fields.DatetimeField(auto_now=True)
+    modified = fields.DateTimeField(auto_now=True)
     prize = fields.DecimalField(max_digits=10, decimal_places=2, null=True)
     token = fields.CharField(max_length=100, description="Unique token", unique=True)
 

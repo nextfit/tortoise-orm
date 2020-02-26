@@ -211,7 +211,7 @@ class DecimalField(Field, Decimal):
             return functions.Cast(term, SqlTypes.NUMERIC)
 
 
-class DatetimeField(Field, datetime.datetime):
+class DateTimeField(Field, datetime.datetime):
     """
     Datetime field.
 

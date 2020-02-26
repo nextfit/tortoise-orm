@@ -12,7 +12,7 @@ class TestDatetimeFields(test.TestCase):
         with self.assertRaisesRegex(
             ConfigurationError, "You can choose only 'auto_now' or 'auto_now_add'"
         ):
-            fields.DatetimeField(auto_now=True, auto_now_add=True)
+            fields.DateTimeField(auto_now=True, auto_now_add=True)
 
     async def test_empty(self):
         with self.assertRaises(IntegrityError):

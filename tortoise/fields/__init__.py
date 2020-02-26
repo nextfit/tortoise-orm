@@ -6,7 +6,7 @@ from tortoise.fields.data import (
     CharEnumField,
     CharField,
     DateField,
-    DatetimeField,
+    DateTimeField,
     DecimalField,
     FloatField,
     IntEnumField,
