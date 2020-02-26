@@ -60,7 +60,7 @@ class TestBasic(test.TestCase):
                 "unique_together": [["chars", "blip"]],
                 "pk_field": {
                     "name": "eyedee",
-                    "field_type": "IntField",
+                    "field_type": "IntegerField",
                     "db_column": "eyedee",
                     "db_column_types": {"": "INT"},
                     "python_type": "int",
@@ -141,7 +141,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "fk_id",
-                        "field_type": "IntField",
+                        "field_type": "IntegerField",
                         "db_column": "fk_id",
                         "db_column_types": {"": "INT"},
                         "python_type": "int",
@@ -170,7 +170,7 @@ class TestBasic(test.TestCase):
                         "db_column_types": {"": "INT"},
                         "default": None,
                         "description": "Line",
-                        "field_type": "IntField",
+                        "field_type": "IntegerField",
                         "generated": False,
                         "auto_created": True,
                         "db_index": True,
@@ -221,7 +221,7 @@ class TestBasic(test.TestCase):
                 "unique_together": [["chars", "blip"]],
                 "pk_field": {
                     "name": "eyedee",
-                    "field_type": fields.IntField,
+                    "field_type": fields.IntegerField,
                     "db_column": "eyedee",
                     "db_column_types": {"": "INT"},
                     "python_type": int,
@@ -302,7 +302,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "fk_id",
-                        "field_type": fields.IntField,
+                        "field_type": fields.IntegerField,
                         "db_column": "fk_id",
                         "db_column_types": {"": "INT"},
                         "python_type": int,
@@ -328,7 +328,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "o2o_id",
-                        "field_type": fields.IntField,
+                        "field_type": fields.IntegerField,
                         "db_column": "o2o_id",
                         "db_column_types": {"": "INT"},
                         "python_type": int,
@@ -382,7 +382,7 @@ class TestBasic(test.TestCase):
                 "unique_together": [["chars", "blip"]],
                 "pk_field": {
                     "name": "eyedee",
-                    "field_type": "IntField",
+                    "field_type": "IntegerField",
                     "db_column": "sometable_id",
                     "db_column_types": {"": "INT"},
                     "python_type": "int",
@@ -463,7 +463,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "fk_id",
-                        "field_type": "IntField",
+                        "field_type": "IntegerField",
                         "db_column": "fk_sometable",
                         "db_column_types": {"": "INT"},
                         "python_type": "int",
@@ -489,7 +489,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "o2o_id",
-                        "field_type": "IntField",
+                        "field_type": "IntegerField",
                         "db_column": "o2o_sometable",
                         "db_column_types": {"": "INT"},
                         "python_type": "int",
@@ -543,7 +543,7 @@ class TestBasic(test.TestCase):
                 "unique_together": [["chars", "blip"]],
                 "pk_field": {
                     "name": "eyedee",
-                    "field_type": fields.IntField,
+                    "field_type": fields.IntegerField,
                     "db_column": "sometable_id",
                     "db_column_types": {"": "INT"},
                     "python_type": int,
@@ -624,7 +624,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "fk_id",
-                        "field_type": fields.IntField,
+                        "field_type": fields.IntegerField,
                         "db_column": "fk_sometable",
                         "db_column_types": {"": "INT"},
                         "python_type": int,
@@ -650,7 +650,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "o2o_id",
-                        "field_type": fields.IntField,
+                        "field_type": fields.IntegerField,
                         "db_column": "o2o_sometable",
                         "db_column_types": {"": "INT"},
                         "python_type": int,
@@ -913,7 +913,7 @@ class TestBasic(test.TestCase):
                 "unique_together": [],
                 "pk_field": {
                     "name": "id",
-                    "field_type": "IntField",
+                    "field_type": "IntegerField",
                     "db_column": "id",
                     "db_column_types": {"": "INT"},
                     "python_type": "int",
@@ -986,7 +986,7 @@ class TestBasic(test.TestCase):
                 "unique_together": [],
                 "pk_field": {
                     "name": "id",
-                    "field_type": fields.IntField,
+                    "field_type": fields.IntegerField,
                     "db_column": "id",
                     "db_column_types": {"": "INT"},
                     "python_type": int,

@@ -2,7 +2,7 @@ from enum import Enum, IntEnum
 from typing import Any, Type
 
 from tortoise import ConfigurationError
-from tortoise.fields import CharField, IntField
+from tortoise.fields import CharField, IntegerField
 
 
 class EnumField(CharField):
@@ -38,7 +38,7 @@ class EnumField(CharField):
             raise ValueError(f"Database value {value} does not exist on Enum {self.enum_type}.")
 
 
-class IntEnumField(IntField):
+class IntEnumField(IntegerField):
     """
     An example extension to CharField that serializes Enums
     to and from a Text representation in the DB.

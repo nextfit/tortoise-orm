@@ -7,7 +7,7 @@ from tortoise.models import Model
 
 
 class Tournament(Model):
-    id = fields.IntField(primary_key=True)
+    id = fields.IntegerField(primary_key=True)
     event = fields.CharField(max_length=32)
 
 

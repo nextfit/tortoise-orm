@@ -29,7 +29,7 @@ except ImportError:  # pragma: nocoverage
     pass
 
 
-class IntField(Field, int):
+class IntegerField(Field, int):
     """
     Integer field. (32-bit signed)
 
@@ -55,7 +55,7 @@ class IntField(Field, int):
         GENERATED_SQL = "INT NOT NULL PRIMARY KEY AUTO_INCREMENT"
 
 
-class BigIntField(Field, int):
+class BigIntegerField(Field, int):
     """
     Big integer field. (64-bit signed)
 
@@ -81,7 +81,7 @@ class BigIntField(Field, int):
         GENERATED_SQL = "BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT"
 
 
-class SmallIntField(Field, int):
+class SmallIntegerField(Field, int):
     """
     Small integer field. (16-bit signed)
 
@@ -386,7 +386,7 @@ class BinaryField(Field, bytes):  # type: ignore
         SQL_TYPE = "LONGBLOB"
 
 
-class IntEnumField(SmallIntField):
+class IntEnumField(SmallIntegerField):
     """
     Enum Field
 

@@ -6,7 +6,7 @@ from pypika import Parameter
 
 from tortoise import Model, fields
 from tortoise.backends.base.executor import BaseExecutor
-from tortoise.fields import BigIntField, IntField, SmallIntField
+from tortoise.fields import BigIntegerField, IntegerField, SmallIntegerField
 
 
 def to_db_bool(self, value, instance) -> Optional[int]:
@@ -50,7 +50,7 @@ class SqliteExecutor(BaseExecutor):
     async def _process_insert_result(self, instance: Model, results: int):
         pk_field_object = self.model._meta.pk
         if (
-            isinstance(pk_field_object, (SmallIntField, IntField, BigIntField))
+            isinstance(pk_field_object, (SmallIntegerField, IntegerField, BigIntegerField))
             and pk_field_object.generated
         ):
             instance.pk = results

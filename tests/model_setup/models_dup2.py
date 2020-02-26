@@ -19,4 +19,4 @@ class Party(Model):
 
 
 class Team(Model):
-    id = fields.IntField(primary_key=True)
+    id = fields.IntegerField(primary_key=True)

@@ -6,7 +6,7 @@ from pypika import Query, Table, Order
 
 from tortoise.exceptions import ConfigurationError, OperationalError
 from tortoise.fields.base import Field
-from tortoise.fields.data import IntField
+from tortoise.fields.data import IntegerField
 from tortoise.fields.relational import (
     BackwardFKRelation,
     BackwardOneToOneRelation,
@@ -238,7 +238,7 @@ class ModelMeta(type):
 
             if not custom_pk_present and not getattr(meta_class, "abstract", None):
                 if pk_attr not in attrs:
-                    attrs = {pk_attr: IntField(primary_key=True), **attrs}
+                    attrs = {pk_attr: IntegerField(primary_key=True), **attrs}
 
                 if not isinstance(attrs[pk_attr], Field) or not attrs[pk_attr].primary_key:
                     raise ConfigurationError(
@@ -497,7 +497,7 @@ class Model(metaclass=ModelMeta):
             created in the DB has all the defaults and generated fields set,
             but may be incomplete reference in Python.
 
-            e.g. ``IntField`` primary keys will not be populated.
+            e.g. ``IntegerField`` primary keys will not be populated.
 
         This is recommend only for throw away inserts where you want to ensure optimal
         insert performance.

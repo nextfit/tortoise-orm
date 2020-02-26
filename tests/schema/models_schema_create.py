@@ -6,7 +6,7 @@ from tortoise.models import Model
 
 
 class Tournament(Model):
-    tid = fields.SmallIntField(primary_key=True)
+    tid = fields.SmallIntegerField(primary_key=True)
     name = fields.CharField(max_length=100, description="Tournament name", db_index=True)
     created = fields.DatetimeField(auto_now_add=True, description="Created */'`/* datetime")
 
@@ -15,7 +15,7 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.BigIntField(primary_key=True, description="Event ID")
+    id = fields.BigIntegerField(primary_key=True, description="Event ID")
     name = fields.TextField()
     tournament = fields.ForeignKeyField(
         "models.Tournament", related_name="events", description="FK to tournament"
@@ -38,7 +38,7 @@ class Event(Model):
 
 class Team(Model):
     name = fields.CharField(max_length=50, primary_key=True, description="The TEAM name (and PK)")
-    key = fields.IntField()
+    key = fields.IntegerField()
     manager = fields.ForeignKeyField("models.Team", related_name="team_members", null=True)
     talks_to = fields.ManyToManyField("models.Team", related_name="gets_talked_to")
 
@@ -58,13 +58,13 @@ class TeamAddress(Model):
 
 class VenueInformation(Model):
     name = fields.CharField(max_length=128)
-    capacity = fields.IntField()
+    capacity = fields.IntegerField()
     rent = fields.FloatField()
     team = fields.OneToOneField("models.Team", on_delete=fields.SET_NULL, null=True)
 
 
 class SourceFields(Model):
-    id = fields.IntField(primary_key=True, db_column="sometable_id")
+    id = fields.IntegerField(primary_key=True, db_column="sometable_id")
     chars = fields.CharField(max_length=255, db_column="some_chars_table", db_index=True)
 
     fk = fields.ForeignKeyField(
@@ -85,11 +85,11 @@ class SourceFields(Model):
 
 
 class DefaultPK(Model):
-    val = fields.IntField()
+    val = fields.IntegerField()
 
 
 class ZeroMixin:
-    zero = fields.IntField()
+    zero = fields.IntegerField()
 
 
 class OneMixin(ZeroMixin):

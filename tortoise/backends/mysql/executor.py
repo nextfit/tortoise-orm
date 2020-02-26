@@ -5,7 +5,7 @@ from pypika.enums import SqlTypes
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
-from tortoise.fields import BigIntField, IntField, SmallIntField
+from tortoise.fields import BigIntegerField, IntegerField, SmallIntegerField
 import tortoise.filters as tf
 
 
@@ -66,7 +66,7 @@ class MySQLExecutor(BaseExecutor):
     async def _process_insert_result(self, instance: Model, results: int):
         pk_field_object = self.model._meta.pk
         if (
-            isinstance(pk_field_object, (SmallIntField, IntField, BigIntField))
+            isinstance(pk_field_object, (SmallIntegerField, IntegerField, BigIntegerField))
             and pk_field_object.generated
         ):
             instance.pk = results

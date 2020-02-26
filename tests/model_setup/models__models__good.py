@@ -7,7 +7,7 @@ from tortoise.models import Model
 
 
 class BadTournament(Model):
-    id = fields.IntField(primary_key=True)
+    id = fields.IntegerField(primary_key=True)
     name = fields.TextField()
     created = fields.DatetimeField(auto_now_add=True, db_index=True)
 
@@ -16,7 +16,7 @@ class BadTournament(Model):
 
 
 class GoodTournament(Model):
-    id = fields.IntField(primary_key=True)
+    id = fields.IntegerField(primary_key=True)
     name = fields.TextField()
     created = fields.DatetimeField(auto_now_add=True, db_index=True)
 
@@ -26,7 +26,7 @@ class GoodTournament(Model):
 
 class Tmp:
     class InAClassTournament(Model):
-        id = fields.IntField(primary_key=True)
+        id = fields.IntegerField(primary_key=True)
         name = fields.TextField()
         created = fields.DatetimeField(auto_now_add=True, db_index=True)
 

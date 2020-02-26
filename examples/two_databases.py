@@ -14,7 +14,7 @@ from tortoise.models import Model
 
 
 class Tournament(Model):
-    id = fields.IntField(primary_key=True)
+    id = fields.IntegerField(primary_key=True)
     name = fields.TextField()
 
     def __str__(self):
@@ -25,9 +25,9 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.IntField(primary_key=True)
+    id = fields.IntegerField(primary_key=True)
     name = fields.TextField()
-    tournament_id = fields.IntField()
+    tournament_id = fields.IntegerField()
     # Here we make link to events.Team, not models.Team
     participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "events.Team", related_name="events", through="event_team"
@@ -41,7 +41,7 @@ class Event(Model):
 
 
 class Team(Model):
-    id = fields.IntField(primary_key=True)
+    id = fields.IntegerField(primary_key=True)
     name = fields.TextField()
 
     event_team: fields.ManyToManyRelation[Event]

@@ -6,7 +6,7 @@ from tortoise.models import Model
 
 
 class Tournament(Model):
-    id = fields.IntField(primary_key=True)
+    id = fields.IntegerField(primary_key=True)
     name = fields.CharField(max_length=255, description="Tournament name", db_index=True)
     created = fields.DatetimeField(auto_now_add=True, description="Created datetime")
 
@@ -17,7 +17,7 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.IntField(primary_key=True, description="Event ID")
+    id = fields.IntegerField(primary_key=True, description="Event ID")
     name = fields.CharField(max_length=255, unique=True)
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
         "models.Tournament", related_name="events", description="FK to tournament"
