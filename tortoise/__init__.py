@@ -174,6 +174,8 @@ class Tortoise:
 
     @classmethod
     def _init_models(cls) -> None:
+
+        models_list = []
         for app_name, app_models_map in cls.app_models_map.items():
             for model in app_models_map.values():
                 if not model._meta._inited:
@@ -188,8 +190,11 @@ class Tortoise:
                         if isinstance(field, RelationField) and not field.auto_created:
                             field.create_relation()
 
-                    model._meta.finalize_model()
                     model._meta._inited = True
+                    models_list.append(model)
+
+        for model in models_list:
+            model._meta.finalize_model()
 
     @classmethod
     def _get_config_from_config_file(cls, config_file: str) -> dict:
