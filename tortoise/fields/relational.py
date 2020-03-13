@@ -520,7 +520,7 @@ class ForeignKeyField(RelationField):
         backward_relation_name = self.related_name
         if backward_relation_name is not False:
             if not backward_relation_name:
-                backward_relation_name = f"{self.model._meta.table}s"
+                backward_relation_name = f"{self.model._meta.db_table}s"
 
             if backward_relation_name in remote_model._meta.fields_map:
                 related_app_name, related_model_name = self.model_name.split(".")
@@ -684,10 +684,10 @@ class ManyToManyField(RelationField):
 
         backward_key = self.backward_key
         if not backward_key:
-            backward_key = f"{self.model._meta.table}_id"
+            backward_key = f"{self.model._meta.db_table}_id"
 
             if backward_key == self.forward_key:
-                backward_key = f"{self.model._meta.table}_rel_id"
+                backward_key = f"{self.model._meta.db_table}_rel_id"
 
             self.backward_key = backward_key
 
@@ -696,7 +696,7 @@ class ManyToManyField(RelationField):
 
         backward_relation_name = self.related_name
         if not backward_relation_name:
-            backward_relation_name = self.related_name = f"{self.model._meta.table}s"
+            backward_relation_name = self.related_name = f"{self.model._meta.db_table}s"
 
         if backward_relation_name in remote_model._meta.fields_map:
             related_app_name, related_model_name = self.model_name.split(".")
@@ -706,12 +706,12 @@ class ManyToManyField(RelationField):
             )
 
         if not self.through:
-            related_model_table_name = remote_model._meta.table or remote_model.__name__.lower()
-            self.through = f"{self.model._meta.table}_{related_model_table_name}"
+            related_model_table_name = remote_model._meta.db_table or remote_model.__name__.lower()
+            self.through = f"{self.model._meta.db_table}_{related_model_table_name}"
 
         elif "." in self.through:
             through_model = Tortoise.get_model(self.through)
-            self.through = through_model._meta.table
+            self.through = through_model._meta.db_table
 
         m2m_relation = ManyToManyField(
             self.model.full_name(),

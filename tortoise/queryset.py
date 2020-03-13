@@ -108,7 +108,7 @@ class AwaitableStatement(Generic[MODEL]):
 
     def create_base_query(self, alias):
         if alias:
-            table = Table(self.model._meta.table, alias=alias)
+            table = Table(self.model._meta.db_table, alias=alias)
             return self.model._meta.db.query_class.from_(table)
         else:
             return copy(self.model._meta.basequery)

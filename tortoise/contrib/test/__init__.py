@@ -337,7 +337,7 @@ class TruncationTestCase(SimpleTestCase):
         # TODO: This is a naive implementation: Will fail to clear M2M and non-cascade foreign keys
         for models_map in Tortoise.app_models_map.values():
             for model in models_map.values():
-                await model._meta.db.execute_script(f"DELETE FROM {model._meta.table}")  # nosec
+                await model._meta.db.execute_script(f"DELETE FROM {model._meta.db_table}")  # nosec
 
 
 class TransactionTestContext:

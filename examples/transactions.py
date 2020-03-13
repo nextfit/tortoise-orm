@@ -12,7 +12,7 @@ class Event(Model):
     name = fields.TextField()
 
     class Meta:
-        table = "event"
+        db_table = "event"
 
     def __str__(self):
         return self.name

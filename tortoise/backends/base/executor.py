@@ -58,7 +58,7 @@ class BaseExecutor:
         self.prefetch_map = prefetch_map or {}
         self._prefetch_queries = prefetch_queries or {}
 
-        key = f"{self.db.connection_name}:{self.model._meta.table}"
+        key = f"{self.db.connection_name}:{self.model._meta.db_table}"
         if key in EXECUTOR_CACHE:
             (
                 self.field_names,

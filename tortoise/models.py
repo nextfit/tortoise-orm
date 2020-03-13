@@ -38,7 +38,7 @@ def get_together(meta, together: str) -> Tuple[Tuple[str, ...], ...]:
 class MetaInfo:
     __slots__ = (
         "abstract",
-        "table",
+        "db_table",
         "ordering",
         "app",
         "db_columns",
@@ -61,7 +61,7 @@ class MetaInfo:
 
     def __init__(self, meta) -> None:
         self.abstract: bool = getattr(meta, "abstract", False)
-        self.table: str = getattr(meta, "table", "")
+        self.db_table: str = getattr(meta, "db_table", "")
         self.ordering: List[Tuple[str, Order]] = getattr(meta, "ordering", None)
         self.app: Optional[str] = getattr(meta, "app", None)
         self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
@@ -292,7 +292,7 @@ class Model(metaclass=ModelMeta):
                 ...
 
                 class Meta:
-                    table="custom_table"
+                    db_table="custom_table"
                     unique_together=(("field_a", "field_b"), )
         """
         pass
@@ -646,7 +646,7 @@ class Model(metaclass=ModelMeta):
                 {
                     "name":                 str     # Qualified model name
                     "app":                  str     # 'App' namespace
-                    "table":                str     # DB table name
+                    "db_table":                str  # DB table name
                     "abstract":             bool    # Is the model Abstract?
                     "description":          str     # Description of table (nullable)
                     "unique_together":      [...]   # List of List containing field names that
@@ -695,7 +695,7 @@ class Model(metaclass=ModelMeta):
         return {
             "name": cls.full_name(),
             "app": _meta.app,
-            "table": _meta.table,
+            "db_table": _meta.db_table,
             "abstract": _meta.abstract,
             "description": _meta.table_description or None,
             "unique_together": _meta.unique_together or [],

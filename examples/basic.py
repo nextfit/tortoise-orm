@@ -11,7 +11,7 @@ class Event(Model):
     datetime = fields.DateTimeField(null=True)
 
     class Meta:
-        table = "event"
+        db_table = "event"
 
     def __str__(self):
         return self.name

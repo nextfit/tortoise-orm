@@ -35,7 +35,7 @@ class Reporter(Model):
     events: fields.ReverseRelation["Event"]
 
     class Meta:
-        table = "re_port_er"
+        db_table = "re_port_er"
 
     def __str__(self):
         return self.name
@@ -289,7 +289,7 @@ class UUIDPkSourceModel(Model):
     id = fields.UUIDField(primary_key=True, db_column="a")
 
     class Meta:
-        table = "upsm"
+        db_table = "upsm"
 
 
 class UUIDFkRelatedSourceModel(Model):
@@ -300,7 +300,7 @@ class UUIDFkRelatedSourceModel(Model):
     )
 
     class Meta:
-        table = "ufrsm"
+        db_table = "ufrsm"
 
 
 class UUIDFkRelatedNullSourceModel(Model):
@@ -311,7 +311,7 @@ class UUIDFkRelatedNullSourceModel(Model):
     )
 
     class Meta:
-        table = "ufrnsm"
+        db_table = "ufrnsm"
 
 
 class UUIDM2MRelatedSourceModel(Model):
@@ -322,7 +322,7 @@ class UUIDM2MRelatedSourceModel(Model):
     )
 
     class Meta:
-        table = "umrsm"
+        db_table = "umrsm"
 
 
 class CharPkModel(Model):
@@ -360,7 +360,7 @@ class MyDerivedModel(TimestampMixin, MyAbstractBaseModel):
 
 class CommentModel(Model):
     class Meta:
-        table = "comments"
+        db_table = "comments"
         table_description = "Test Table comment"
 
     id = fields.IntegerField(primary_key=True, description="Primary key \r*/'`/*\n field for the comments")
@@ -488,7 +488,7 @@ class SourceFields(Model):
     rel_from: fields.ManyToManyRelation["SourceFields"]
 
     class Meta:
-        table = "sometable"
+        db_table = "sometable"
         unique_together = [["chars", "blip"]]
         table_description = "Source mapped fields"
 

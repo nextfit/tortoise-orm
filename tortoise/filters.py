@@ -190,7 +190,7 @@ class BackwardFKFilter(RelationFilter):
             field.remote_model._meta.pk.model_field_name,
             opr,
             value_encoder,
-            Table(field.remote_model._meta.table),
+            Table(field.remote_model._meta.db_table),
             field.relation_field)
 
 

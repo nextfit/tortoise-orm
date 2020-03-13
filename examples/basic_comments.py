@@ -14,7 +14,7 @@ class Event(Model):
     )
 
     class Meta:
-        table = "event"
+        db_table = "event"
         table_description = "This table contains a list of all the example events"
 
     def __str__(self):

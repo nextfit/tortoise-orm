@@ -179,11 +179,11 @@ class Tortoise:
         for app_name, app_models_map in cls.app_models_map.items():
             for model in app_models_map.values():
                 if not model._meta._inited:
-                    if not model._meta.table:
-                        model._meta.table = model.__name__.lower()  # default table name
+                    if not model._meta.db_table:
+                        model._meta.db_table = model.__name__.lower()  # default table name
 
-                    model._meta.basetable = Table(model._meta.table)
-                    model._meta.basequery = model._meta.db.query_class.from_(model._meta.table)
+                    model._meta.basetable = Table(model._meta.db_table)
+                    model._meta.basequery = model._meta.db.query_class.from_(model._meta.db_table)
 
                     field_objects = list(model._meta.fields_map.values())
                     for field in field_objects:

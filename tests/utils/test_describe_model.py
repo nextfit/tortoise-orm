@@ -54,7 +54,7 @@ class TestBasic(test.TestCase):
             {
                 "name": "models.StraightFields",
                 "app": "models",
-                "table": "straightfields",
+                "db_table": "straightfields",
                 "abstract": False,
                 "description": "Straight auto-mapped fields",
                 "unique_together": [["chars", "blip"]],
@@ -215,7 +215,7 @@ class TestBasic(test.TestCase):
             {
                 "name": "models.StraightFields",
                 "app": "models",
-                "table": "straightfields",
+                "db_table": "straightfields",
                 "abstract": False,
                 "description": "Straight auto-mapped fields",
                 "unique_together": [["chars", "blip"]],
@@ -376,7 +376,7 @@ class TestBasic(test.TestCase):
             {
                 "name": "models.SourceFields",
                 "app": "models",
-                "table": "sometable",
+                "db_table": "sometable",
                 "abstract": False,
                 "description": "Source mapped fields",
                 "unique_together": [["chars", "blip"]],
@@ -537,7 +537,7 @@ class TestBasic(test.TestCase):
             {
                 "name": "models.SourceFields",
                 "app": "models",
-                "table": "sometable",
+                "db_table": "sometable",
                 "abstract": False,
                 "description": "Source mapped fields",
                 "unique_together": [["chars", "blip"]],
@@ -698,7 +698,7 @@ class TestBasic(test.TestCase):
             {
                 "name": "models.UUIDPkModel",
                 "app": "models",
-                "table": "uuidpkmodel",
+                "db_table": "uuidpkmodel",
                 "abstract": False,
                 "description": None,
                 "unique_together": [],
@@ -753,7 +753,7 @@ class TestBasic(test.TestCase):
             {
                 "name": "models.UUIDPkModel",
                 "app": "models",
-                "table": "uuidpkmodel",
+                "db_table": "uuidpkmodel",
                 "abstract": False,
                 "description": None,
                 "unique_together": [],
@@ -894,7 +894,7 @@ class TestBasic(test.TestCase):
                     "python_type": "uuid.UUID",
                     "unique": True,
                 },
-                "table": "uuidfkrelatednullmodel",
+                "db_table": "uuidfkrelatednullmodel",
                 "unique_together": [],
             },
         )
@@ -907,7 +907,7 @@ class TestBasic(test.TestCase):
             {
                 "name": "models.JSONFields",
                 "app": "models",
-                "table": "jsonfields",
+                "db_table": "jsonfields",
                 "abstract": False,
                 "description": None,
                 "unique_together": [],
@@ -980,7 +980,7 @@ class TestBasic(test.TestCase):
             {
                 "name": "models.JSONFields",
                 "app": "models",
-                "table": "jsonfields",
+                "db_table": "jsonfields",
                 "abstract": False,
                 "description": None,
                 "unique_together": [],

@@ -80,7 +80,7 @@ class SourceFields(Model):
     )
 
     class Meta:
-        table = "sometable"
+        db_table = "sometable"
         indexes = [["chars"]]
 
 
