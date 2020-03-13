@@ -59,7 +59,18 @@ class BaseExecutor:
         self._prefetch_queries = prefetch_queries or {}
 
         key = f"{self.db.connection_name}:{self.model._meta.table}"
-        if key not in EXECUTOR_CACHE:
+        if key in EXECUTOR_CACHE:
+            (
+                self.field_names,
+                self.insert_query,
+                self.all_field_names,
+                self.insert_query_all,
+                self.column_map,
+                self.delete_query,
+                self.update_cache,
+            ) = EXECUTOR_CACHE[key]
+
+        else:
             self.field_names, column_names = self._prepare_insert_columns()
             self.insert_query = self._prepare_insert_statement(column_names)
 
@@ -67,7 +78,7 @@ class BaseExecutor:
                 self.all_field_names, all_column_names = \
                     self._prepare_insert_columns(include_generated=True)
                 self.insert_query_all = \
-                    self._prepare_insert_statement(all_column_names, no_generated=True)
+                    self._prepare_insert_statement(all_column_names, has_generated=False)
 
             else:
                 self.all_field_names = self.field_names
@@ -100,16 +111,6 @@ class BaseExecutor:
                 self.delete_query,
                 self.update_cache,
             )
-        else:
-            (
-                self.field_names,
-                self.insert_query,
-                self.all_field_names,
-                self.insert_query_all,
-                self.column_map,
-                self.delete_query,
-                self.update_cache,
-            ) = EXECUTOR_CACHE[key]
 
     async def execute_explain(self, query) -> Any:
         sql = " ".join((self.EXPLAIN_PREFIX, query.get_sql()))
@@ -146,7 +147,7 @@ class BaseExecutor:
             return cls.TO_DB_OVERRIDE[field_object.__class__](field_object, attr, instance)
         return field_object.to_db_value(attr, instance)
 
-    def _prepare_insert_statement(self, columns: List[str], no_generated: bool = False) -> str:
+    def _prepare_insert_statement(self, columns: List[str], has_generated: bool = True) -> str:
         # Insert should implement returning new id to saved object
         # Each db has it's own methods for it, so each implementation should
         # go to descendant executors
