@@ -107,11 +107,11 @@ class AwaitableStatement(Generic[MODEL]):
         return joins[-1][0]
 
     def create_base_query(self, alias):
-        if alias is None:
-            return copy(self.model._meta.basequery)
-        else:
+        if alias:
             table = Table(self.model._meta.table, alias=alias)
             return self.model._meta.db.query_class.from_(table)
+        else:
+            return copy(self.model._meta.basequery)
 
     def create_base_query_all_fields(self, alias):
         return self.create_base_query(alias).select(*self.model._meta.db_columns)
