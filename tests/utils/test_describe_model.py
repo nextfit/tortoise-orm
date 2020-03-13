@@ -18,7 +18,7 @@ from tortoise import Tortoise, fields
 from tortoise.contrib import test
 from tortoise.fields.relational import (
     BackwardFKRelation,
-    ForeignKeyField,
+    ForeignKey,
     ManyToManyField,
     OneToOneField,
 )
@@ -103,7 +103,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "fk",
-                        "field_type": "ForeignKeyField",
+                        "field_type": "ForeignKey",
                         "raw_field": "fk_id",
                         "python_type": "models.StraightFields",
                         "generated": False,
@@ -264,7 +264,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "fk",
-                        "field_type": ForeignKeyField,
+                        "field_type": ForeignKey,
                         "raw_field": "fk_id",
                         "python_type": StraightFields,
                         "generated": False,
@@ -425,7 +425,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "fk",
-                        "field_type": "ForeignKeyField",
+                        "field_type": "ForeignKey",
                         "raw_field": "fk_id",
                         "python_type": "models.SourceFields",
                         "generated": False,
@@ -586,7 +586,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "fk",
-                        "field_type": ForeignKeyField,
+                        "field_type": ForeignKey,
                         "raw_field": "fk_id",
                         "python_type": SourceFields,
                         "generated": False,
@@ -826,7 +826,7 @@ class TestBasic(test.TestCase):
                     {
                         "default": None,
                         "description": None,
-                        "field_type": "ForeignKeyField",
+                        "field_type": "ForeignKey",
                         "generated": False,
                         "auto_created": False,
                         "db_index": False,

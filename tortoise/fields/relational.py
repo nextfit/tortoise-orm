@@ -26,13 +26,13 @@ Type hint for the result of accessing the :func:`.OneToOneField` field in the mo
 
 ForeignKeyNullableRelation = Union[Awaitable[Optional[MODEL]], Optional[MODEL]]
 """
-Type hint for the result of accessing the :func:`.ForeignKeyField` field in the model
+Type hint for the result of accessing the :func:`.ForeignKey` field in the model
 when obtained model can be nullable.
 """
 
 ForeignKeyRelation = Union[Awaitable[MODEL], MODEL]
 """
-Type hint for the result of accessing the :func:`.ForeignKeyField` field in the model.
+Type hint for the result of accessing the :func:`.ForeignKey` field in the model.
 """
 
 
@@ -91,7 +91,7 @@ def _m2m_getter(self, _key, field_object):
 
 class ReverseRelation(Generic[MODEL]):
     """
-    Relation container for :func:`.ForeignKeyField`.
+    Relation container for :func:`.ForeignKey`.
     """
 
     def __init__(self, remote_model: "Type[MODEL]", related_name: str, instance) -> None:
@@ -419,7 +419,7 @@ class BackwardFKRelation(RelationField):
         ]
 
 
-class ForeignKeyField(RelationField):
+class ForeignKey(RelationField):
     """
     ForeignKey relation field.
 
@@ -572,7 +572,7 @@ class BackwardOneToOneRelation(BackwardFKRelation):
         return instance_list
 
 
-class OneToOneField(ForeignKeyField):
+class OneToOneField(ForeignKey):
     """
     OneToOne relation field.
 

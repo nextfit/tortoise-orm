@@ -16,7 +16,7 @@ from tortoise.exceptions import ConfigurationError
 from tortoise.fields.relational import (
     BackwardFKRelation,
     BackwardOneToOneRelation,
-    ForeignKeyField,
+    ForeignKey,
     ManyToManyField,
     OneToOneField,
     RelationField)

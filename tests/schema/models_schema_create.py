@@ -17,7 +17,7 @@ class Tournament(Model):
 class Event(Model):
     id = fields.BigIntegerField(primary_key=True, description="Event ID")
     name = fields.TextField()
-    tournament = fields.ForeignKeyField(
+    tournament = fields.ForeignKey(
         "models.Tournament", related_name="events", description="FK to tournament"
     )
     participants = fields.ManyToManyField(
@@ -39,7 +39,7 @@ class Event(Model):
 class Team(Model):
     name = fields.CharField(max_length=50, primary_key=True, description="The TEAM name (and PK)")
     key = fields.IntegerField()
-    manager = fields.ForeignKeyField("models.Team", related_name="team_members", null=True)
+    manager = fields.ForeignKey("models.Team", related_name="team_members", null=True)
     talks_to = fields.ManyToManyField("models.Team", related_name="gets_talked_to")
 
     class Meta:
@@ -67,7 +67,7 @@ class SourceFields(Model):
     id = fields.IntegerField(primary_key=True, db_column="sometable_id")
     chars = fields.CharField(max_length=255, db_column="some_chars_table", db_index=True)
 
-    fk = fields.ForeignKeyField(
+    fk = fields.ForeignKey(
         "models.SourceFields", related_name="team_members", null=True, db_column="fk_sometable"
     )
 

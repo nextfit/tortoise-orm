@@ -19,7 +19,7 @@ from tortoise.fields.data import (
 )
 from tortoise.fields.relational import (
     BackwardOneToOneRelation,
-    ForeignKeyField,
+    ForeignKey,
     ForeignKeyNullableRelation,
     ForeignKeyRelation,
     ManyToManyField,

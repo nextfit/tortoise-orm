@@ -11,4 +11,4 @@ class Tournament(Model):
 
 
 class Event(Model):
-    tournament = fields.ForeignKeyField("models.app.Tournament", related_name="events")
+    tournament = fields.ForeignKey("models.app.Tournament", related_name="events")

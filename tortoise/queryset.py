@@ -27,7 +27,7 @@ from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.context import QueryContext
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
 
-from tortoise.fields.relational import ForeignKeyField, OneToOneField
+from tortoise.fields.relational import ForeignKey, OneToOneField
 from tortoise.filters import EmptyCriterion as TortoiseEmptyCriterion
 from tortoise.functions import Annotation
 from tortoise.expressions import F
@@ -621,7 +621,7 @@ class UpdateQuery(AwaitableStatement):
             if field_object.primary_key:
                 raise IntegrityError(f"Field {key} is primary key and can not be updated")
 
-            if isinstance(field_object, (ForeignKeyField, OneToOneField)):
+            if isinstance(field_object, (ForeignKey, OneToOneField)):
                 fk_field: str = field_object.db_column  # type: ignore
                 column_name = self.model._meta.fields_map[fk_field].db_column
                 value = executor.column_map[fk_field](value.pk, None)

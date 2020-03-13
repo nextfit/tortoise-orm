@@ -55,7 +55,7 @@ def transform_model(cls: ClassDef) -> None:
                 except AttributeError:
                     pass
                 else:
-                    if attrname in ["OneToOneField", "ForeignKeyField", "ManyToManyField"]:
+                    if attrname in ["OneToOneField", "ForeignKey", "ManyToManyField"]:
                         tomodel = attr.value.args[0].value
                         relname = ""
                         if attr.value.keywords:
@@ -77,10 +77,10 @@ def transform_model(cls: ClassDef) -> None:
                                     "ManyToManyRelation"
                                 )[1][0],
                             ]
-                        elif attrname == "ForeignKeyField":
+                        elif attrname == "ForeignKey":
                             relval = [
                                 MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
-                                    "ForeignKeyField"
+                                    "ForeignKey"
                                 )[1][0],
                                 MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
                                     "ReverseRelation"

@@ -2,7 +2,7 @@
 This example shows how self-referential (recursive) relations work.
 
 Key points in this example are:
-* Use of ForeignKeyField that refers to self
+* Use of ForeignKey that refers to self
 * To pass in the (optional) parent node at creation
 * To use async iterator to fetch children
 * To use .fetch_related(…) to emulate sync behaviour
@@ -15,7 +15,7 @@ from tortoise.models import Model
 class Employee(Model):
     name = fields.CharField(max_length=50)
 
-    manager: fields.ForeignKeyNullableRelation["Employee"] = fields.ForeignKeyField(
+    manager: fields.ForeignKeyNullableRelation["Employee"] = fields.ForeignKey(
         "models.Employee", related_name="team_members", null=True
     )
     team_members: fields.ReverseRelation["Employee"]

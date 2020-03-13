@@ -3,7 +3,7 @@ from typing import Any, Dict, Tuple
 
 from tortoise.context import QueryContext
 from tortoise.exceptions import FieldError, OperationalError
-from tortoise.fields.relational import ForeignKeyField, OneToOneField
+from tortoise.fields.relational import ForeignKey, OneToOneField
 from tortoise.filters import FieldFilter, QueryModifier
 from tortoise.functions import OuterRef
 
@@ -106,7 +106,7 @@ class Q:
         field_name = key
         if field_name in model._meta.fields_map:
             field = model._meta.fields_map[field_name]
-            if isinstance(field, (ForeignKeyField, OneToOneField)):
+            if isinstance(field, (ForeignKey, OneToOneField)):
                 return field.db_column
 
             # if isinstance(field, ManyToManyField):

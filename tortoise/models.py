@@ -10,7 +10,7 @@ from tortoise.fields.data import IntegerField
 from tortoise.fields.relational import (
     BackwardFKRelation,
     BackwardOneToOneRelation,
-    ForeignKeyField,
+    ForeignKey,
     ManyToManyField,
     OneToOneField,
     RelationField)
@@ -313,7 +313,7 @@ class Model(metaclass=ModelMeta):
             if key in meta.fields_map:
                 field_object = meta.fields_map[key]
 
-                if isinstance(field_object, (ForeignKeyField, OneToOneField)):
+                if isinstance(field_object, (ForeignKey, OneToOneField)):
                     if value and not value._saved_in_db:
                         raise OperationalError(
                             f"You should first call .save() on {value} before referring to it"

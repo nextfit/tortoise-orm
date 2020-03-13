@@ -7,7 +7,7 @@ from pypika.terms import Function as BaseFunction
 
 from tortoise.context import QueryContext
 from tortoise.exceptions import ConfigurationError
-from tortoise.fields.relational import ForeignKeyField
+from tortoise.fields.relational import ForeignKey
 
 ##############################################################################
 # Base
@@ -94,7 +94,7 @@ class Function(Annotation):
 
         remote_model = relation_field.remote_model
         remote_table = remote_model._meta.basetable
-        if isinstance(relation_field, ForeignKeyField):
+        if isinstance(relation_field, ForeignKey):
             # Only FK's can be to same table, so we only auto-alias FK join tables
             remote_table = remote_table.as_(f"{table.get_table_name()}__{field_split[0]}")
 

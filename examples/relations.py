@@ -1,7 +1,7 @@
 """
 This example shows how relations between models work.
 
-Key points in this example are use of ForeignKeyField and ManyToManyField
+Key points in this example are use of ForeignKey and ManyToManyField
 to declare relations and use of .prefetch_related() and .fetch_related()
 to get this related objects
 """
@@ -23,7 +23,7 @@ class Tournament(Model):
 class Event(Model):
     id = fields.IntegerField(primary_key=True)
     name = fields.TextField()
-    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKey(
         "models.Tournament", related_name="events"
     )
     participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
