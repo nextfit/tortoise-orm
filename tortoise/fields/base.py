@@ -102,23 +102,25 @@ class Field(metaclass=_FieldMeta):
             for dialect in [key for key in dir(self) if key.startswith("_db_")]
         }
 
-    def get_db_column_types(self) -> Optional[Dict[str, str]]:
-        if not self.has_db_column:
-            return None
-        return {
-            "": getattr(self, "SQL_TYPE"),
-            **{
-                dialect: _db["SQL_TYPE"]
-                for dialect, _db in self._get_dialects().items()
-                if "SQL_TYPE" in _db
-            },
-        }
-
     def get_for_dialect(self, dialect: str, key: str) -> Any:
         dialect_data = self._get_dialects().get(dialect, {})
         return dialect_data.get(key, getattr(self, key, None))
 
     def describe(self, serializable: bool = True) -> dict:
+        def get_db_column_types() -> Optional[Dict[str, str]]:
+            if self.has_db_column:
+                return {
+                    "": getattr(self, "SQL_TYPE"),
+                    **{
+                        dialect: _db["SQL_TYPE"]
+                        for dialect, _db in self._get_dialects().items()
+                        if "SQL_TYPE" in _db
+                    },
+                }
+
+            else:
+                return None
+
         def default_name(default: Any) -> Optional[Union[int, float, str, bool]]:
             if isinstance(default, (int, float, str, bool, type(None))):
                 return default
@@ -150,7 +152,7 @@ class Field(metaclass=_FieldMeta):
             "name": self.model_field_name,
             "field_type": self.__class__.__name__ if serializable else self.__class__,
             "db_column": self.db_column or self.model_field_name,
-            "db_column_types": self.get_db_column_types(),
+            "db_column_types": get_db_column_types(),
             "python_type": type_name(field_type) if serializable else field_type,
             "generated": self.generated,
             "auto_created": self.auto_created,

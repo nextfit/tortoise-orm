@@ -152,9 +152,9 @@ class MetaInfo:
         Finalise the model after it had been fully loaded.
         """
         self._setup_relation_properties()
-        self.finalize_model_data()
+        self._finalize_model_data()
 
-    def finalize_model_data(self) -> None:
+    def _finalize_model_data(self) -> None:
         self.db_columns = set(self.field_to_db_column_name_map.values())
         self.db_column_to_field_name_map = {
             value: key for key, value in self.field_to_db_column_name_map.items()
@@ -440,6 +440,7 @@ class Model(metaclass=ModelMeta):
 
             User.fetch_related("emails", "manager")
 
+        :param using_db:
         :param args: The related fields that should be fetched.
         """
         db = using_db or self._meta.db
@@ -509,6 +510,7 @@ class Model(metaclass=ModelMeta):
                 User(name="...", email="...")
             ])
 
+        :param using_db:
         :param objects: List of objects to bulk create
 
         """
