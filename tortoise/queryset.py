@@ -122,6 +122,12 @@ class AwaitableStatement(Generic[MODEL]):
     async def _execute(self):
         raise NotImplementedError()  # pragma: nocoverage
 
+    def __await__(self) -> Generator[Any, None, List[MODEL]]:
+        if self._db is None:
+            self._db = self.model._meta.db  # type: ignore
+        self._make_query(context=QueryContext())
+        return self._execute().__await__()
+
 
 class AwaitableQuery(AwaitableStatement[MODEL]):
     __slots__ = (
@@ -198,6 +204,10 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
                     field = func(field_object, field)
 
                 self.query = self.query.orderby(field, order=ordering.direction)
+
+    async def __aiter__(self) -> AsyncIterator[Any]:
+        for val in await self:
+            yield val
 
 
 class QuerySet(AwaitableQuery[MODEL]):
@@ -562,16 +572,6 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         self.resolve_ordering(context=context)
 
-    def __await__(self) -> Generator[Any, None, List[MODEL]]:
-        if self._db is None:
-            self._db = self.model._meta.db  # type: ignore
-        self._make_query(context=QueryContext())
-        return self._execute().__await__()
-
-    async def __aiter__(self) -> AsyncIterator[MODEL]:
-        for val in await self:
-            yield val
-
     async def _execute(self) -> List[MODEL]:
         instance_list = await self._db.executor_class(
             model=self.model,
@@ -641,12 +641,6 @@ class UpdateQuery(AwaitableStatement):
 
         context.pop()
 
-    def __await__(self) -> Generator[Any, None, int]:
-        if self._db is None:
-            self._db = self.model._meta.db  # type: ignore
-        self._make_query(context=QueryContext())
-        return self._execute().__await__()
-
     async def _execute(self) -> int:
         return (await self._db.execute_query(str(self.query)))[0]
 
@@ -663,12 +657,6 @@ class DeleteQuery(AwaitableStatement):
         self.resolve_filters(context=context)
         self.query._delete_from = True
         context.pop()
-
-    def __await__(self) -> Generator[Any, None, int]:
-        if self._db is None:
-            self._db = self.model._meta.db  # type: ignore
-        self._make_query(context=QueryContext())
-        return self._execute().__await__()
 
     async def _execute(self) -> int:
         return (await self._db.execute_query(str(self.query)))[0]
@@ -687,12 +675,6 @@ class CountQuery(AwaitableStatement):
         self.query._select_other(Count("*"))
         context.pop()
 
-    def __await__(self) -> Generator[Any, None, int]:
-        if self._db is None:
-            self._db = self.model._meta.db  # type: ignore
-        self._make_query(context=QueryContext())
-        return self._execute().__await__()
-
     async def _execute(self) -> int:
         _, result = await self._db.execute_query(str(self.query))
         return list(dict(result[0]).values())[0]
@@ -700,7 +682,9 @@ class CountQuery(AwaitableStatement):
 
 class FieldSelectQuery(AwaitableQuery):
     # pylint: disable=W0223
-    __slots__ = ()
+    __slots__ = (
+        "fields_for_select",
+    )
 
     def __init__(self, model, db, q_objects, annotations,
         orderings, distinct, limit, offset) -> None:
@@ -806,84 +790,6 @@ class FieldSelectQuery(AwaitableQuery):
 
         raise FieldError(f'Unknown field "{field_name}" for model "{model}"')
 
-
-class ValuesListQuery(FieldSelectQuery):
-    __slots__ = (
-        "flat",
-        "fields",
-        "fields_for_select_list",
-    )
-
-    def __init__(
-        self, model, db, q_objects, annotations, orderings, distinct,
-        limit, offset, fields_for_select_list, flat,
-    ) -> None:
-        super().__init__(model, db, q_objects, annotations, orderings, distinct, limit, offset)
-
-        if flat and (len(fields_for_select_list) != 1):
-            raise TypeError("You can flat value_list only if contains one field")
-
-        fields_for_select = {str(i): field for i, field in enumerate(fields_for_select_list)}
-        self.fields = fields_for_select
-        self.fields_for_select_list = fields_for_select_list
-        self.flat = flat
-
-    def _make_query(self, context: QueryContext, alias=None) -> None:
-        self.query = self.create_base_query(alias)
-        context.push(self.model, self.query._from[-1])
-        for positional_number, field_name in self.fields.items():
-            self.add_field_to_select_query(context, field_name, positional_number)
-
-        self.resolve_filters(context=context)
-        if self._limit:
-            self.query._limit = self._limit
-        if self._offset:
-            self.query._offset = self._offset
-        if self._distinct:
-            self.query._distinct = True
-
-        self.resolve_ordering(context=context)
-        context.pop()
-
-    def __await__(self) -> Generator[Any, None, List[Any]]:
-        if self._db is None:
-            self._db = self.model._meta.db  # type: ignore
-        self._make_query(context=QueryContext())
-        return self._execute().__await__()  # pylint: disable=E1101
-
-    async def __aiter__(self) -> AsyncIterator[Any]:
-        for val in await self:
-            yield val
-
-    async def _execute(self) -> List[Any]:
-        _, result = await self._db.execute_query(str(self.query))
-        columns = [
-            (key, self.resolve_to_python_value(self.model, name))
-            for key, name in sorted(list(self.fields.items()))
-        ]
-        if self.flat:
-            func = columns[0][1]
-            flatmap = lambda entry: func(entry["0"])  # noqa
-            return list(map(flatmap, result))
-
-        listmap = lambda entry: tuple(func(entry[column]) for column, func in columns)  # noqa
-        return list(map(listmap, result))
-
-
-class ValuesQuery(FieldSelectQuery):
-    __slots__ = (
-        "fields_for_select",
-    )
-
-    def __init__(
-        self, model, db, q_objects, annotations, orderings, distinct,
-        limit, offset, fields_for_select,
-    ) -> None:
-        super().__init__(model, db, q_objects, annotations, orderings,
-            distinct, limit, offset)
-
-        self.fields_for_select = fields_for_select
-
     def _make_query(self, context: QueryContext, alias=None) -> None:
         self.query = self.create_base_query(alias)
         context.push(self.model, self.query._from[-1])
@@ -902,15 +808,50 @@ class ValuesQuery(FieldSelectQuery):
         self.resolve_ordering(context=context)
         context.pop()
 
-    def __await__(self) -> Generator[Any, None, List[dict]]:
-        if self._db is None:
-            self._db = self.model._meta.db  # type: ignore
-        self._make_query(context=QueryContext())
-        return self._execute().__await__()  # pylint: disable=E1101
 
-    async def __aiter__(self) -> AsyncIterator[dict]:
-        for val in await self:
-            yield val
+class ValuesListQuery(FieldSelectQuery):
+    __slots__ = (
+        "flat",
+        "fields_for_select_list",
+    )
+
+    def __init__(
+        self, model, db, q_objects, annotations, orderings, distinct,
+        limit, offset, fields_for_select_list, flat,
+    ) -> None:
+        super().__init__(model, db, q_objects, annotations, orderings, distinct, limit, offset)
+
+        if flat and (len(fields_for_select_list) != 1):
+            raise TypeError("You can flat value_list only if contains one field")
+
+        self.fields_for_select = {str(i): field for i, field in enumerate(fields_for_select_list)}
+        self.fields_for_select_list = fields_for_select_list
+        self.flat = flat
+
+    async def _execute(self) -> List[Any]:
+        _, result = await self._db.execute_query(str(self.query))
+        columns = [
+            (key, self.resolve_to_python_value(self.model, name))
+            for key, name in sorted(list(self.fields_for_select.items()))
+        ]
+        if self.flat:
+            func = columns[0][1]
+            flatmap = lambda entry: func(entry["0"])  # noqa
+            return list(map(flatmap, result))
+
+        listmap = lambda entry: tuple(func(entry[column]) for column, func in columns)  # noqa
+        return list(map(listmap, result))
+
+
+class ValuesQuery(FieldSelectQuery):
+    __slots__ = ()
+
+    def __init__(
+        self, model, db, q_objects, annotations, orderings, distinct,
+        limit, offset, fields_for_select,
+    ) -> None:
+        super().__init__(model, db, q_objects, annotations, orderings, distinct, limit, offset)
+        self.fields_for_select = fields_for_select
 
     async def _execute(self) -> List[dict]:
         result = await self._db.execute_query_dict(str(self.query))
