@@ -209,12 +209,15 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         """
         if not instances:
             return
+
         if not self.instance._saved_in_db:
             raise OperationalError(f"You should first call .save() on {self.instance}")
+
         db = using_db if using_db else self.remote_model._meta.db
         pk_formatting_func = type(self.instance)._meta.pk.to_db_value
         related_pk_formatting_func = type(instances[0])._meta.pk.to_db_value
         through_table = Table(self.field.through)
+
         select_query = (
             db.query_class.from_(through_table)
             .where(
@@ -223,6 +226,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
             )
             .select(self.field.backward_key, self.field.forward_key)
         )
+
         query = db.query_class.into(through_table).columns(
             getattr(through_table, self.field.forward_key),
             getattr(through_table, self.field.backward_key),
@@ -520,13 +524,13 @@ class ForeignKey(RelationField):
         backward_relation_name = self.related_name
         if backward_relation_name is not False:
             if not backward_relation_name:
-                backward_relation_name = f"{self.model._meta.db_table}s"
+                backward_relation_name = "{}_set".format(self.model.__name__.lower())
 
             if backward_relation_name in remote_model._meta.fields_map:
-                related_app_name, related_model_name = self.model_name.split(".")
+                remote_app_name, remote_model_name = self.model_name.split(".")
                 raise ConfigurationError(
                     f'backward relation "{backward_relation_name}" duplicates in'
-                    f" model {related_model_name}"
+                    f" model {remote_model_name}"
                 )
 
             backward_relation_field = self.backward_relation_class(
@@ -683,33 +687,34 @@ class ManyToManyField(RelationField):
         from tortoise import Tortoise
 
         backward_key = self.backward_key
+        model_name_lower = self.model.__name__.lower()
+
         if not backward_key:
-            backward_key = f"{self.model._meta.db_table}_id"
+            backward_key = "{}_id".format(model_name_lower)
 
             if backward_key == self.forward_key:
-                backward_key = f"{self.model._meta.db_table}_rel_id"
+                backward_key = "{}_rel_id".format(model_name_lower)
 
             self.backward_key = backward_key
 
+        remote_app_name, remote_model_name = self.model_name.split(".")
         remote_model = Tortoise.get_model(self.model_name)
         self.remote_model = remote_model
 
         backward_relation_name = self.related_name
         if not backward_relation_name:
-            backward_relation_name = self.related_name = f"{self.model._meta.db_table}s"
+            backward_relation_name = self.related_name = "{}_set".format(model_name_lower)
 
         if backward_relation_name in remote_model._meta.fields_map:
-            related_app_name, related_model_name = self.model_name.split(".")
             raise ConfigurationError(
                 f'backward relation "{backward_relation_name}" duplicates in'
-                f" model {related_model_name}"
+                f" model {remote_model_name}"
             )
 
         if not self.through:
-            related_model_table_name = remote_model._meta.db_table or remote_model.__name__.lower()
-            self.through = f"{self.model._meta.db_table}_{related_model_table_name}"
+            self.through = "{}_{}".format(model_name_lower, remote_model.__name__.lower())
 
-        elif "." in self.through:
+        if "." in self.through:
             through_model = Tortoise.get_model(self.through)
             self.through = through_model._meta.db_table
 

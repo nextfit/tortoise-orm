@@ -13,20 +13,20 @@ class TestForeignKeyField(test.TestCase):
         tour = await testmodels.Tournament.create(name="Team1")
         rel = await testmodels.MinRelation.create(tournament_id=tour.id)
         self.assertEqual(rel.tournament_id, tour.id)
-        self.assertEqual((await tour.minrelations.all())[0], rel)
+        self.assertEqual((await tour.minrelation_set.all())[0], rel)
 
     async def test_minimal__create_by_name(self):
         tour = await testmodels.Tournament.create(name="Team1")
         rel = await testmodels.MinRelation.create(tournament=tour)
         await rel.fetch_related("tournament")
         self.assertEqual(rel.tournament, tour)
-        self.assertEqual((await tour.minrelations.all())[0], rel)
+        self.assertEqual((await tour.minrelation_set.all())[0], rel)
 
     async def test_minimal__by_name__created_prefetched(self):
         tour = await testmodels.Tournament.create(name="Team1")
         rel = await testmodels.MinRelation.create(tournament=tour)
         self.assertEqual(rel.tournament, tour)
-        self.assertEqual((await tour.minrelations.all())[0], rel)
+        self.assertEqual((await tour.minrelation_set.all())[0], rel)
 
     async def test_minimal__by_name__unfetched(self):
         tour = await testmodels.Tournament.create(name="Team1")
@@ -46,7 +46,7 @@ class TestForeignKeyField(test.TestCase):
         rel = await testmodels.MinRelation.create(tournament=tour)
         rel = await testmodels.MinRelation.get(id=rel.id)
         self.assertEqual(await rel.tournament, tour)
-        self.assertEqual((await tour.minrelations.all())[0], rel)
+        self.assertEqual((await tour.minrelation_set.all())[0], rel)
 
     async def test_event__create_by_id(self):
         tour = await testmodels.Tournament.create(name="Team1")
@@ -96,7 +96,7 @@ class TestForeignKeyField(test.TestCase):
         with self.assertRaisesRegex(
             OperationalError, "This objects hasn't been instanced, call .save()"
         ):
-            async for _ in tour.minrelations:
+            async for _ in tour.minrelation_set:
                 pass
 
     async def test_minimal__uninstantiated_await(self):
@@ -104,7 +104,7 @@ class TestForeignKeyField(test.TestCase):
         with self.assertRaisesRegex(
             OperationalError, "This objects hasn't been instanced, call .save()"
         ):
-            await tour.minrelations
+            await tour.minrelation_set
 
     async def test_minimal__unfetched_contains(self):
         tour = await testmodels.Tournament.create(name="Team1")
@@ -112,7 +112,7 @@ class TestForeignKeyField(test.TestCase):
             NoValuesFetched,
             "No values were fetched for this relation," " first use .fetch_related()",
         ):
-            "a" in tour.minrelations  # pylint: disable=W0104
+            "a" in tour.minrelation_set  # pylint: disable=W0104
 
     async def test_minimal__unfetched_iter(self):
         tour = await testmodels.Tournament.create(name="Team1")
@@ -120,7 +120,7 @@ class TestForeignKeyField(test.TestCase):
             NoValuesFetched,
             "No values were fetched for this relation," " first use .fetch_related()",
         ):
-            for _ in tour.minrelations:
+            for _ in tour.minrelation_set:
                 pass
 
     async def test_minimal__unfetched_len(self):
@@ -129,7 +129,7 @@ class TestForeignKeyField(test.TestCase):
             NoValuesFetched,
             "No values were fetched for this relation," " first use .fetch_related()",
         ):
-            len(tour.minrelations)
+            len(tour.minrelation_set)
 
     async def test_minimal__unfetched_bool(self):
         tour = await testmodels.Tournament.create(name="Team1")
@@ -137,7 +137,7 @@ class TestForeignKeyField(test.TestCase):
             NoValuesFetched,
             "No values were fetched for this relation," " first use .fetch_related()",
         ):
-            bool(tour.minrelations)
+            bool(tour.minrelation_set)
 
     async def test_minimal__unfetched_getitem(self):
         tour = await testmodels.Tournament.create(name="Team1")
@@ -145,7 +145,7 @@ class TestForeignKeyField(test.TestCase):
             NoValuesFetched,
             "No values were fetched for this relation," " first use .fetch_related()",
         ):
-            tour.minrelations[0]  # pylint: disable=W0104
+            tour.minrelation_set[0]  # pylint: disable=W0104
 
     async def test_minimal__instantiated_create(self):
         tour = await testmodels.Tournament.create(name="Team1")
@@ -153,47 +153,47 @@ class TestForeignKeyField(test.TestCase):
 
     async def test_minimal__instantiated_iterate(self):
         tour = await testmodels.Tournament.create(name="Team1")
-        async for _ in tour.minrelations:
+        async for _ in tour.minrelation_set:
             pass
 
     async def test_minimal__instantiated_await(self):
         tour = await testmodels.Tournament.create(name="Team1")
-        await tour.minrelations
+        await tour.minrelation_set
 
     async def test_minimal__fetched_contains(self):
         tour = await testmodels.Tournament.create(name="Team1")
         rel = await testmodels.MinRelation.create(tournament=tour)
-        await tour.fetch_related("minrelations")
-        self.assertTrue(rel in tour.minrelations)
+        await tour.fetch_related("minrelation_set")
+        self.assertTrue(rel in tour.minrelation_set)
 
     async def test_minimal__fetched_iter(self):
         tour = await testmodels.Tournament.create(name="Team1")
         rel = await testmodels.MinRelation.create(tournament=tour)
-        await tour.fetch_related("minrelations")
-        self.assertEqual(list(tour.minrelations), [rel])
+        await tour.fetch_related("minrelation_set")
+        self.assertEqual(list(tour.minrelation_set), [rel])
 
     async def test_minimal__fetched_len(self):
         tour = await testmodels.Tournament.create(name="Team1")
         await testmodels.MinRelation.create(tournament=tour)
-        await tour.fetch_related("minrelations")
-        self.assertEqual(len(tour.minrelations), 1)
+        await tour.fetch_related("minrelation_set")
+        self.assertEqual(len(tour.minrelation_set), 1)
 
     async def test_minimal__fetched_bool(self):
         tour = await testmodels.Tournament.create(name="Team1")
-        await tour.fetch_related("minrelations")
-        self.assertFalse(bool(tour.minrelations))
+        await tour.fetch_related("minrelation_set")
+        self.assertFalse(bool(tour.minrelation_set))
         await testmodels.MinRelation.create(tournament=tour)
-        await tour.fetch_related("minrelations")
-        self.assertTrue(bool(tour.minrelations))
+        await tour.fetch_related("minrelation_set")
+        self.assertTrue(bool(tour.minrelation_set))
 
     async def test_minimal__fetched_getitem(self):
         tour = await testmodels.Tournament.create(name="Team1")
         rel = await testmodels.MinRelation.create(tournament=tour)
-        await tour.fetch_related("minrelations")
-        self.assertEqual(tour.minrelations[0], rel)
+        await tour.fetch_related("minrelation_set")
+        self.assertEqual(tour.minrelation_set[0], rel)
 
         with self.assertRaises(IndexError):
-            tour.minrelations[1]  # pylint: disable=W0104
+            tour.minrelation_set[1]  # pylint: disable=W0104
 
     async def test_event__filter(self):
         tour = await testmodels.Tournament.create(name="Team1")
