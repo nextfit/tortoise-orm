@@ -521,6 +521,9 @@ class ForeignKey(RelationField):
         self.model._meta.add_field(key_field_name, key_field_object)
         self.remote_model = remote_model
 
+        if self.primary_key:
+            self.model._meta.pk_attr = key_field_name
+
         backward_relation_name = self.related_name
         if backward_relation_name is not False:
             if not backward_relation_name:
@@ -536,9 +539,6 @@ class ForeignKey(RelationField):
             backward_relation_field = self.backward_relation_class(
                 self.model, key_field_name, True, self.description)
             remote_model._meta.add_field(backward_relation_name, backward_relation_field)
-
-        if self.primary_key:
-            self.model._meta.pk_attr = key_field_name
 
     def describe(self, serializable: bool = True) -> dict:
         desc = super().describe(serializable)
@@ -663,7 +663,7 @@ class ManyToManyField(RelationField):
         through: Optional[str] = None,
         forward_key: Optional[str] = None,
         backward_key: Optional[str] = None,
-        related_name: Optional[str] = None,
+        related_name: Union[Optional[str], Literal[False]] = None,
         **kwargs,
     ) -> None:
 
@@ -701,16 +701,6 @@ class ManyToManyField(RelationField):
         remote_model = Tortoise.get_model(self.model_name)
         self.remote_model = remote_model
 
-        backward_relation_name = self.related_name
-        if not backward_relation_name:
-            backward_relation_name = self.related_name = "{}_set".format(model_name_lower)
-
-        if backward_relation_name in remote_model._meta.fields_map:
-            raise ConfigurationError(
-                f'backward relation "{backward_relation_name}" duplicates in'
-                f" model {remote_model_name}"
-            )
-
         if not self.through:
             self.through = "{}_{}".format(model_name_lower, remote_model.__name__.lower())
 
@@ -718,17 +708,28 @@ class ManyToManyField(RelationField):
             through_model = Tortoise.get_model(self.through)
             self.through = through_model._meta.db_table
 
-        m2m_relation = ManyToManyField(
-            self.model.full_name(),
-            self.through,
-            forward_key=self.backward_key,
-            backward_key=self.forward_key,
-            related_name=self.model_field_name,
-            description=self.description,
-        )
-        m2m_relation.auto_created = True
-        m2m_relation.remote_model = self.model
-        remote_model._meta.add_field(backward_relation_name, m2m_relation)
+        backward_relation_name = self.related_name
+        if backward_relation_name is not False:
+            if not backward_relation_name:
+                backward_relation_name = self.related_name = "{}_set".format(model_name_lower)
+
+            if backward_relation_name in remote_model._meta.fields_map:
+                raise ConfigurationError(
+                    f'backward relation "{backward_relation_name}" duplicates in'
+                    f" model {remote_model_name}"
+                )
+
+            m2m_relation = ManyToManyField(
+                self.model.full_name(),
+                self.through,
+                forward_key=self.backward_key,
+                backward_key=self.forward_key,
+                related_name=self.model_field_name,
+                description=self.description,
+            )
+            m2m_relation.auto_created = True
+            m2m_relation.remote_model = self.model
+            remote_model._meta.add_field(backward_relation_name, m2m_relation)
 
     async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
         instance_id_set = [
