@@ -82,16 +82,16 @@ class MetaInfo:
 
         self._filter_cache: Dict[str, Optional[FieldFilter]] = {}
 
-    def add_field(self, name: str, value: Field):
+    def add_field(self, name: str, field: Field):
         if name in self.fields_map:
             raise ConfigurationError(f"Field {name} already present in meta")
 
-        value.model_field_name = name
-        value.model = self._model
+        field.model_field_name = name
+        field.model = self._model
 
-        self.fields_map[name] = value
-        if value.has_db_column:
-            self.field_to_db_column_name_map[name] = value.db_column or name
+        self.fields_map[name] = field
+        if field.has_db_column:
+            self.field_to_db_column_name_map[name] = field.db_column or name
 
     @property
     def db(self) -> "BaseDBAsyncClient":
