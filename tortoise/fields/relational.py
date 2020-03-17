@@ -364,13 +364,13 @@ class BackwardFKRelation(RelationField):
     def __init__(
         self,
         remote_model: "Type[Model]",
-        relation_field: str,
+        related_name: str,
         null: bool,
         description: Optional[str]
     ) -> None:
         super().__init__(null=null)
         self.remote_model: "Type[Model]" = remote_model
-        self.relation_field: str = relation_field
+        self.related_name: str = related_name
         self.description: Optional[str] = description
         self.auto_created = True
 
@@ -381,7 +381,7 @@ class BackwardFKRelation(RelationField):
                 _rfk_getter,
                 _key=_key,
                 ftype=self.remote_model,
-                frelfield=self.relation_field,
+                frelfield=self.related_name,
             )
         )
 
@@ -393,15 +393,15 @@ class BackwardFKRelation(RelationField):
             self.model._meta.db.executor_class._field_to_db(instance._meta.pk, instance.pk, instance)
             for instance in instance_list
         }
-        relation_field = self.model._meta.fields_map[self.model_field_name].relation_field  # type: ignore
+        related_name = self.model._meta.fields_map[self.model_field_name].related_name  # type: ignore
 
         related_object_list = await related_query.filter(
-            **{f"{relation_field}__in": list(instance_id_set)}
+            **{f"{related_name}__in": list(instance_id_set)}
         )
 
         related_object_map: Dict[str, list] = {}
         for entry in related_object_list:
-            object_id = getattr(entry, relation_field)
+            object_id = getattr(entry, related_name)
             if object_id in related_object_map.keys():
                 related_object_map[object_id].append(entry)
             else:
@@ -419,7 +419,7 @@ class BackwardFKRelation(RelationField):
 
         return [
             (related_table,
-             getattr(table, table_pk) == getattr(related_table, self.relation_field),)
+             getattr(table, table_pk) == getattr(related_table, self.related_name),)
         ]
 
 
@@ -554,7 +554,7 @@ class BackwardOneToOneRelation(BackwardFKRelation):
                 _ro2o_getter,
                 _key=_key,
                 ftype=self.remote_model,
-                frelfield=self.relation_field,
+                frelfield=self.related_name,
             ),
         )
 
@@ -563,13 +563,13 @@ class BackwardOneToOneRelation(BackwardFKRelation):
             self.model._meta.db.executor_class._field_to_db(instance._meta.pk, instance.pk, instance)
             for instance in instance_list
         }
-        relation_field = self.model._meta.fields_map[self.model_field_name].relation_field  # type: ignore
+        related_name = self.model._meta.fields_map[self.model_field_name].related_name  # type: ignore
 
         related_object_list = await related_query.filter(
-            **{f"{relation_field}__in": list(instance_id_set)}
+            **{f"{related_name}__in": list(instance_id_set)}
         )
 
-        related_object_map = {getattr(entry, relation_field): entry for entry in related_object_list}
+        related_object_map = {getattr(entry, related_name): entry for entry in related_object_list}
         for instance in instance_list:
             setattr(instance, f"_{self.model_field_name}", related_object_map.get(instance.pk, None))
 

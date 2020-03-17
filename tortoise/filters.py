@@ -191,7 +191,7 @@ class BackwardFKFilter(RelationFilter):
             opr,
             value_encoder,
             Table(field.remote_model._meta.db_table),
-            field.relation_field)
+            field.related_name)
 
 
 class ManyToManyRelationFilter(RelationFilter):
