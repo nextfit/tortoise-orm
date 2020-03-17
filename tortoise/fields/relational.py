@@ -49,46 +49,6 @@ class _NoneAwaitable:
 NoneAwaitable = _NoneAwaitable()
 
 
-def _fk_setter(self, value, _key, relation_field):
-    setattr(self, relation_field, value.pk if value else None)
-    setattr(self, _key, value)
-
-
-def _fk_getter(self, _key, ftype, relation_field):
-    try:
-        return getattr(self, _key)
-    except AttributeError:
-        _pk = getattr(self, relation_field)
-        if _pk:
-            return ftype.filter(pk=_pk).first()
-        return NoneAwaitable
-
-
-def _rfk_getter(self, _key, ftype, frelfield):
-    val = getattr(self, _key, None)
-    if val is None:
-        val = ReverseRelation(ftype, frelfield, self)
-        setattr(self, _key, val)
-    return val
-
-
-def _ro2o_getter(self, _key, ftype, frelfield):
-    if hasattr(self, _key):
-        return getattr(self, _key)
-
-    val = ftype.filter(**{frelfield: self.pk}).first()
-    setattr(self, _key, val)
-    return val
-
-
-def _m2m_getter(self, _key, field_object):
-    val = getattr(self, _key, None)
-    if val is None:
-        val = ManyToManyRelation(self, field_object)
-        setattr(self, _key, val)
-    return val
-
-
 class ReverseRelation(Generic[MODEL]):
     """
     Relation container for :func:`.ForeignKey`.
@@ -377,14 +337,22 @@ class BackwardFKRelation(RelationField):
         self.description: Optional[str] = description
         self.auto_created = True
 
+    @staticmethod
+    def _rfk_getter(self, _key, ftype, field_name):
+        val = getattr(self, _key, None)
+        if val is None:
+            val = ReverseRelation(ftype, field_name, self)
+            setattr(self, _key, val)
+        return val
+
     def attribute_property(self):
         _key = f"_{self.model_field_name}"
         return property(
             partial(
-                _rfk_getter,
+                BackwardFKRelation._rfk_getter,
                 _key=_key,
                 ftype=self.remote_model,
-                frelfield=self.related_name,
+                field_name=self.related_name,
             )
         )
 
@@ -488,18 +456,33 @@ class ForeignKey(RelationField):
 
         self.on_delete = on_delete
 
+    @staticmethod
+    def _fk_setter(self, value, _key, field_name):
+        setattr(self, field_name, value.pk if value else None)
+        setattr(self, _key, value)
+
+    @staticmethod
+    def _fk_getter(self, _key, ftype, field_name):
+        try:
+            return getattr(self, _key)
+        except AttributeError:
+            _pk = getattr(self, field_name)
+            if _pk:
+                return ftype.filter(pk=_pk).first()
+            return NoneAwaitable
+
     def attribute_property(self):
         _key = f"_{self.model_field_name}"
         relation_field = self.db_column
         return property(
             partial(
-                _fk_getter,
+                ForeignKey._fk_getter,
                 _key=_key,
-                ftype=self.remote_model,  # type: ignore
-                relation_field=relation_field,
+                ftype=self.remote_model,
+                field_name=relation_field,
             ),
-            partial(_fk_setter, _key=_key, relation_field=relation_field),
-            partial(_fk_setter, value=None, _key=_key, relation_field=relation_field),
+            partial(ForeignKey._fk_setter, _key=_key, field_name=relation_field),
+            partial(ForeignKey._fk_setter, value=None, _key=_key, field_name=relation_field),
         )
 
     def create_relation(self):
@@ -549,14 +532,24 @@ class ForeignKey(RelationField):
 
 
 class BackwardOneToOneRelation(BackwardFKRelation):
+
+    @staticmethod
+    def _ro2o_getter(self, _key, ftype, field_name):
+        if hasattr(self, _key):
+            return getattr(self, _key)
+
+        val = ftype.filter(**{field_name: self.pk}).first()
+        setattr(self, _key, val)
+        return val
+
     def attribute_property(self):
         _key = f"_{self.model_field_name}"
         return property(
             partial(
-                _ro2o_getter,
+                BackwardOneToOneRelation._ro2o_getter,
                 _key=_key,
                 ftype=self.remote_model,
-                frelfield=self.related_name,
+                field_name=self.related_name,
             ),
         )
 
@@ -679,9 +672,17 @@ class ManyToManyField(RelationField):
         self.backward_key: str = backward_key
         self.through: Optional[str] = through
 
+    @staticmethod
+    def _m2m_getter(self, _key, field_object):
+        val = getattr(self, _key, None)
+        if val is None:
+            val = ManyToManyRelation(self, field_object)
+            setattr(self, _key, val)
+        return val
+
     def attribute_property(self):
         _key = f"_{self.model_field_name}"
-        return property(partial(_m2m_getter, _key=_key, field_object=self))
+        return property(partial(ManyToManyField._m2m_getter, _key=_key, field_object=self))
 
     def create_relation(self):
         from tortoise import Tortoise
