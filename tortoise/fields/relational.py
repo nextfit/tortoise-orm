@@ -364,7 +364,7 @@ class BackwardFKRelation(RelationField):
             self.model._meta.db.executor_class._field_to_db(instance._meta.pk, instance.pk, instance)
             for instance in instance_list
         }
-        related_name = self.model._meta.fields_map[self.model_field_name].related_name  # type: ignore
+        related_name = self.related_name
 
         related_object_list = await related_query.filter(
             **{f"{related_name}__in": list(instance_id_set)}
@@ -558,7 +558,7 @@ class BackwardOneToOneRelation(BackwardFKRelation):
             self.model._meta.db.executor_class._field_to_db(instance._meta.pk, instance.pk, instance)
             for instance in instance_list
         }
-        related_name = self.model._meta.fields_map[self.model_field_name].related_name  # type: ignore
+        related_name = self.related_name
 
         related_object_list = await related_query.filter(
             **{f"{related_name}__in": list(instance_id_set)}

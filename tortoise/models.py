@@ -15,8 +15,13 @@ from tortoise.fields.relational import (
     OneToOneField,
     RelationField)
 
-from tortoise.filters import FieldFilter, BaseFieldFilter, ManyToManyRelationFilter, RELATED_FILTER_FUNC_MAP, \
-    BackwardFKFilter
+from tortoise.filters import (
+    FieldFilter,
+    BaseFieldFilter,
+    ManyToManyRelationFilter,
+    RELATED_FILTER_FUNC_MAP,
+    BackwardFKFilter)
+
 from tortoise.queryset import QuerySet, QuerySetSingle
 from tortoise.transactions import current_transaction_map
 
