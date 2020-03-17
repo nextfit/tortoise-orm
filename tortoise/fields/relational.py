@@ -319,6 +319,11 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
 class RelationField(Field):
     has_db_column = False
 
+    def __init__(self, remote_model: "Type[Model]", related_name: str, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.remote_model: "Type[Model]" = remote_model
+        self.related_name: str = related_name
+
     def attribute_property(self):
         raise NotImplementedError()
 
@@ -368,9 +373,7 @@ class BackwardFKRelation(RelationField):
         null: bool,
         description: Optional[str]
     ) -> None:
-        super().__init__(null=null)
-        self.remote_model: "Type[Model]" = remote_model
-        self.related_name: str = related_name
+        super().__init__(remote_model=remote_model, related_name=related_name, null=null)
         self.description: Optional[str] = description
         self.auto_created = True
 
@@ -467,17 +470,16 @@ class ForeignKey(RelationField):
         **kwargs,
     ) -> None:
 
-        super().__init__(primary_key=primary_key, unique=unique, **kwargs)
+        super().__init__(remote_model=None, related_name=related_name,
+            primary_key=primary_key, unique=unique, **kwargs)
+
         if primary_key and not unique:
             raise ConfigurationError(f"{self.__class__.__name__} cannot be a primary key if not unique")
 
         if len(model_name.split(".")) != 2:
             raise ConfigurationError(f'{self.__class__.__name__} accepts model name in format "app.Model"')
 
-        self.remote_model: "Type[Model]" = None  # type: ignore
         self.model_name = model_name
-        self.related_name = related_name
-
         if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
             raise ConfigurationError("on_delete can only be CASCADE, RESTRICT or SET_NULL")
 
@@ -667,14 +669,12 @@ class ManyToManyField(RelationField):
         **kwargs,
     ) -> None:
 
-        super().__init__(**kwargs)
+        super().__init__(remote_model=None, related_name=related_name, **kwargs)
 
-        self.remote_model: "Type[Model]" = None
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
 
         self.model_name: str = model_name
-        self.related_name: str = related_name
         self.forward_key: str = forward_key or f"{model_name.split('.')[1].lower()}_id"
         self.backward_key: str = backward_key
         self.through: Optional[str] = through
