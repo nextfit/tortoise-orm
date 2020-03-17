@@ -1,3 +1,4 @@
+
 from tortoise.fields.base import CASCADE, RESTRICT, SET_DEFAULT, SET_NULL, Field
 from tortoise.fields.data import (
     BigIntegerField,
@@ -18,7 +19,9 @@ from tortoise.fields.data import (
     UUIDField,
 )
 from tortoise.fields.relational import (
+    RelationField,
     BackwardOneToOneRelation,
+    BackwardFKRelation,
     ForeignKey,
     ForeignKeyNullableRelation,
     ForeignKeyRelation,

@@ -271,7 +271,7 @@ class BaseSchemaGenerator:
         table_create_string = "\n".join([table_create_string, *field_indexes_sqls])
         table_create_string += self._post_table_hook()
 
-        from tortoise import ManyToManyField
+        from tortoise.fields import ManyToManyField
         for field in model._meta.fields_map.values():
             if isinstance(field, ManyToManyField) and not field.auto_created:
                 m2m_create_string = self.M2M_TABLE_TEMPLATE.format(

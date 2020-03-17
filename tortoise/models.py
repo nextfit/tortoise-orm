@@ -4,7 +4,7 @@ from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeV
 
 from pypika import Query, Table, Order
 
-from tortoise.exceptions import ConfigurationError, OperationalError
+from tortoise.exceptions import ConfigurationError, OperationalError, FieldError
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntegerField
 from tortoise.fields.relational import (
@@ -97,6 +97,12 @@ class MetaInfo:
         self.fields_map[name] = field
         if field.has_db_column:
             self.field_to_db_column_name_map[name] = field.db_column or name
+
+    def get_field(self, name: str):
+        if name in self.fields_map:
+            return self.fields_map[name]
+
+        raise FieldError(f"Field {name} does not exist")
 
     @property
     def db(self) -> "BaseDBAsyncClient":

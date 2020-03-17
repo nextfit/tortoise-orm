@@ -13,13 +13,7 @@ from pypika import Table
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
 from tortoise.exceptions import ConfigurationError
-from tortoise.fields.relational import (
-    BackwardFKRelation,
-    BackwardOneToOneRelation,
-    ForeignKey,
-    ManyToManyField,
-    OneToOneField,
-    RelationField)
+from tortoise.fields.relational import RelationField
 
 from tortoise.models import Model
 from tortoise.queryset import QuerySet
