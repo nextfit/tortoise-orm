@@ -28,6 +28,7 @@ class BaseExecutor:
 
     FILTER_FUNC_MAP = {
         "": (operator.eq, None),
+        "exact": (operator.eq, None),
         "not": (tf.not_equal, None),
         "in": (tf.is_in, tf.list_encoder),
         "not_in": (tf.not_in, tf.list_encoder),

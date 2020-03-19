@@ -287,6 +287,7 @@ def __field_to_list(field):
 
 RELATED_FILTER_FUNC_MAP = {
     "": (operator.eq, __field_to_db_value),
+    "exact": (operator.eq, __field_to_db_value),
     "not": (not_equal, __field_to_db_value),
     "in": (is_in, __field_to_list),
     "not_in": (not_in, __field_to_list)
