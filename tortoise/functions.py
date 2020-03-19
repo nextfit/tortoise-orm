@@ -5,6 +5,7 @@ from pypika import functions
 from pypika.terms import AggregateFunction, Term
 from pypika.terms import Function as BaseFunction
 
+from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields.relational import ForeignKey
@@ -65,7 +66,7 @@ class Function(Annotation):
         model = context.stack[-1].model
         table = context.stack[-1].table
 
-        field_split = field.split("__")
+        field_split = field.split(LOOKUP_SEP)
         if not field_split[1:]:
             function_joins = []
             if field_split[0] in model._meta.fetch_fields:
@@ -96,11 +97,11 @@ class Function(Annotation):
         remote_table = remote_model._meta.basetable
         if isinstance(relation_field, ForeignKey):
             # Only FK's can be to same table, so we only auto-alias FK join tables
-            remote_table = remote_table.as_(f"{table.get_table_name()}__{field_split[0]}")
+            remote_table = remote_table.as_(f"{table.get_table_name()}{LOOKUP_SEP}{field_split[0]}")
 
         context.push(remote_model, remote_table)
         annotation_info = self._resolve_field(
-            context, "__".join(field_split[1:]), *default_values
+            context, LOOKUP_SEP.join(field_split[1:]), *default_values
         )
         context.pop()
 

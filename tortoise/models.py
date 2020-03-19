@@ -4,6 +4,7 @@ from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeV
 
 from pypika import Query, Table, Order
 
+from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import ConfigurationError, OperationalError, FieldError
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntegerField
@@ -112,7 +113,7 @@ class MetaInfo:
             raise ConfigurationError("No DB associated to model")
 
     def __create_filter(self, key: str) -> Optional[FieldFilter]:
-        (field_name, sep, comparision) = key.partition('__')
+        (field_name, sep, comparision) = key.partition(LOOKUP_SEP)
         if field_name not in self.fields_map:
             return None
 

@@ -1,6 +1,7 @@
 from copy import copy
 from typing import Any, Dict, Tuple
 
+from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
 from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.relational import ForeignKey, OneToOneField
@@ -63,13 +64,13 @@ class Q:
         model = context_item.model
         table = context_item.table
 
-        relation_field_name = key.split("__")[0]
+        relation_field_name = key.split(LOOKUP_SEP)[0]
         relation_field = model._meta.fields_map[relation_field_name]
         required_joins = relation_field.get_joins(table)
 
         related_table = required_joins[-1][0]
         context.push(relation_field.remote_model, related_table)
-        modifier = Q(**{"__".join(key.split("__")[1:]): value}).resolve(
+        modifier = Q(**{LOOKUP_SEP.join(key.split(LOOKUP_SEP)[1:]): value}).resolve(
             context=context, annotations=self._annotations)
         context.pop()
 
@@ -78,7 +79,7 @@ class Q:
     def _resolve_annotation_filters(self, context: QueryContext, key, value) -> QueryModifier:
 
         model = context.stack[-1].model
-        (field_name, sep, comparision) = key.partition('__')
+        (field_name, sep, comparision) = key.partition(LOOKUP_SEP)
         (filter_operator, _) = model._meta.db.executor_class.FILTER_FUNC_MAP[comparision]
 
         annotation = self._annotations[field_name]
@@ -93,12 +94,12 @@ class Q:
         model = context.stack[-1].model
         key_filter = model._meta.get_filter(key)
 
-        if key_filter is None and key.split("__")[0] in model._meta.fetch_fields:
+        if key_filter is None and key.split(LOOKUP_SEP)[0] in model._meta.fetch_fields:
             return self._resolve_nested_filter(context, key, value)
 
         else:
             if value is None and "isnull" in model._meta.db.executor_class.FILTER_FUNC_MAP:
-                return model._meta.get_filter(f"{key}__isnull")(context, True)
+                return model._meta.get_filter(f"{key}{LOOKUP_SEP}isnull")(context, True)
             else:
                 return key_filter(context, value)
 
@@ -114,7 +115,7 @@ class Q:
 
             return key
 
-        (field_name, sep, comparision) = key.partition('__')
+        (field_name, sep, comparision) = key.partition(LOOKUP_SEP)
         if field_name == "pk":
             return f"{model._meta.pk_attr}{sep}{comparision}"
 
@@ -139,7 +140,7 @@ class Q:
             key = self._get_actual_key(context.stack[-1].model, raw_key)
             value = self._get_actual_value(context, raw_value)
 
-            if key.split("__")[0] in self._annotations:
+            if key.split(LOOKUP_SEP)[0] in self._annotations:
                 filter_modifier = self._resolve_annotation_filters(context, key, value)
             else:
                 filter_modifier = self._resolve_field_filters(context, key, value)
@@ -185,7 +186,7 @@ class Prefetch:
             self.queryset.query = copy(self.queryset.model._meta.basequery)
 
     def resolve_for_queryset(self, queryset) -> None:
-        relation_split = self.relation.split("__")
+        relation_split = self.relation.split(LOOKUP_SEP)
         first_level_field = relation_split[0]
         if first_level_field not in queryset.model._meta.fetch_fields:
             if first_level_field in queryset.model._meta.fields_map:
@@ -195,7 +196,7 @@ class Prefetch:
 
             raise FieldError(msg)
 
-        forwarded_prefetch = "__".join(relation_split[1:])
+        forwarded_prefetch = LOOKUP_SEP.join(relation_split[1:])
         if forwarded_prefetch:
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()

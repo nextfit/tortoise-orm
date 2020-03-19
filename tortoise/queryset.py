@@ -24,6 +24,7 @@ from pypika.terms import ArithmeticExpression
 from typing_extensions import Protocol
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
+from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
 
@@ -175,14 +176,14 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
                     "Filtering by relation is not possible. Filter by nested field of related model"
                 )
 
-            if field_name.split("__")[0] in model._meta.fetch_fields:
-                relation_field_name = field_name.split("__")[0]
+            if field_name.split(LOOKUP_SEP)[0] in model._meta.fetch_fields:
+                relation_field_name = field_name.split(LOOKUP_SEP)[0]
                 relation_field = model._meta.fields_map[relation_field_name]
                 related_table = self._join_table_by_field(table, relation_field)
                 context.push(relation_field.remote_model, related_table)
                 self.__resolve_ordering(
                     context,
-                    [QueryOrdering("__".join(field_name.split("__")[1:]), ordering.direction)],
+                    [QueryOrdering(LOOKUP_SEP.join(field_name.split(LOOKUP_SEP)[1:]), ordering.direction)],
                     {},
                 )
                 context.pop()
@@ -717,13 +718,13 @@ class FieldSelectQuery(AwaitableQuery):
             raise FieldError(f'Unknown field "{field_name}" for model "{model.__name__}"')
 
         field_table = self._join_table_by_field(table, field_object)
-        forwarded_fields_split = forwarded_fields.split("__")
+        forwarded_fields_split = forwarded_fields.split(LOOKUP_SEP)
 
         context.push(field_object.remote_model, field_table)
         output = self._join_table_with_forwarded_fields(
             context=context,
             field_name=forwarded_fields_split[0],
-            forwarded_fields="__".join(forwarded_fields_split[1:]),
+            forwarded_fields=LOOKUP_SEP.join(forwarded_fields_split[1:]),
         )
         context.pop()
         return output
@@ -751,11 +752,11 @@ class FieldSelectQuery(AwaitableQuery):
             self.query._select_other(annotation_info.field.as_(return_as))
             return
 
-        field_split = field_name.split("__")
+        field_split = field_name.split(LOOKUP_SEP)
         if field_split[0] in self.model._meta.fetch_fields:
             context.push(model=self.model, table=self.model._meta.basetable)
             related_table, related_db_column = self._join_table_with_forwarded_fields(
-                context=context, field_name=field_split[0], forwarded_fields="__".join(field_split[1:])
+                context=context, field_name=field_split[0], forwarded_fields=LOOKUP_SEP.join(field_split[1:])
             )
             context.pop()
             self.query._select_field(getattr(related_table, related_db_column).as_(return_as))
@@ -783,10 +784,10 @@ class FieldSelectQuery(AwaitableQuery):
             else:
                 return model._meta.fields_map[field_name].to_python_value
 
-        field_split = field_name.split("__")
+        field_split = field_name.split(LOOKUP_SEP)
         if field_split[0] in model._meta.fetch_fields:
             remote_model = model._meta.fields_map[field_split[0]].remote_model  # type: ignore
-            return self.resolve_to_python_value(remote_model, "__".join(field_split[1:]))
+            return self.resolve_to_python_value(remote_model, LOOKUP_SEP.join(field_split[1:]))
 
         raise FieldError(f'Unknown field "{field_name}" for model "{model}"')
 

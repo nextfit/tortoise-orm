@@ -4,6 +4,7 @@ from typing import Awaitable, Generic, Optional, TypeVar, Union, Dict
 
 from pypika import Table
 from typing_extensions import Literal
+from tortoise.constants import LOOKUP_SEP
 
 from tortoise.context import QueryContext
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
@@ -293,7 +294,7 @@ class RelationField(Field):
     def get_joins(self, table: Table):
         related_table_pk = self.remote_model._meta.pk_db_column
         related_table = self.remote_model._meta.basetable
-        related_table = related_table.as_(f"{table.get_table_name()}__{self.model_field_name}")
+        related_table = related_table.as_(f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}")
         return [
             (related_table,
              getattr(related_table, related_table_pk) == getattr(table, f"{self.model_field_name}_id"),)

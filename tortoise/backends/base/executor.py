@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Ty
 
 from pypika import Parameter
 
+from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import OperationalError
 from tortoise.fields.base import Field
 import tortoise.filters as tf
@@ -260,7 +261,7 @@ class BaseExecutor:
     async def fetch_for_list(self, instance_list: list, *args) -> list:
         self.prefetch_map = {}
         for relation in args:
-            relation_split = relation.split("__")
+            relation_split = relation.split(LOOKUP_SEP)
             first_level_field = relation_split[0]
 
             if first_level_field not in self.model._meta.fetch_fields:
@@ -271,7 +272,7 @@ class BaseExecutor:
             if first_level_field not in self.prefetch_map.keys():
                 self.prefetch_map[first_level_field] = set()
 
-            forwarded_prefetch = "__".join(relation_split[1:])
+            forwarded_prefetch = LOOKUP_SEP.join(relation_split[1:])
 
             if forwarded_prefetch:
                 self.prefetch_map[first_level_field].add(forwarded_prefetch)
