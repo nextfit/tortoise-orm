@@ -225,9 +225,9 @@ class BaseSchemaGenerator:
             for unique_together_list in model._meta.unique_together:
                 unique_together_to_create = []
 
-                for field in unique_together_list:
-                    field_object = model._meta.fields_map[field]
-                    unique_together_to_create.append(field_object.db_column or field)
+                for field_name in unique_together_list:
+                    field_object = model._meta.fields_map[field_name]
+                    unique_together_to_create.append(field_object.db_column or field_name)
 
                 columns_to_create.append(
                     self._get_unique_constraint_sql(model, unique_together_to_create)

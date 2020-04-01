@@ -124,8 +124,8 @@ class BaseExecutor:
         for row in raw_results:
             instance: "Model" = self.model._init_from_db(**row)
             if custom_fields:
-                for field in custom_fields:
-                    setattr(instance, field, row[field])
+                for field_name in custom_fields:
+                    setattr(instance, field_name, row[field_name])
             instance_list.append(instance)
 
         await self._execute_prefetch_queries(instance_list)
@@ -203,9 +203,9 @@ class BaseExecutor:
         table = self.model._meta.basetable
         query = self.db.query_class.update(table)
         count = 0
-        for field in update_fields or self.model._meta.field_to_db_column_name_map.keys():
-            db_column = self.model._meta.field_to_db_column_name_map[field]
-            field_object = self.model._meta.fields_map[field]
+        for field_name in update_fields or self.model._meta.field_to_db_column_name_map.keys():
+            db_column = self.model._meta.field_to_db_column_name_map[field_name]
+            field_object = self.model._meta.fields_map[field_name]
             if not field_object.primary_key:
                 query = query.set(db_column, self.parameter(count))
                 count += 1
@@ -217,9 +217,9 @@ class BaseExecutor:
 
     async def execute_update(self, instance, update_fields: Optional[List[str]]) -> int:
         values = [
-            self.column_map[field](getattr(instance, field), instance)
-            for field in update_fields or self.model._meta.field_to_db_column_name_map.keys()
-            if not self.model._meta.fields_map[field].primary_key
+            self.column_map[field_name](getattr(instance, field_name), instance)
+            for field_name in update_fields or self.model._meta.field_to_db_column_name_map.keys()
+            if not self.model._meta.fields_map[field_name].primary_key
         ]
         values.append(self.model._meta.pk.to_db_value(instance.pk, instance))
         return (await self.db.execute_query(self.get_update_sql(update_fields), values))[0]
@@ -251,8 +251,8 @@ class BaseExecutor:
             fields_map = self.model._meta.fields_map
 
             prefetch_tasks = [
-                fields_map[field].prefetch(instance_list, related_query)
-                for field, related_query in self._prefetch_queries.items()
+                fields_map[field_name].prefetch(instance_list, related_query)
+                for field_name, related_query in self._prefetch_queries.items()
             ]
             await asyncio.gather(*prefetch_tasks)
 
