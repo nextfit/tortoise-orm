@@ -4,8 +4,8 @@ import sys
 
 from setuptools import find_packages, setup
 
-if sys.version_info < (3, 6):
-    raise RuntimeError("Tortoise-ORM requires Python >= 3.6")
+if sys.version_info < (3, 7):
+    raise RuntimeError("Tortoise-ORM requires Python >= 3.7")
 
 
 def version() -> str:
@@ -47,7 +47,6 @@ setup(
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: Implementation :: CPython",
