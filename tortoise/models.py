@@ -20,7 +20,6 @@ from tortoise.filters import (
     FieldFilter,
     BaseFieldFilter,
     ManyToManyRelationFilter,
-    RELATED_FILTER_FUNC_MAP,
     BackwardFKFilter)
 
 from tortoise.queryset import QuerySet, QuerySetSingle
@@ -120,27 +119,28 @@ class MetaInfo:
         field = self.fields_map[field_name]
         db_column = field.db_column or field_name
 
+        related_filter_func_map = self.db.executor_class.RELATED_FILTER_FUNC_MAP
+
         if isinstance(field, ManyToManyField):
-            if comparision not in RELATED_FILTER_FUNC_MAP:
+            if comparision not in related_filter_func_map:
                 return None
 
-            (filter_operator, filter_encoder) = RELATED_FILTER_FUNC_MAP[comparision]
+            (filter_operator, filter_encoder) = related_filter_func_map[comparision]
             return ManyToManyRelationFilter(field, filter_operator, filter_encoder(field))
 
         if isinstance(field, BackwardFKRelation):
-            if comparision not in RELATED_FILTER_FUNC_MAP:
+            if comparision not in related_filter_func_map:
                 return None
 
-            (filter_operator, filter_encoder) = RELATED_FILTER_FUNC_MAP[comparision]
+            (filter_operator, filter_encoder) = related_filter_func_map[comparision]
             return BackwardFKFilter(field, filter_operator, filter_encoder(field))
 
-        if comparision not in self.db.executor_class.FILTER_FUNC_MAP:
+        filter_func_map = self.db.executor_class.FILTER_FUNC_MAP
+
+        if comparision not in filter_func_map:
             return None
 
-        return BaseFieldFilter(
-            field,
-            db_column,
-            *self.db.executor_class.FILTER_FUNC_MAP[comparision])
+        return BaseFieldFilter(field, db_column, *filter_func_map[comparision])
 
     def get_filter(self, key: str) -> Optional[FieldFilter]:
         if key in self._filter_cache:

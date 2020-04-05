@@ -22,7 +22,7 @@ class Capabilities:
 
     Defaults are set with the following standard:
 
-    * Defeciences: assume it is working right.
+    * Deficiencies: assume it is working right.
     * Features: assume it doesn't have it.
 
     Fields:

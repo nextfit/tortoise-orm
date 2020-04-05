@@ -48,6 +48,14 @@ class BaseExecutor:
         "iendswith": (tf.insensitive_ends_with, tf.string_encoder),
     }
 
+    RELATED_FILTER_FUNC_MAP = {
+        "": (operator.eq, tf.field_to_db_value),
+        "exact": (operator.eq, tf.field_to_db_value),
+        "not": (tf.not_equal, tf.field_to_db_value),
+        "in": (tf.is_in, tf.field_to_list),
+        "not_in": (tf.not_in, tf.field_to_list)
+    }
+
     def __init__(
         self,
         model: "Type[Model]",

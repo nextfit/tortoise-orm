@@ -275,20 +275,12 @@ def insensitive_ends_with(field, value):
     )
 
 
-def __field_to_db_value(field):
+def field_to_db_value(field):
     target_table_pk = field.remote_model._meta.pk
     return target_table_pk.to_db_value
 
 
-def __field_to_list(field):
+def field_to_list(field):
     target_table_pk = field.remote_model._meta.pk
     return partial(related_list_encoder, field=target_table_pk)
 
-
-RELATED_FILTER_FUNC_MAP = {
-    "": (operator.eq, __field_to_db_value),
-    "exact": (operator.eq, __field_to_db_value),
-    "not": (not_equal, __field_to_db_value),
-    "in": (is_in, __field_to_list),
-    "not_in": (not_in, __field_to_list)
-}
