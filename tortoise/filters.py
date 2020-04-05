@@ -1,10 +1,7 @@
 
-import operator
-from functools import partial
 from typing import Optional, List, Tuple
 
-from pypika import Table, functions, Criterion
-from pypika.enums import SqlTypes
+from pypika import Table, Criterion
 
 from tortoise.context import QueryContext
 from tortoise.fields import Field
@@ -198,89 +195,3 @@ class ManyToManyRelationFilter(RelationFilter):
     def __init__(self, field: ManyToManyField, opr, value_encoder):
         super().__init__(field.forward_key, opr, value_encoder,
             Table(field.through), field.backward_key)
-
-
-def list_encoder(values, instance, field: Field):
-    """Encodes an iterable of a given field into a database-compatible format."""
-    return [field.to_db_value(element, instance) for element in values]
-
-
-def related_list_encoder(values, instance, field: Field):
-    return [field.to_db_value(getattr(element, "pk", element), instance) for element in values]
-
-
-def bool_encoder(value, *args):
-    return bool(value)
-
-
-def string_encoder(value, *args):
-    return str(value)
-
-
-def is_in(field, value):
-    return field.isin(value)
-
-
-def not_in(field, value):
-    return field.notin(value) | field.isnull()
-
-
-def not_equal(field, value):
-    return field.ne(value) | field.isnull()
-
-
-def is_null(field, value):
-    if value:
-        return field.isnull()
-    return field.notnull()
-
-
-def not_null(field, value):
-    if value:
-        return field.notnull()
-    return field.isnull()
-
-
-def contains(field, value):
-    return functions.Cast(field, SqlTypes.VARCHAR).like(f"%{value}%")
-
-
-def starts_with(field, value):
-    return functions.Cast(field, SqlTypes.VARCHAR).like(f"{value}%")
-
-
-def ends_with(field, value):
-    return functions.Cast(field, SqlTypes.VARCHAR).like(f"%{value}")
-
-
-def insensitive_exact(field, value):
-    return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).eq(functions.Upper(f"{value}"))
-
-
-def insensitive_contains(field, value):
-    return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).like(
-        functions.Upper(f"%{value}%")
-    )
-
-
-def insensitive_starts_with(field, value):
-    return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).like(
-        functions.Upper(f"{value}%")
-    )
-
-
-def insensitive_ends_with(field, value):
-    return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).like(
-        functions.Upper(f"%{value}")
-    )
-
-
-def field_to_db_value(field):
-    target_table_pk = field.remote_model._meta.pk
-    return target_table_pk.to_db_value
-
-
-def field_to_list(field):
-    target_table_pk = field.remote_model._meta.pk
-    return partial(related_list_encoder, field=target_table_pk)
-

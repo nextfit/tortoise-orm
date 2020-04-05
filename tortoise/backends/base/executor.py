@@ -3,15 +3,16 @@ import asyncio
 import datetime
 import decimal
 import operator
+import tortoise.backends.base.filters as tf
+
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type
-
 from pypika import Parameter
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import OperationalError
 from tortoise.fields.base import Field
-import tortoise.filters as tf
+
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -49,11 +50,11 @@ class BaseExecutor:
     }
 
     RELATED_FILTER_FUNC_MAP = {
-        "": (operator.eq, tf.field_to_db_value),
-        "exact": (operator.eq, tf.field_to_db_value),
-        "not": (tf.not_equal, tf.field_to_db_value),
-        "in": (tf.is_in, tf.field_to_list),
-        "not_in": (tf.not_in, tf.field_to_list)
+        "": (operator.eq, tf.related_to_db_value_func),
+        "exact": (operator.eq, tf.related_to_db_value_func),
+        "not": (tf.not_equal, tf.related_to_db_value_func),
+        "in": (tf.is_in, tf.related_list_to_db_values_func),
+        "not_in": (tf.not_in, tf.related_list_to_db_values_func)
     }
 
     def __init__(
