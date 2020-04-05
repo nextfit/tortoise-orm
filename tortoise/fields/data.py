@@ -1,6 +1,6 @@
+
 import datetime
 import functools
-import json
 import warnings
 from decimal import Decimal
 from enum import Enum, IntEnum
@@ -15,9 +15,6 @@ from pypika.terms import Term
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields.base import Field
 
-# Doing this we can replace json dumps/loads with different implementations
-JSON_DUMPS = functools.partial(json.dumps, separators=(",", ":"))
-JSON_LOADS = json.loads
 
 try:
     # Use python-rapidjson as an optional accelerator
@@ -26,7 +23,12 @@ try:
     JSON_DUMPS = rapidjson.dumps
     JSON_LOADS = rapidjson.loads
 except ImportError:  # pragma: nocoverage
-    pass
+
+    import json
+
+    # Doing this we can replace json dumps/loads with different implementations
+    JSON_DUMPS = functools.partial(json.dumps, separators=(",", ":"))
+    JSON_LOADS = json.loads
 
 
 class IntegerField(Field, int):
