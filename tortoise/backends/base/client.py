@@ -89,7 +89,7 @@ class BaseDBAsyncClient:
         logger.debug("Creating schema: %s", schema)
 
         if schema:  # pragma: nobranch
-            await generator.generate_from_string(schema)
+            await generator.client.execute_script(schema)
 
     async def create_connection(self, with_db: bool) -> None:
         raise NotImplementedError()  # pragma: nocoverage

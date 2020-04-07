@@ -97,11 +97,13 @@ class Q:
         if key_filter is None and key.split(LOOKUP_SEP)[0] in model._meta.fetch_fields:
             return self._resolve_nested_filter(context, key, value)
 
-        else:
-            if value is None and "isnull" in model._meta.db.executor_class.FILTER_FUNC_MAP:
-                return model._meta.get_filter(f"{key}{LOOKUP_SEP}isnull")(context, True)
-            else:
-                return key_filter(context, value)
+        if value is None and "isnull" in model._meta.db.executor_class.FILTER_FUNC_MAP:
+            return model._meta.get_filter(f"{key}{LOOKUP_SEP}isnull")(context, True)
+
+        if key_filter:
+            return key_filter(context, value)
+
+        raise FieldError(f'Unknown field "{key}" for model "{model}"')
 
     def _get_actual_key(self, model: "Model", key: str) -> str:
         field_name = key

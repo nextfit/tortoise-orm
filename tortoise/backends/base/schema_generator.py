@@ -342,7 +342,3 @@ class BaseSchemaGenerator:
 
         schema_creation_string = "\n".join(ordered_tables_for_create + m2m_tables_to_create)
         return schema_creation_string
-
-    async def generate_from_string(self, creation_string: str) -> None:
-        # print(creation_string)
-        await self.client.execute_script(creation_string)
