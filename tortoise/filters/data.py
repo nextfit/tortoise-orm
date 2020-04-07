@@ -40,7 +40,7 @@ class DataFieldFilter(FieldFilter):
 
 
 class JSONFieldFilter(FieldFilter):
-    def __init__(self, field: Field, opr, value_encoder=None):
+    def __init__(self, field: Field, opr, value_encoder):
         super().__init__(field.model_field_name, opr, value_encoder)
         self.db_column = field.db_column or field.model_field_name
 
@@ -50,12 +50,7 @@ class JSONFieldFilter(FieldFilter):
         table = context_item.table
 
         field_object = model._meta.fields_map[self.field_name]
-
-        if self.value_encoder:
-            encoded_value = self.value_encoder(value, model, field_object)
-
-        else:
-            encoded_value = model._meta.db.executor_class._field_to_db(field_object, value, model)
+        encoded_value = self.value_encoder(value, model, field_object) if self.value_encoder else value
 
         encoded_key = table[self.db_column]
         criterion = self.opr(encoded_key, encoded_value)

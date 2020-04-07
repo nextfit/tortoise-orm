@@ -12,6 +12,9 @@ from tortoise.fields import Field, RelationField, BackwardFKField, ManyToManyFie
 # Encoders
 #
 
+def identity_encoder(value, *args):
+    return value
+
 
 def bool_encoder(value, *args):
     return bool(value)
