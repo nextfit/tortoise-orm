@@ -1,7 +1,7 @@
 
 from typing import Any, Dict, Optional, Type, Union, List
 from tortoise.exceptions import ConfigurationError
-
+from tortoise.filters import FieldFilter
 
 CASCADE = "CASCADE"
 RESTRICT = "RESTRICT"
@@ -87,6 +87,10 @@ class Field(metaclass=_FieldMeta):
         if value is None or isinstance(value, self.field_type):
             return value
         return self.field_type(value)  # pylint: disable=E1102
+
+    def create_filter(self, opr, value_encoder) -> FieldFilter:
+        from tortoise.filters.data import DataFieldFilter
+        return DataFieldFilter(self, opr, value_encoder)
 
     @property
     def required(self):

@@ -1,3 +1,4 @@
+
 from copy import deepcopy
 from functools import partial
 from typing import Awaitable, Generic, Optional, TypeVar, Union, Dict
@@ -11,6 +12,8 @@ from tortoise.exceptions import ConfigurationError, NoValuesFetched, Operational
 from tortoise.fields.base import CASCADE, RESTRICT, SET_NULL, Field
 
 from typing import Type
+
+from tortoise.filters import FieldFilter
 
 MODEL = TypeVar("MODEL", bound="Model")
 
@@ -327,6 +330,7 @@ class RelationField(Field):
 
 
 class BackwardFKRelation(RelationField):
+
     def __init__(
         self,
         remote_model: "Type[Model]",
@@ -359,6 +363,10 @@ class BackwardFKRelation(RelationField):
 
     def create_relation(self):
         raise RuntimeError("This method on should not have been called on a generated relation.")
+
+    def create_filter(self, opr, value_encoder) -> FieldFilter:
+        from tortoise.filters.relational import BackwardFKFilter
+        return BackwardFKFilter(self, opr, value_encoder)
 
     async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
         instance_id_set: set = {
@@ -684,6 +692,10 @@ class ManyToManyField(RelationField):
     def attribute_property(self):
         _key = f"_{self.model_field_name}"
         return property(partial(ManyToManyField._m2m_getter, _key=_key, field_object=self))
+
+    def create_filter(self, opr, value_encoder) -> FieldFilter:
+        from tortoise.filters.relational import ManyToManyRelationFilter
+        return ManyToManyRelationFilter(self, opr, value_encoder)
 
     def create_relation(self):
         from tortoise import Tortoise
