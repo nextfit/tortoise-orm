@@ -51,3 +51,23 @@ class TestJSONFields(test.TestCase):
     def test_index_fail(self):
         with self.assertRaisesRegex(ConfigurationError, "can't be indexed"):
             JSONField(db_index=True)
+
+    async def test_filter(self):
+        from tests.testmodels import JSONFields
+        if JSONFields._meta.db.capabilities.dialect == "postgres":
+
+            await JSONFields.create(data={"customer": "John Doe", "items": {"product": "Beer", "qty": 6}})
+            await JSONFields.bulk_create(objects=[
+                JSONFields(data={"customer": "Lily Bush", "items": {"product": "Diaper","qty": 24}}),
+                JSONFields(data={"customer": "Josh William", "items": {"product": "Toy Car","qty": 1}}),
+                JSONFields(data={"customer": "Mary Clark", "items": {"product": "Toy Train","qty": 2}})
+            ])
+
+            values = [v.data async for v in JSONFields.filter(data__customer="Lily Bush")]
+            self.assertEqual(values, [{"customer": "Lily Bush", "items": {"product": "Diaper","qty": 24}}])
+
+            values = [v.data async for v in JSONFields.filter(data__items__product="Beer")]
+            self.assertEqual(values, [{"customer": "John Doe", "items": {"product": "Beer", "qty": 6}}])
+
+            values = [v.data async for v in JSONFields.filter(data__items__qty__gt=7)]
+            self.assertEqual(values, [{"customer": "Lily Bush", "items": {"product": "Diaper","qty": 24}}])
