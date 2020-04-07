@@ -7,6 +7,7 @@ from asyncpg.transaction import Transaction
 from pypika import PostgreSQLQuery
 
 from tortoise.backends.asyncpg.executor import AsyncpgExecutor
+from tortoise.backends.asyncpg.filters import AsyncpgFilter
 from tortoise.backends.asyncpg.schema_generator import AsyncpgSchemaGenerator
 from tortoise.backends.base.client import (
     BaseDBAsyncClient,
@@ -43,7 +44,9 @@ def translate_exceptions(func):
 
 class AsyncpgDBClient(BaseDBAsyncClient):
     DSN_TEMPLATE = "postgres://{user}:{password}@{host}:{port}/{database}"
+
     query_class = PostgreSQLQuery
+    filter_class = AsyncpgFilter
     executor_class = AsyncpgExecutor
     schema_generator = AsyncpgSchemaGenerator
     capabilities = Capabilities("postgres")
