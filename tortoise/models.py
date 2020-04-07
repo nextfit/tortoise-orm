@@ -117,7 +117,6 @@ class MetaInfo:
             return None
 
         field = self.fields_map[field_name]
-        db_column = field.db_column or field_name
 
         related_filter_func_map = self.db.executor_class.RELATED_FILTER_FUNC_MAP
 
@@ -140,7 +139,7 @@ class MetaInfo:
         if comparision not in filter_func_map:
             return None
 
-        return BaseFieldFilter(field, db_column, *filter_func_map[comparision])
+        return BaseFieldFilter(field, *filter_func_map[comparision])
 
     def get_filter(self, key: str) -> Optional[FieldFilter]:
         if key in self._filter_cache:

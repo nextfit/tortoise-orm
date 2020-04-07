@@ -98,9 +98,9 @@ class FieldFilter:
 
 
 class BaseFieldFilter(FieldFilter):
-    def __init__(self, field: Field, db_column: str, opr, value_encoder=None):
+    def __init__(self, field: Field, opr, value_encoder=None):
         super().__init__(field.model_field_name, opr, value_encoder)
-        self.db_column = db_column
+        self.db_column = field.db_column or field.model_field_name
 
     def __call__(self, context: QueryContext, value) -> QueryModifier:
         context_item = context.stack[-1]
@@ -193,5 +193,9 @@ class BackwardFKFilter(RelationFilter):
 
 class ManyToManyRelationFilter(RelationFilter):
     def __init__(self, field: ManyToManyField, opr, value_encoder):
-        super().__init__(field.forward_key, opr, value_encoder,
-            Table(field.through), field.backward_key)
+        super().__init__(
+            field.forward_key,
+            opr,
+            value_encoder,
+            Table(field.through),
+            field.backward_key)
