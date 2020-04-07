@@ -14,7 +14,7 @@ from pypika.terms import Term
 
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields.base import Field
-
+from tortoise.filters import FieldFilter
 
 try:
     # Use python-rapidjson as an optional accelerator
@@ -339,6 +339,10 @@ class JSONField(Field, dict, list):  # type: ignore
         self, value: Optional[Union[str, dict, list]]
     ) -> Optional[Union[dict, list]]:
         return self.decoder(value) if isinstance(value, str) else value
+
+    def create_filter(self, opr, value_encoder) -> FieldFilter:
+        from tortoise.filters.data import JSONFieldFilter
+        return JSONFieldFilter(self, opr, value_encoder)
 
 
 class UUIDField(Field, UUID):
