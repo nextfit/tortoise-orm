@@ -17,7 +17,7 @@ from tests.testmodels import (
 from tortoise import Tortoise, fields
 from tortoise.contrib import test
 from tortoise.fields.relational import (
-    BackwardFKRelation,
+    BackwardFKField,
     ForeignKey,
     ManyToManyField,
     OneToOneField,
@@ -155,7 +155,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "fkrev",
-                        "field_type": "BackwardFKRelation",
+                        "field_type": "BackwardFKField",
                         "python_type": "models.StraightFields",
                         "generated": False,
                         "auto_created": True,
@@ -183,7 +183,7 @@ class TestBasic(test.TestCase):
                         "name": "o2o_rev",
                         "default": None,
                         "description": "Line",
-                        "field_type": "BackwardOneToOneRelation",
+                        "field_type": "BackwardOneToOneField",
                         "generated": False,
                         "auto_created": True,
                         "db_index": False,
@@ -316,7 +316,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "fkrev",
-                        "field_type": BackwardFKRelation,
+                        "field_type": BackwardFKField,
                         "python_type": StraightFields,
                         "generated": False,
                         "auto_created": True,
@@ -344,7 +344,7 @@ class TestBasic(test.TestCase):
                         "name": "o2o_rev",
                         "default": None,
                         "description": "Line",
-                        "field_type": fields.BackwardOneToOneRelation,
+                        "field_type": fields.BackwardOneToOneField,
                         "generated": False,
                         "auto_created": True,
                         "db_index": False,
@@ -477,7 +477,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "fkrev",
-                        "field_type": "BackwardFKRelation",
+                        "field_type": "BackwardFKField",
                         "python_type": "models.SourceFields",
                         "generated": False,
                         "auto_created": True,
@@ -505,7 +505,7 @@ class TestBasic(test.TestCase):
                         "name": "o2o_rev",
                         "default": None,
                         "description": "Line",
-                        "field_type": "BackwardOneToOneRelation",
+                        "field_type": "BackwardOneToOneField",
                         "generated": False,
                         "auto_created": True,
                         "db_index": False,
@@ -638,7 +638,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "fkrev",
-                        "field_type": BackwardFKRelation,
+                        "field_type": BackwardFKField,
                         "python_type": SourceFields,
                         "generated": False,
                         "auto_created": True,
@@ -666,7 +666,7 @@ class TestBasic(test.TestCase):
                         "name": "o2o_rev",
                         "default": None,
                         "description": "Line",
-                        "field_type": fields.BackwardOneToOneRelation,
+                        "field_type": fields.BackwardOneToOneField,
                         "generated": False,
                         "auto_created": True,
                         "db_index": False,
@@ -719,7 +719,7 @@ class TestBasic(test.TestCase):
                 "fields": [
                     {
                         "name": "children",
-                        "field_type": "BackwardFKRelation",
+                        "field_type": "BackwardFKField",
                         "python_type": "models.UUIDFkRelatedModel",
                         "generated": False,
                         "auto_created": True,
@@ -774,7 +774,7 @@ class TestBasic(test.TestCase):
                 "fields": [
                     {
                         "name": "children",
-                        "field_type": BackwardFKRelation,
+                        "field_type": BackwardFKField,
                         "python_type": UUIDFkRelatedModel,
                         "generated": False,
                         "auto_created": True,

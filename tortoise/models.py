@@ -9,8 +9,8 @@ from tortoise.exceptions import ConfigurationError, OperationalError, FieldError
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntegerField
 from tortoise.fields.relational import (
-    BackwardFKRelation,
-    BackwardOneToOneRelation,
+    BackwardFKField,
+    BackwardOneToOneField,
     ForeignKey,
     ManyToManyField,
     OneToOneField,
@@ -114,7 +114,7 @@ class MetaInfo:
 
         field = self.fields_map[field_name]
 
-        if isinstance(field, (BackwardFKRelation, ManyToManyField)):
+        if isinstance(field, (BackwardFKField, ManyToManyField)):
             related_filter_func_map = self.db.executor_class.RELATED_FILTER_FUNC_MAP
             if comparision not in related_filter_func_map:
                 return None
@@ -329,13 +329,13 @@ class Model(metaclass=ModelMeta):
                         raise ValueError(f"{key} is non nullable field, but null was passed")
                     setattr(self, key, field_object.to_python_value(value))
 
-                elif isinstance(field_object, BackwardOneToOneRelation):
+                elif isinstance(field_object, BackwardOneToOneField):
                     raise ConfigurationError(
                         "You can't set backward one to one relations through init,"
                         " change related model instead"
                     )
 
-                elif isinstance(field_object, BackwardFKRelation):
+                elif isinstance(field_object, BackwardFKField):
                     raise ConfigurationError(
                         "You can't set backward relations through init, change related model instead"
                     )

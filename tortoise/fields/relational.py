@@ -329,7 +329,7 @@ class RelationField(Field):
         return desc
 
 
-class BackwardFKRelation(RelationField):
+class BackwardFKField(RelationField):
 
     def __init__(
         self,
@@ -354,7 +354,7 @@ class BackwardFKRelation(RelationField):
         _key = f"_{self.model_field_name}"
         return property(
             partial(
-                BackwardFKRelation._rfk_getter,
+                BackwardFKField._rfk_getter,
                 _key=_key,
                 ftype=self.remote_model,
                 field_name=self.related_name,
@@ -435,7 +435,7 @@ class ForeignKey(RelationField):
                 Can only be set is field has a ``default`` set.
     """
 
-    backward_relation_class = BackwardFKRelation
+    backward_relation_class = BackwardFKField
 
     def __init__(
         self,
@@ -540,7 +540,7 @@ class ForeignKey(RelationField):
         return desc
 
 
-class BackwardOneToOneRelation(BackwardFKRelation):
+class BackwardOneToOneField(BackwardFKField):
 
     @staticmethod
     def _ro2o_getter(self, _key, ftype, field_name):
@@ -555,7 +555,7 @@ class BackwardOneToOneRelation(BackwardFKRelation):
         _key = f"_{self.model_field_name}"
         return property(
             partial(
-                BackwardOneToOneRelation._ro2o_getter,
+                BackwardOneToOneField._ro2o_getter,
                 _key=_key,
                 ftype=self.remote_model,
                 field_name=self.related_name,
@@ -612,7 +612,7 @@ class OneToOneField(ForeignKey):
                 Can only be set is field has a ``default`` set.
     """
 
-    backward_relation_class = BackwardOneToOneRelation
+    backward_relation_class = BackwardOneToOneField
 
     def __init__(
         self,
