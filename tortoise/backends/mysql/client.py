@@ -18,6 +18,7 @@ from tortoise.backends.base.client import (
     TransactionContextPooled,
 )
 from tortoise.backends.mysql.executor import MySQLExecutor
+from tortoise.backends.mysql.filters import MySQLFilter
 from tortoise.backends.mysql.schema_generator import MySQLSchemaGenerator
 from tortoise.exceptions import (
     DBConnectionError,
@@ -47,7 +48,9 @@ def translate_exceptions(func):
 
 
 class MySQLClient(BaseDBAsyncClient):
+
     query_class = MySQLQuery
+    filter_class = MySQLFilter
     executor_class = MySQLExecutor
     schema_generator = MySQLSchemaGenerator
     capabilities = Capabilities("mysql", requires_limit=True, inline_comment=True)

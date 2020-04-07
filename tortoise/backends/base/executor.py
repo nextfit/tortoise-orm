@@ -2,8 +2,6 @@
 import asyncio
 import datetime
 import decimal
-import operator
-import tortoise.backends.base.filters as tf
 
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type
@@ -27,35 +25,6 @@ class BaseExecutor:
     TO_DB_OVERRIDE: Dict[Type[Field], Callable] = {}
     EXPLAIN_PREFIX: str = "EXPLAIN"
     DB_NATIVE = {bytes, str, int, bool, float, decimal.Decimal, datetime.datetime, datetime.date}
-
-    FILTER_FUNC_MAP = {
-        "": (operator.eq, None),
-        "exact": (operator.eq, None),
-        "not": (tf.not_equal, None),
-        "in": (tf.is_in, tf.list_encoder),
-        "not_in": (tf.not_in, tf.list_encoder),
-        "isnull": (tf.is_null, tf.bool_encoder),
-        "not_isnull": (tf.not_null, tf.bool_encoder),
-        "gte": (operator.ge, None),
-        "lte": (operator.le, None),
-        "gt": (operator.gt, None),
-        "lt": (operator.lt, None),
-        "contains": (tf.contains, tf.string_encoder),
-        "startswith": (tf.starts_with, tf.string_encoder),
-        "endswith": (tf.ends_with, tf.string_encoder),
-        "iexact": (tf.insensitive_exact, tf.string_encoder),
-        "icontains": (tf.insensitive_contains, tf.string_encoder),
-        "istartswith": (tf.insensitive_starts_with, tf.string_encoder),
-        "iendswith": (tf.insensitive_ends_with, tf.string_encoder),
-    }
-
-    RELATED_FILTER_FUNC_MAP = {
-        "": (operator.eq, tf.related_to_db_value_func),
-        "exact": (operator.eq, tf.related_to_db_value_func),
-        "not": (tf.not_equal, tf.related_to_db_value_func),
-        "in": (tf.is_in, tf.related_list_to_db_values_func),
-        "not_in": (tf.not_in, tf.related_list_to_db_values_func)
-    }
 
     def __init__(
         self,

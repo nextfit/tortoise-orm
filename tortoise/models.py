@@ -108,28 +108,13 @@ class MetaInfo:
             raise ConfigurationError("No DB associated to model")
 
     def __create_filter(self, key: str) -> Optional[FieldFilter]:
-        (field_name, sep, comparision) = key.partition(LOOKUP_SEP)
+        (field_name, sep, comparison) = key.partition(LOOKUP_SEP)
         if field_name not in self.fields_map:
             return None
 
         field = self.fields_map[field_name]
-
-        if isinstance(field, (BackwardFKField, ManyToManyField)):
-            related_filter_func_map = self.db.executor_class.RELATED_FILTER_FUNC_MAP
-            if comparision not in related_filter_func_map:
-                return None
-
-            (filter_operator, filter_encoder) = related_filter_func_map[comparision]
-            opr, encoder = filter_operator, filter_encoder(field)
-
-        else:
-            filter_func_map = self.db.executor_class.FILTER_FUNC_MAP
-            if comparision not in filter_func_map:
-                return None
-
-            opr, encoder = filter_func_map[comparision]
-
-        return field.create_filter(opr, encoder)
+        filter_funcs = self.db.filter_class.get_filter_func_for(field, comparison)
+        return field.create_filter(*filter_funcs) if filter_funcs else None
 
     def get_filter(self, key: str) -> Optional[FieldFilter]:
         if key in self._filter_cache:

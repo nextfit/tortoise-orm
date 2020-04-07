@@ -1,9 +1,12 @@
 
+
+import operator
 from functools import partial
 from pypika import functions
 from pypika.enums import SqlTypes
 
-from tortoise.fields import Field, RelationField
+from tortoise.fields import Field, RelationField, BackwardFKField, ManyToManyField
+
 
 #
 # Encoders
@@ -103,3 +106,48 @@ def insensitive_ends_with(field, value):
         .Upper(functions.Cast(field, SqlTypes.VARCHAR))\
         .like(functions.Upper(f"%{value}"))
 
+
+class BaseFilter:
+    FILTER_FUNC_MAP = {
+        "": (operator.eq, None),
+        "exact": (operator.eq, None),
+        "not": (not_equal, None),
+        "in": (is_in, list_encoder),
+        "not_in": (not_in, list_encoder),
+        "isnull": (is_null, bool_encoder),
+        "not_isnull": (not_null, bool_encoder),
+        "gte": (operator.ge, None),
+        "lte": (operator.le, None),
+        "gt": (operator.gt, None),
+        "lt": (operator.lt, None),
+        "contains": (contains, string_encoder),
+        "startswith": (starts_with, string_encoder),
+        "endswith": (ends_with, string_encoder),
+        "iexact": (insensitive_exact, string_encoder),
+        "icontains": (insensitive_contains, string_encoder),
+        "istartswith": (insensitive_starts_with, string_encoder),
+        "iendswith": (insensitive_ends_with, string_encoder),
+    }
+
+    RELATED_FILTER_FUNC_MAP = {
+        "": (operator.eq, related_to_db_value_func),
+        "exact": (operator.eq, related_to_db_value_func),
+        "not": (not_equal, related_to_db_value_func),
+        "in": (is_in, related_list_to_db_values_func),
+        "not_in": (not_in, related_list_to_db_values_func)
+    }
+
+    @classmethod
+    def get_filter_func_for(cls, field, comparison):
+        if isinstance(field, (BackwardFKField, ManyToManyField)):
+            if comparison not in cls.RELATED_FILTER_FUNC_MAP:
+                return None
+
+            (filter_operator, filter_encoder) = cls.RELATED_FILTER_FUNC_MAP[comparison]
+            return filter_operator, filter_encoder(field)
+
+        else:
+            if comparison not in cls.FILTER_FUNC_MAP:
+                return None
+
+            return cls.FILTER_FUNC_MAP[comparison]

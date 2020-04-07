@@ -8,6 +8,7 @@ from typing import Any, List, Optional, Sequence, Tuple, Type, Union
 from pypika import Query
 
 from tortoise.backends.base.executor import BaseExecutor
+from tortoise.backends.base.filters import BaseFilter
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.exceptions import TransactionManagementError
 from tortoise.transactions import current_transaction_map
@@ -69,7 +70,9 @@ class Capabilities:
 
 
 class BaseDBAsyncClient:
+
     query_class: Type[Query] = Query
+    filter_class: Type[BaseFilter] = BaseFilter
     executor_class: Type[BaseExecutor] = BaseExecutor
     schema_generator: Type[BaseSchemaGenerator] = BaseSchemaGenerator
     capabilities: Capabilities = Capabilities("")

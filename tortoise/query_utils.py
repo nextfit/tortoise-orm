@@ -80,7 +80,7 @@ class Q:
 
         model = context.stack[-1].model
         (field_name, sep, comparision) = key.partition(LOOKUP_SEP)
-        (filter_operator, _) = model._meta.db.executor_class.FILTER_FUNC_MAP[comparision]
+        (filter_operator, _) = model._meta.db.filter_class.FILTER_FUNC_MAP[comparision]
 
         annotation = self._annotations[field_name]
         annotation_info = annotation.resolve(context=context)
@@ -97,7 +97,7 @@ class Q:
         if key_filter is None and key.split(LOOKUP_SEP)[0] in model._meta.fetch_fields:
             return self._resolve_nested_filter(context, key, value)
 
-        if value is None and "isnull" in model._meta.db.executor_class.FILTER_FUNC_MAP:
+        if value is None and "isnull" in model._meta.db.filter_class.FILTER_FUNC_MAP:
             return model._meta.get_filter(f"{key}{LOOKUP_SEP}isnull")(context, True)
 
         if key_filter:
