@@ -27,6 +27,7 @@ from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
+from tortoise.fields import JSONField
 
 from tortoise.fields.relational import ForeignKey, OneToOneField
 from tortoise.filters import EmptyCriterion as TortoiseEmptyCriterion
@@ -737,7 +738,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         if field_name in self.model._meta.field_to_db_column_name_map:
             db_column = self.model._meta.field_to_db_column_name_map[field_name]
-            self.query._select_field(getattr(table, db_column).as_(return_as))
+            self.query._select_field(table[db_column].as_(return_as))
             return
 
         if field_name in self.model._meta.fetch_fields:
@@ -752,42 +753,53 @@ class FieldSelectQuery(AwaitableQuery):
             self.query._select_other(annotation_info.field.as_(return_as))
             return
 
-        field_split = field_name.split(LOOKUP_SEP)
-        if field_split[0] in self.model._meta.fetch_fields:
+        base_field_name, _, sub_field = field_name.partition(LOOKUP_SEP)
+        if base_field_name in self.model._meta.fetch_fields:
             context.push(model=self.model, table=self.model._meta.basetable)
             related_table, related_db_column = self._join_table_with_forwarded_fields(
-                context=context, field_name=field_split[0], forwarded_fields=LOOKUP_SEP.join(field_split[1:])
-            )
+                context=context, field_name=base_field_name, forwarded_fields=sub_field)
             context.pop()
-            self.query._select_field(getattr(related_table, related_db_column).as_(return_as))
+
+            self.query._select_field(related_table[related_db_column].as_(return_as))
+            return
+
+        base_field = self.model._meta.fields_map.get(base_field_name)
+        if isinstance(base_field, JSONField):
+            path = "{{{}}}".format(sub_field.replace(LOOKUP_SEP, ','))
+            db_column = self.model._meta.field_to_db_column_name_map[base_field_name]
+            self.query._select_other(table[db_column].get_path_json_value(path).as_(return_as))
             return
 
         raise FieldError(f'Unknown field "{field_name}" for model "{self.model.__name__}"')
 
     def resolve_to_python_value(self, model: "Type[Model]", field_name: str) -> Callable:
         if field_name in model._meta.fetch_fields:
-            # return as is to get whole model objects
             return lambda x: x
 
         if field_name in self.annotations:
             field_object = self.annotations[field_name].field_object
             if field_object:
                 return field_object.to_python_value
-            return lambda x: x
+            else:
+                return lambda x: x
 
         if field_name in model._meta.fields_map:
-            field = model._meta.fields_map[field_name]
-            if (field.skip_to_python_if_native and
-                field.field_type in model._meta.db.executor_class.DB_NATIVE
+            field_object = model._meta.fields_map[field_name]
+            if (field_object.skip_to_python_if_native and
+                field_object.field_type in model._meta.db.executor_class.DB_NATIVE
             ):
                 return lambda x: x
             else:
-                return model._meta.fields_map[field_name].to_python_value
+                return field_object.to_python_value
 
-        field_split = field_name.split(LOOKUP_SEP)
-        if field_split[0] in model._meta.fetch_fields:
-            remote_model = model._meta.fields_map[field_split[0]].remote_model  # type: ignore
-            return self.resolve_to_python_value(remote_model, LOOKUP_SEP.join(field_split[1:]))
+        base_field_name, _, sub_field = field_name.partition(LOOKUP_SEP)
+        if base_field_name in model._meta.fetch_fields:
+            remote_model = model._meta.fields_map[base_field_name].remote_model  # type: ignore
+            return self.resolve_to_python_value(remote_model, sub_field)
+
+        base_field_object = model._meta.fields_map.get(base_field_name)
+        if isinstance(base_field_object, JSONField):
+            return base_field_object.to_python_value
 
         raise FieldError(f'Unknown field "{field_name}" for model "{model}"')
 
@@ -855,19 +867,14 @@ class ValuesQuery(FieldSelectQuery):
         self.fields_for_select = fields_for_select
 
     async def _execute(self) -> List[dict]:
-        result = await self._db.execute_query_dict(str(self.query))
-        columns = [
-            val
-            for val in [
-                (alias, self.resolve_to_python_value(self.model, field_name))
-                for alias, field_name in self.fields_for_select.items()
-            ]
-            if not isinstance(val[1], types.LambdaType)
+        column_mappers = [
+            (alias, self.resolve_to_python_value(self.model, field_name))
+            for alias, field_name in self.fields_for_select.items()
         ]
 
-        if columns:
-            for row in result:
-                for col, func in columns:
-                    row[col] = func(row[col])
+        result = await self._db.execute_query_dict(str(self.query))
+        for row in result:
+            for col_name, col_mapper in column_mappers:
+                row[col_name] = col_mapper(row[col_name])
 
         return result
