@@ -110,16 +110,13 @@ class BaseExecutor:
         return instance_list
 
     def _prepare_insert_columns(self, include_generated=False) -> Tuple[List[str], List[str]]:
-        fields_map = self.model._meta.fields_map
-        fields_names = [field_name
-            for field_name in self.model._meta.field_to_db_column_name_map.keys()
-            if include_generated or not fields_map[field_name].generated
+        field_column_name = [(field_name, field.db_column)
+            for field_name, field in self.model._meta.fields_map.items()
+            if field.has_db_column and (include_generated or not field.generated)
         ]
 
-        column_names = [self.model._meta.field_to_db_column_name_map[c]
-            for c in fields_names]
-
-        return fields_names, column_names
+        # return fields_names, column_names
+        return tuple(zip(*field_column_name))
 
     @classmethod
     def _field_to_db(cls, field_object: Field, attr: Any, instance) -> Any:
@@ -181,11 +178,11 @@ class BaseExecutor:
         table = self.model._meta.basetable
         query = self.db.query_class.update(table)
         count = 0
+
         for field_name in update_fields or self.model._meta.field_to_db_column_name_map.keys():
-            db_column = self.model._meta.field_to_db_column_name_map[field_name]
             field_object = self.model._meta.fields_map[field_name]
             if not field_object.primary_key:
-                query = query.set(db_column, self.parameter(count))
+                query = query.set(field_object.db_column, self.parameter(count))
                 count += 1
 
         query = query.where(table[self.model._meta.pk_db_column] == self.parameter(count))
