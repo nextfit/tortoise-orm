@@ -76,8 +76,23 @@ class Q:
 
         return QueryModifier(joins=required_joins) & modifier
 
-    def _resolve_annotation_filters(self, context: QueryContext, key, value) -> QueryModifier:
+    def _resolve_field_filters(self, context: QueryContext, key, value) -> QueryModifier:
+        model = context.stack[-1].model
 
+        if value is None and "isnull" in model._meta.db.filter_class.FILTER_FUNC_MAP:
+            value = True
+            key = f"{key}{LOOKUP_SEP}isnull"
+
+        key_filter = model._meta.get_filter(key)
+        if key_filter:
+            return key_filter(context, value)
+
+        elif key.split(LOOKUP_SEP)[0] in model._meta.fetch_fields:
+            return self._resolve_nested_filter(context, key, value)
+
+        raise FieldError(f'Unknown field "{key}" for model "{model}"')
+
+    def _resolve_annotation_filters(self, context: QueryContext, key, value) -> QueryModifier:
         model = context.stack[-1].model
         (field_name, sep, comparision) = key.partition(LOOKUP_SEP)
         (filter_operator, _) = model._meta.db.filter_class.FILTER_FUNC_MAP[comparision]
@@ -89,21 +104,6 @@ class Q:
             return QueryModifier(having_criterion=filter_operator(annotation_info.field, value))
         else:
             return QueryModifier(where_criterion=filter_operator(annotation_info.field, value))
-
-    def _resolve_field_filters(self, context: QueryContext, key, value) -> QueryModifier:
-        model = context.stack[-1].model
-        key_filter = model._meta.get_filter(key)
-
-        if key_filter is None and key.split(LOOKUP_SEP)[0] in model._meta.fetch_fields:
-            return self._resolve_nested_filter(context, key, value)
-
-        if value is None and "isnull" in model._meta.db.filter_class.FILTER_FUNC_MAP:
-            return model._meta.get_filter(f"{key}{LOOKUP_SEP}isnull")(context, True)
-
-        if key_filter:
-            return key_filter(context, value)
-
-        raise FieldError(f'Unknown field "{key}" for model "{model}"')
 
     def _get_actual_key(self, model: "Model", key: str) -> str:
         field_name = key
