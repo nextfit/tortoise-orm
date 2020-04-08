@@ -92,7 +92,9 @@ class MetaInfo:
 
         self.fields_map[name] = field
         if field.has_db_column:
-            self.field_to_db_column_name_map[name] = field.db_column or name
+            if not field.db_column:
+                field.db_column = name
+            self.field_to_db_column_name_map[name] = field.db_column
 
     def get_field(self, name: str):
         if name in self.fields_map:
@@ -241,7 +243,10 @@ class ModelMeta(type):
                     value.model_field_name = key
 
                     if value.has_db_column:
-                        field_to_db_column_name_map[key] = value.db_column or key
+                        if not value.db_column:
+                            value.db_column = key
+
+                        field_to_db_column_name_map[key] = value.db_column
 
         # Clean the class attributes
         for slot in fields_map:
