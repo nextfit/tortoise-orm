@@ -188,8 +188,7 @@ class Prefetch:
             self.queryset.query = copy(self.queryset.model._meta.basequery)
 
     def resolve_for_queryset(self, queryset) -> None:
-        relation_split = self.relation.split(LOOKUP_SEP)
-        first_level_field = relation_split[0]
+        first_level_field, _, forwarded_prefetch = self.relation.partition(LOOKUP_SEP)
         if first_level_field not in queryset.model._meta.fetch_fields:
             if first_level_field in queryset.model._meta.fields_map:
                 msg = f"Field {first_level_field} on {queryset.model.full_name()} is not a relation"
@@ -198,7 +197,6 @@ class Prefetch:
 
             raise FieldError(msg)
 
-        forwarded_prefetch = LOOKUP_SEP.join(relation_split[1:])
         if forwarded_prefetch:
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()

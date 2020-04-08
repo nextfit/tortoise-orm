@@ -304,22 +304,7 @@ class RelationField(Field):
         ]
 
     async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
-        related_objects_for_fetch = set()
-        relation_key_field = f"{self.model_field_name}_id"
-        for instance in instance_list:
-            if getattr(instance, relation_key_field):
-                related_objects_for_fetch.add(getattr(instance, relation_key_field))
-            else:
-                setattr(instance, self.model_field_name, None)
-
-        if related_objects_for_fetch:
-            related_object_list = await related_query.filter(pk__in=list(related_objects_for_fetch))
-            related_object_map = {obj.pk: obj for obj in related_object_list}
-            for instance in instance_list:
-                setattr(instance, self.model_field_name,
-                    related_object_map.get(getattr(instance, relation_key_field)))
-
-        return instance_list
+        raise NotImplementedError()
 
     def describe(self, serializable: bool = True) -> dict:
         desc = super().describe(serializable)
@@ -493,6 +478,24 @@ class ForeignKey(RelationField):
             partial(ForeignKey._fk_setter, _key=_key, field_name=relation_field),
             partial(ForeignKey._fk_setter, value=None, _key=_key, field_name=relation_field),
         )
+
+    async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
+        related_objects_for_fetch = set()
+        relation_key_field = f"{self.model_field_name}_id"
+        for instance in instance_list:
+            if getattr(instance, relation_key_field):
+                related_objects_for_fetch.add(getattr(instance, relation_key_field))
+            else:
+                setattr(instance, self.model_field_name, None)
+
+        if related_objects_for_fetch:
+            related_object_list = await related_query.filter(pk__in=list(related_objects_for_fetch))
+            related_object_map = {obj.pk: obj for obj in related_object_list}
+            for instance in instance_list:
+                setattr(instance, self.model_field_name,
+                    related_object_map.get(getattr(instance, relation_key_field)))
+
+        return instance_list
 
     def create_relation(self):
         from tortoise import Tortoise
