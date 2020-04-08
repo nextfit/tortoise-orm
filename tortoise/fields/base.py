@@ -103,12 +103,22 @@ class Field(metaclass=_FieldMeta):
                 for key, val in getattr(self, dialect).__dict__.items()
                 if not key.startswith("_")
             }
-            for dialect in [key for key in dir(self) if key.startswith("_db_")]
+            for dialect in dir(self) if dialect.startswith("_db_")
         }
 
     def get_for_dialect(self, dialect: str, key: str) -> Any:
-        dialect_data = self._get_dialects().get(dialect, {})
-        return dialect_data.get(key, getattr(self, key, None))
+        #
+        # The following two lines is the original code,
+        # but is an overkill unless _get_dialects is cached.
+        #
+        #   dialect_data = self._get_dialects().get(dialect, {})
+        #   return dialect_data.get(key, getattr(self, key, None))
+        #
+        db_meta = getattr(self, f"_db_{dialect}", None)
+        if db_meta and key in db_meta.__dict__:
+            return db_meta.__dict__.get(key)
+
+        return getattr(self, key, None)
 
     def describe(self, serializable: bool = True) -> dict:
         def get_db_column_types() -> Optional[Dict[str, str]]:
