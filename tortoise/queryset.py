@@ -575,12 +575,14 @@ class QuerySet(AwaitableQuery[MODEL]):
         self.resolve_ordering(context=context)
 
     async def _execute(self) -> List[MODEL]:
-        instance_list = await self._db.executor_class(
+        executor = self._db.executor_class(
             model=self.model,
             db=self._db,
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
-        ).execute_select(self.query, custom_fields=list(self.annotations.keys()))
+        )
+
+        instance_list = await executor.execute_select(self.query, custom_fields=list(self.annotations.keys()))
 
         if self._get:
             if len(instance_list) == 1:
