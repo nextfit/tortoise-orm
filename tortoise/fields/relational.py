@@ -376,10 +376,7 @@ class BackwardFKField(RelationField):
         table_pk = self.model._meta.pk_db_column
         related_table = self.remote_model._meta.basetable
 
-        return [
-            (related_table,
-             getattr(table, table_pk) == getattr(related_table, self.related_name),)
-        ]
+        return [(related_table, table[table_pk] == related_table[self.related_name])]
 
 
 class ForeignKey(RelationField):
@@ -535,10 +532,8 @@ class ForeignKey(RelationField):
         related_table_pk = self.remote_model._meta.pk_db_column
         related_table = self.remote_model._meta.basetable
         related_table = related_table.as_(f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}")
-        return [
-            (related_table,
-             getattr(related_table, related_table_pk) == getattr(table, f"{self.model_field_name}_id"),)
-        ]
+
+        return [(related_table, related_table[related_table_pk] == table[f"{self.model_field_name}_id"])]
 
     def describe(self, serializable: bool = True) -> dict:
         desc = super().describe(serializable)
@@ -818,8 +813,6 @@ class ManyToManyField(RelationField):
         related_table = self.remote_model._meta.basetable
         through_table = Table(self.through)
         return [
-            (through_table,
-                getattr(table, table_pk) == getattr(through_table, self.backward_key),),
-            (related_table,
-                getattr(through_table, self.forward_key) == getattr(related_table, related_table_pk),)
+            (through_table, table[table_pk] == through_table[self.backward_key]),
+            (related_table, through_table[self.forward_key] == related_table[related_table_pk])
         ]
