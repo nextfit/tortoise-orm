@@ -1,12 +1,7 @@
 
-import logging
 from hashlib import sha256
 from typing import List, Set
 from tortoise.exceptions import ConfigurationError
-
-# pylint: disable=R0201
-
-logger = logging.getLogger("tortoise")
 
 
 class BaseSchemaGenerator:

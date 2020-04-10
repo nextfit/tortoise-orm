@@ -13,8 +13,6 @@ from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.exceptions import TransactionManagementError
 from tortoise.transactions import current_transaction_map
 
-logger = logging.getLogger("tortoise")
-
 
 class Capabilities:
     """
@@ -78,7 +76,7 @@ class BaseDBAsyncClient:
     capabilities: Capabilities = Capabilities("")
 
     def __init__(self, connection_name: str, fetch_inserted: bool = True, **kwargs) -> None:
-        self.log = logging.getLogger("db_client")
+        self.log = logging.getLogger("tortoise")
         self.connection_name = connection_name
         self.fetch_inserted = fetch_inserted
 
@@ -89,7 +87,7 @@ class BaseDBAsyncClient:
     async def generate_schema_for_client(self, safe: bool) -> None:
         generator = self.schema_generator(self)
         schema = generator.get_create_schema_sql(safe)
-        logger.debug("Creating schema: %s", schema)
+        self.log.debug("Creating schema: %s", schema)
 
         if schema:  # pragma: nobranch
             await generator.client.execute_script(schema)
