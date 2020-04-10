@@ -1,9 +1,9 @@
 
 from copy import deepcopy
 from functools import partial
-from typing import Awaitable, Generic, Optional, TypeVar, Union, Dict
+from typing import Awaitable, Generic, Optional, TypeVar, Union, Dict, List, Tuple
 
-from pypika import Table
+from pypika import Table, Criterion
 from typing_extensions import Literal
 from tortoise.constants import LOOKUP_SEP
 
@@ -294,14 +294,8 @@ class RelationField(Field):
     def create_relation(self):
         raise NotImplementedError()
 
-    def get_joins(self, table: Table):
-        related_table_pk = self.remote_model._meta.pk_db_column
-        related_table = self.remote_model._meta.basetable
-        related_table = related_table.as_(f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}")
-        return [
-            (related_table,
-             getattr(related_table, related_table_pk) == getattr(table, f"{self.model_field_name}_id"),)
-        ]
+    def get_joins(self, table: Table) -> List[Tuple[Table, Criterion]]:
+        raise NotImplementedError()
 
     async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
         raise NotImplementedError()
@@ -378,7 +372,7 @@ class BackwardFKField(RelationField):
 
         return instance_list
 
-    def get_joins(self, table: Table):
+    def get_joins(self, table: Table) -> List[Tuple[Table, Criterion]]:
         table_pk = self.model._meta.pk_db_column
         related_table = self.remote_model._meta.basetable
 
@@ -536,6 +530,15 @@ class ForeignKey(RelationField):
             backward_relation_field = self.backward_relation_class(
                 self.model, key_field_name, True, self.description)
             remote_model._meta.add_field(backward_relation_name, backward_relation_field)
+
+    def get_joins(self, table: Table) -> List[Tuple[Table, Criterion]]:
+        related_table_pk = self.remote_model._meta.pk_db_column
+        related_table = self.remote_model._meta.basetable
+        related_table = related_table.as_(f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}")
+        return [
+            (related_table,
+             getattr(related_table, related_table_pk) == getattr(table, f"{self.model_field_name}_id"),)
+        ]
 
     def describe(self, serializable: bool = True) -> dict:
         desc = super().describe(serializable)
@@ -809,7 +812,7 @@ class ManyToManyField(RelationField):
 
         return instance_list
 
-    def get_joins(self, table: Table):
+    def get_joins(self, table: Table) -> List[Tuple[Table, Criterion]]:
         table_pk = self.model._meta.pk_db_column
         related_table_pk = self.remote_model._meta.pk_db_column
         related_table = self.remote_model._meta.basetable
