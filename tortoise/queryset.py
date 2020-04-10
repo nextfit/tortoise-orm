@@ -199,7 +199,7 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
                 if not field_object:
                     raise FieldError(f"Unknown field {field_name} for model {model.__name__}")
                 field_name = field_object.db_column or field_name
-                field = getattr(table, field_name)
+                field = table[field_name]
 
                 func = field_object.get_for_dialect(model._meta.db.capabilities.dialect, "function_cast")
                 if func:

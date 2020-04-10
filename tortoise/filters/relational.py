@@ -21,10 +21,7 @@ class RelationFilter(FieldFilter):
         table = context_item.table
 
         pk_db_column = model._meta.pk_db_column
-        joins = [(
-            self.table,
-            table[pk_db_column] == getattr(self.table, self.backward_key),
-        )]
+        joins = [(self.table, table[pk_db_column] == self.table[self.backward_key])]
 
         if isinstance(value, OuterRef):
             outer_context_item = context.stack[-2]
