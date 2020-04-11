@@ -11,7 +11,7 @@ from tortoise.filters.q import Q
 from tortoise.functions import Annotation
 from tortoise.query.fieldselect import ValuesListQuery, ValuesQuery
 from tortoise.query.statements import DeleteQuery, UpdateQuery, CountQuery
-from tortoise.query.utils import Prefetch
+from tortoise.query.prefetch import Prefetch
 from tortoise.query.base import AwaitableQuery, MODEL
 
 T_co = TypeVar("T_co", covariant=True)
