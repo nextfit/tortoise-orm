@@ -19,6 +19,7 @@ from tortoise.fields.relational import (
 from tortoise.filters import FieldFilter
 
 from tortoise.query import QuerySet, QuerySetSingle
+from tortoise.query.raw import RawQuerySet
 from tortoise.transactions import current_transaction_map
 
 MODEL = TypeVar("MODEL", bound="Model")
@@ -538,6 +539,13 @@ class Model(metaclass=ModelMeta):
         Returns the complete QuerySet.
         """
         return QuerySet(cls)
+
+    @classmethod
+    def raw(cls: Type[MODEL], raw_sql) -> RawQuerySet[MODEL]:
+        """
+        Returns the complete QuerySet.
+        """
+        return QuerySet(cls).raw(raw_sql)
 
     @classmethod
     def get(cls: Type[MODEL], *args, **kwargs) -> QuerySetSingle[MODEL]:

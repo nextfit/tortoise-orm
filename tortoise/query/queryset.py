@@ -44,8 +44,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._get: bool = False
         self._filter_kwargs: Dict[str, Any] = {}
 
-    def _clone(self) -> "QuerySet[MODEL]":
-        queryset = QuerySet.__new__(QuerySet)
+    def _copy(self, queryset) -> None:
         queryset.fields = self.fields
         queryset.model = self.model
         queryset.query = self.query
@@ -65,6 +64,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset.q_objects = copy(self.q_objects)
         queryset.annotations = copy(self.annotations)
 
+    def _clone(self) -> "QuerySet[MODEL]":
+        queryset = QuerySet.__new__(QuerySet)
+        self._copy(queryset)
         return queryset
 
     def _filter_or_exclude(self, *args, negate: bool, **kwargs):
@@ -264,6 +266,13 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         return self._clone()
 
+    def raw(self, query) -> "RawQuerySet[MODEL]":
+        from tortoise.query.raw import RawQuerySet
+        queryset = RawQuerySet._clone(self)
+        queryset.query = query
+
+        return queryset
+
     def first(self) -> QuerySetSingle[Optional[MODEL]]:
         """
         Limit queryset to one object and return one object instead of list.
@@ -323,10 +332,11 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         if self._db is None:
             self._db = self.model._meta.db  # type: ignore
+
         self._make_query(context=QueryContext())
-        return await self._db.executor_class(model=self.model, db=self._db).execute_explain(
-            self.query
-        )
+        return await self._db\
+            .executor_class(model=self.model, db=self._db)\
+            .execute_explain(self.query)
 
     def using_db(self, _db: BaseDBAsyncClient) -> "QuerySet[MODEL]":
         """
