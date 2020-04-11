@@ -1,5 +1,4 @@
 
-import copy
 import urllib.parse as urlparse
 import uuid
 from typing import Any, Dict, List, Optional
@@ -9,6 +8,7 @@ from tortoise.exceptions import ConfigurationError
 urlparse.uses_netloc.append("postgres")
 urlparse.uses_netloc.append("sqlite")
 urlparse.uses_netloc.append("mysql")
+
 DB_LOOKUP: Dict[str, Dict[str, Any]] = {
     "postgres": {
         "engine": "tortoise.backends.asyncpg",

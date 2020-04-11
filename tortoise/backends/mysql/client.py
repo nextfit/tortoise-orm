@@ -9,14 +9,11 @@ from pypika import MySQLQuery
 
 from tortoise.backends.base.client import (
     BaseDBAsyncClient,
-    BaseTransactionWrapper,
     Capabilities,
     ConnectionWrapper,
-    NestedTransactionContext,
     PoolConnectionWrapper,
-    TransactionContext,
-    TransactionContextPooled,
 )
+
 from tortoise.backends.mysql.executor import MySQLExecutor
 from tortoise.backends.mysql.filters import MySQLFilter
 from tortoise.backends.mysql.schema_generator import MySQLSchemaGenerator
@@ -26,6 +23,8 @@ from tortoise.exceptions import (
     OperationalError,
     TransactionManagementError,
 )
+from tortoise.transactions import BaseTransactionWrapper
+from tortoise.transactions.context import TransactionContextPooled, NestedTransactionContext, TransactionContext
 
 
 def translate_exceptions(func):
@@ -206,7 +205,7 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
 
-    def _in_transaction(self) -> "TransactionContext":
+    def _in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(self)
 
     def acquire_connection(self) -> ConnectionWrapper:

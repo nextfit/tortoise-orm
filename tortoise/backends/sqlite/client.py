@@ -8,15 +8,15 @@ import aiosqlite
 
 from tortoise.backends.base.client import (
     BaseDBAsyncClient,
-    BaseTransactionWrapper,
     Capabilities,
     ConnectionWrapper,
-    NestedTransactionContext,
-    TransactionContext,
 )
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
 from tortoise.exceptions import IntegrityError, OperationalError, TransactionManagementError
+
+from tortoise.transactions import BaseTransactionWrapper
+from tortoise.transactions.context import TransactionContext, NestedTransactionContext
 
 
 def translate_exceptions(func):
@@ -147,7 +147,7 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
         self._finalized = False
         self.fetch_inserted = connection.fetch_inserted
 
-    def _in_transaction(self) -> "TransactionContext":
+    def _in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(self)
 
     @translate_exceptions

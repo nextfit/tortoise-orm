@@ -1,15 +1,15 @@
-import warnings
+
 from functools import wraps
 from typing import TYPE_CHECKING, Callable, Optional
-
 from tortoise.exceptions import ParamsError
 
+
 current_transaction_map: dict = {}
+
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import (
         BaseDBAsyncClient,
-        BaseTransactionWrapper,
         TransactionContext,
     )
 
@@ -67,32 +67,15 @@ def atomic(connection_name: Optional[str] = None) -> Callable:
     return wrapper
 
 
-async def start_transaction(
-    connection_name: Optional[str] = None,
-) -> "BaseTransactionWrapper":  # pragma: nocoverage
-    """
-    Function to manually control your transaction.
+class BaseTransactionWrapper:
+    async def start(self) -> None:
+        raise NotImplementedError()  # pragma: nocoverage
 
-    .. warning::
-        **Deprecated, to be removed in v0.15**
+    def release(self) -> None:
+        raise NotImplementedError()  # pragma: nocoverage
 
-        ``start_transaction`` leaks context.
-        Please use ``@atomic()`` or ``async with in_transaction():`` instead.
+    async def rollback(self) -> None:
+        raise NotImplementedError()  # pragma: nocoverage
 
-    Returns transaction object with ``.rollback()`` and ``.commit()`` methods.
-    All db calls in same coroutine context will run into transaction
-    before ending transaction with above methods.
-
-    :param connection_name: name of connection to run with, optional if you have only
-                            one db connection
-    """
-    warnings.warn(
-        "start_transaction leaks context,"
-        " please use '@atomic()' or 'async with in_transaction():' instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    connection = _get_connection(connection_name)
-    transaction = connection._in_transaction()
-    await transaction.connection.start()
-    return transaction.connection
+    async def commit(self) -> None:
+        raise NotImplementedError()  # pragma: nocoverage

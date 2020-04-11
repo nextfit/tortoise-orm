@@ -11,20 +11,19 @@ from tortoise.backends.asyncpg.filters import AsyncpgFilter
 from tortoise.backends.asyncpg.schema_generator import AsyncpgSchemaGenerator
 from tortoise.backends.base.client import (
     BaseDBAsyncClient,
-    BaseTransactionWrapper,
     Capabilities,
     ConnectionWrapper,
-    NestedTransactionContext,
     PoolConnectionWrapper,
-    TransactionContext,
-    TransactionContextPooled,
 )
+
 from tortoise.exceptions import (
     DBConnectionError,
     IntegrityError,
     OperationalError,
     TransactionManagementError,
 )
+from tortoise.transactions import BaseTransactionWrapper
+from tortoise.transactions.context import TransactionContextPooled, NestedTransactionContext, TransactionContext
 
 
 def translate_exceptions(func):
@@ -198,7 +197,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         self._finalized = False
         self._parent = connection
 
-    def _in_transaction(self) -> "TransactionContext":
+    def _in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(self)
 
     def acquire_connection(self) -> "ConnectionWrapper":
