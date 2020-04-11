@@ -93,11 +93,11 @@ class BaseExecutor:
             )
 
     async def execute_explain(self, query) -> Any:
-        sql = " ".join((self.EXPLAIN_PREFIX, query.get_sql()))
+        sql = " ".join((self.EXPLAIN_PREFIX, str(query)))
         return (await self.db.execute_query(sql))[1]
 
     async def execute_select(self, query, custom_fields: Optional[list] = None) -> list:
-        _, raw_results = await self.db.execute_query(query.get_sql())
+        _, raw_results = await self.db.execute_query(str(query))
         instance_list = []
         for row in raw_results:
             instance: "Model" = self.model._init_from_db(**row)

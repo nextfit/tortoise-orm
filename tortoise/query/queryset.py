@@ -30,10 +30,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         "_prefetch_queries",
         "_single",
         "_get",
-        "_count",
         "_db",
         "_filter_kwargs",
-        "_having",
     )
 
     def __init__(self, model: Type[MODEL]) -> None:
@@ -44,10 +42,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._prefetch_queries: Dict[str, QuerySet] = {}
         self._single: bool = False
         self._get: bool = False
-        self._count: bool = False
         self._filter_kwargs: Dict[str, Any] = {}
-
-        self._having: Dict[str, Any] = {}
 
     def _clone(self) -> "QuerySet[MODEL]":
         queryset = QuerySet.__new__(QuerySet)
@@ -59,7 +54,6 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._prefetch_queries = copy(self._prefetch_queries)
         queryset._single = self._single
         queryset._get = self._get
-        queryset._count = self._count
         queryset._db = self._db
         queryset._limit = self._limit
         queryset._offset = self._offset
@@ -67,7 +61,6 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._orderings = copy(self._orderings)
         queryset._joined_tables = copy(self._joined_tables)
         queryset._distinct = self._distinct
-        queryset._having = copy(self._having)
 
         queryset.q_objects = copy(self.q_objects)
         queryset.annotations = copy(self.annotations)
