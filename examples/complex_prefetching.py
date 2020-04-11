@@ -1,6 +1,6 @@
 from tortoise import Tortoise, fields, run_async
 from tortoise.models import Model
-from tortoise.query_utils import Prefetch
+from tortoise.query import Prefetch
 
 
 class Tournament(Model):

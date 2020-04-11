@@ -30,11 +30,11 @@ from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, Multip
 from tortoise.fields import JSONField
 
 from tortoise.fields.relational import ForeignKey, OneToOneField
-from tortoise.filters import EmptyCriterion as TortoiseEmptyCriterion
+from tortoise.filters import EmptyCriterion as TortoiseEmptyCriterion, QueryModifier
 from tortoise.functions import Annotation
 from tortoise.expressions import F
 
-from tortoise.query_utils import Prefetch, Q, QueryModifier
+from tortoise.query import Prefetch, Q
 
 # Empty placeholder - Should never be edited.
 from tortoise.ordering import QueryOrdering
