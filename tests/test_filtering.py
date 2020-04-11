@@ -1,7 +1,7 @@
 from tests.testmodels import Event, IntFields, Reporter, Team, Tournament
 from tortoise.contrib import test
 from tortoise.functions import Coalesce, Count, Length, Lower, Trim, Upper
-from tortoise.query import Q
+from tortoise.filters.q import Q
 
 
 class TestFiltering(test.TestCase):

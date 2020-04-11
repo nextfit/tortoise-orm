@@ -1,3 +1,3 @@
 
 
-from tortoise.query.utils import Prefetch, Q
+from tortoise.query.utils import Prefetch

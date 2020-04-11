@@ -5,7 +5,7 @@ Key points are filtering by related names and using Q objects
 """
 from tortoise import Tortoise, fields, run_async
 from tortoise.models import Model
-from tortoise.query import Q
+from tortoise.filters.q import Q
 
 
 class Tournament(Model):

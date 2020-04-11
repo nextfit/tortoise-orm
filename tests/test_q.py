@@ -4,7 +4,7 @@ from tests.testmodels import CharFields, IntFields
 from tortoise.context import QueryContext
 from tortoise.contrib.test import TestCase
 from tortoise.exceptions import OperationalError
-from tortoise.query import Q
+from tortoise.filters.q import Q
 
 
 class TestQ(_TestCase):
