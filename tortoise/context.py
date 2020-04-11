@@ -1,7 +1,6 @@
 
-from typing import List, Type, TypeVar, Dict
+from typing import List, Type, Dict, TypeVar
 from pypika import Table
-
 
 MODEL = TypeVar("MODEL", bound="Model")
 

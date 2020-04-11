@@ -6,7 +6,6 @@ from pypika import Order
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import FieldError
 
-
 MODEL = TypeVar("MODEL", bound="Model")
 
 

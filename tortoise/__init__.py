@@ -16,7 +16,6 @@ from tortoise.exceptions import ConfigurationError
 from tortoise.fields.relational import RelationField
 
 from tortoise.models import Model
-from tortoise.queryset import QuerySet
 from tortoise.transactions import current_transaction_map
 from contextvars import ContextVar
 

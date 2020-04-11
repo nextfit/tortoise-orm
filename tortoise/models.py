@@ -18,11 +18,10 @@ from tortoise.fields.relational import (
 
 from tortoise.filters import FieldFilter
 
-from tortoise.queryset import QuerySet, QuerySetSingle
+from tortoise.query import QuerySet, QuerySetSingle
 from tortoise.transactions import current_transaction_map
 
 MODEL = TypeVar("MODEL", bound="Model")
-# TODO: Define Filter type object. Possibly tuple?
 
 
 def get_together(meta, together: str) -> Tuple[Tuple[str, ...], ...]:
