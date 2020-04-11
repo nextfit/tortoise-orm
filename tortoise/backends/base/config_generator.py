@@ -1,3 +1,5 @@
+
+import copy
 import urllib.parse as urlparse
 import uuid
 from typing import Any, Dict, List, Optional
@@ -126,3 +128,19 @@ def generate_config(
             for app_label, modules in app_modules.items()
         },
     }
+
+
+def obscure_password(data):
+    if isinstance(data, dict):
+        output = {}
+        for key, value in data.items():
+            if key == 'password':
+                output[key] = '<REDACTED>'
+
+            else:
+                output[key] = obscure_password(value)
+
+        return output
+
+    else:
+        return data

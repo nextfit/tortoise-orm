@@ -11,7 +11,7 @@ from typing import Coroutine, Dict, List, Optional, Type
 from pypika import Table
 
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.backends.base.config_generator import expand_db_url, generate_config
+from tortoise.backends.base.config_generator import expand_db_url, generate_config, obscure_password
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields.relational import RelationField
 
@@ -306,7 +306,7 @@ class Tortoise:
         apps_config = config["apps"]  # type: ignore
         logger.info(
             "Tortoise-ORM startup\n    connections: %s\n    apps: %s",
-            str(connections_config),
+            str(obscure_password(connections_config)),
             str(apps_config),
         )
 
