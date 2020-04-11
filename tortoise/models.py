@@ -148,7 +148,7 @@ class MetaInfo:
         }
 
         self.fetch_fields = {key for key, field in self.fields_map.items() if not field.has_db_column}
-        self.generated_column_names = [field.db_column or field.model_field_name
+        self.generated_column_names = [field.db_column
             for field in self.fields_map.values() if field.generated]
 
     def _setup_relation_properties(self) -> None:
