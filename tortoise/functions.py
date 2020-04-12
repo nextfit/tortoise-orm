@@ -66,19 +66,19 @@ class Function(Annotation):
         model = context.stack[-1].model
         table = context.stack[-1].table
 
-        field_split = field.split(LOOKUP_SEP)
-        if not field_split[1:]:
+        (field_name, _, field_sub) = field.partition(LOOKUP_SEP)
+        if not field_sub:
             function_joins = []
-            if field_split[0] in model._meta.fetch_fields:
-                relation_field = model._meta.fields_map[field_split[0]]
+            if field_name in model._meta.fetch_fields:
+                relation_field = model._meta.fields_map[field_name]
                 relation_field_meta = relation_field.remote_model._meta
                 join = (table, relation_field)
                 function_joins.append(join)
                 field = relation_field_meta.basetable[relation_field_meta.pk_db_column]
             else:
-                field = table[field_split[0]]
+                field = table[field_name]
                 if self.populate_field_object:
-                    self.field_object = model._meta.fields_map.get(field_split[0], None)
+                    self.field_object = model._meta.fields_map.get(field_name, None)
                     if self.field_object:
                         func = self.field_object.get_for_dialect(
                             model._meta.db.capabilities.dialect, "function_cast")
@@ -88,20 +88,20 @@ class Function(Annotation):
             function_field = self.database_func(field, *default_values)
             return AnnotationInfo(function_field, function_joins)
 
-        if field_split[0] not in model._meta.fetch_fields:
+        if field_name not in model._meta.fetch_fields:
             raise ConfigurationError(f"{field} not resolvable")
 
-        relation_field = model._meta.fields_map[field_split[0]]
+        relation_field = model._meta.fields_map[field_name]
 
         remote_model = relation_field.remote_model
         remote_table = remote_model._meta.basetable
         if isinstance(relation_field, ForeignKey):
             # Only FK's can be to same table, so we only auto-alias FK join tables
-            remote_table = remote_table.as_(f"{table.get_table_name()}{LOOKUP_SEP}{field_split[0]}")
+            remote_table = remote_table.as_(f"{table.get_table_name()}{LOOKUP_SEP}{field_name}")
 
         context.push(remote_model, remote_table)
         annotation_info = self._resolve_field(
-            context, LOOKUP_SEP.join(field_split[1:]), *default_values
+            context, field_sub, *default_values
         )
         context.pop()
 

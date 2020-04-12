@@ -47,13 +47,13 @@ class FieldSelectQuery(AwaitableQuery):
             raise FieldError(f'Unknown field "{field_name}" for model "{model.__name__}"')
 
         field_table = self._join_table_by_field(table, field_object)
-        forwarded_fields_split = forwarded_fields.split(LOOKUP_SEP)
+        forwarded_base, _, forwarded_sub = forwarded_fields.partition(LOOKUP_SEP)
 
         context.push(field_object.remote_model, field_table)
         output = self._join_table_with_forwarded_fields(
             context=context,
-            field_name=forwarded_fields_split[0],
-            forwarded_fields=LOOKUP_SEP.join(forwarded_fields_split[1:]),
+            field_name=forwarded_base,
+            forwarded_fields=forwarded_sub,
         )
         context.pop()
         return output

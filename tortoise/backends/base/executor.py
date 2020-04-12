@@ -232,8 +232,7 @@ class BaseExecutor:
     async def fetch_for_list(self, instance_list: list, *args) -> list:
         self.prefetch_map = {}
         for relation in args:
-            relation_split = relation.split(LOOKUP_SEP)
-            first_level_field = relation_split[0]
+            first_level_field, _, forwarded_prefetch = relation.partition(LOOKUP_SEP)
 
             if first_level_field not in self.model._meta.fetch_fields:
                 raise OperationalError(
@@ -242,8 +241,6 @@ class BaseExecutor:
 
             if first_level_field not in self.prefetch_map.keys():
                 self.prefetch_map[first_level_field] = set()
-
-            forwarded_prefetch = LOOKUP_SEP.join(relation_split[1:])
 
             if forwarded_prefetch:
                 self.prefetch_map[first_level_field].add(forwarded_prefetch)

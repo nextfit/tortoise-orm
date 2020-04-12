@@ -64,13 +64,13 @@ class Q:
         model = context_item.model
         table = context_item.table
 
-        relation_field_name = key.split(LOOKUP_SEP)[0]
+        relation_field_name, _, relation_field_sub = key.partition(LOOKUP_SEP)
         relation_field = model._meta.fields_map[relation_field_name]
         required_joins = relation_field.get_joins(table)
 
         related_table = required_joins[-1][0]
         context.push(relation_field.remote_model, related_table)
-        modifier = Q(**{LOOKUP_SEP.join(key.split(LOOKUP_SEP)[1:]): value}).resolve(
+        modifier = Q(**{relation_field_sub: value}).resolve(
             context=context, annotations=self._annotations)
         context.pop()
 

@@ -146,14 +146,14 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
                     "Filtering by relation is not possible. Filter by nested field of related model"
                 )
 
-            if field_name.split(LOOKUP_SEP)[0] in model._meta.fetch_fields:
-                relation_field_name = field_name.split(LOOKUP_SEP)[0]
+            relation_field_name, _, field_sub = field_name.partition(LOOKUP_SEP)
+            if relation_field_name in model._meta.fetch_fields:
                 relation_field = model._meta.fields_map[relation_field_name]
                 related_table = self._join_table_by_field(table, relation_field)
                 context.push(relation_field.remote_model, related_table)
                 self.__resolve_ordering(
                     context,
-                    [QueryOrdering(LOOKUP_SEP.join(field_name.split(LOOKUP_SEP)[1:]), ordering.direction)],
+                    [QueryOrdering(field_sub, ordering.direction)],
                     {},
                 )
                 context.pop()
