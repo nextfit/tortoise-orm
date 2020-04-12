@@ -268,10 +268,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
     def raw(self, query) -> "RawQuerySet[MODEL]":
         from tortoise.query.raw import RawQuerySet
-        queryset = RawQuerySet._clone(self)
-        queryset.query = query
-
-        return queryset
+        return RawQuerySet(self, query)
 
     def first(self) -> QuerySetSingle[Optional[MODEL]]:
         """
