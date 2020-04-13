@@ -30,7 +30,6 @@ class QuerySet(AwaitableQuery[MODEL]):
         "_prefetch_queries",
         "_single",
         "_get",
-        "_db",
         "_filter_kwargs",
     )
 
@@ -45,29 +44,25 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._filter_kwargs: Dict[str, Any] = {}
 
     def _copy(self, queryset) -> None:
-        queryset.fields = self.fields
+        queryset._db = self._db
+        queryset.capabilities = self.capabilities
         queryset.model = self.model
         queryset.query = self.query
-        queryset.capabilities = self.capabilities
+        queryset._joined_tables = copy(self._joined_tables)
+        queryset.q_objects = copy(self.q_objects)
+        queryset.annotations = copy(self.annotations)
+
+        queryset._orderings = copy(self._orderings)
+        queryset._distinct = self._distinct
+        queryset._limit = self._limit
+        queryset._offset = self._offset
+
+        queryset.fields = self.fields
         queryset._prefetch_map = copy(self._prefetch_map)
         queryset._prefetch_queries = copy(self._prefetch_queries)
         queryset._single = self._single
         queryset._get = self._get
-        queryset._db = self._db
-        queryset._limit = self._limit
-        queryset._offset = self._offset
         queryset._filter_kwargs = copy(self._filter_kwargs)
-        queryset._orderings = copy(self._orderings)
-        queryset._joined_tables = copy(self._joined_tables)
-        queryset._distinct = self._distinct
-
-        queryset.q_objects = copy(self.q_objects)
-        queryset.annotations = copy(self.annotations)
-
-    def _clone(self) -> "QuerySet[MODEL]":
-        queryset = QuerySet.__new__(QuerySet)
-        self._copy(queryset)
-        return queryset
 
     def _filter_or_exclude(self, *args, negate: bool, **kwargs):
         queryset = self._clone()
@@ -104,49 +99,6 @@ class QuerySet(AwaitableQuery[MODEL]):
         Same as .filter(), but with appends all args with NOT
         """
         return self._filter_or_exclude(negate=True, *args, **kwargs)
-
-    def order_by(self, *orderings: str) -> "QuerySet[MODEL]":
-        """
-        Accept args to filter by in format like this:
-
-        .. code-block:: python3
-
-            .order_by('name', '-tournament__name')
-
-        Supports ordering by related models too.
-        """
-        queryset = self._clone()
-        queryset._orderings = self._parse_orderings(*orderings)
-        return queryset
-
-    def limit(self, limit: int) -> "QuerySet[MODEL]":
-        """
-        Limits QuerySet to given length.
-        """
-        queryset = self._clone()
-        queryset._limit = limit
-        return queryset
-
-    def offset(self, offset: int) -> "QuerySet[MODEL]":
-        """
-        Query offset for QuerySet.
-        """
-        queryset = self._clone()
-        queryset._offset = offset
-        if self.capabilities.requires_limit and queryset._limit is None:
-            queryset._limit = 1000000
-        return queryset
-
-    def distinct(self) -> "QuerySet[MODEL]":
-        """
-        Make QuerySet distinct.
-
-        Only makes sense in combination with a ``.values()`` or ``.values_list()`` as it
-        precedes all the fetched fields with a distinct.
-        """
-        queryset = self._clone()
-        queryset._distinct = True
-        return queryset
 
     def annotate(self, **kwargs) -> "QuerySet[MODEL]":
         """
@@ -266,7 +218,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         return self._clone()
 
-    def raw(self, query) -> "RawQuerySet[MODEL]":
+    def raw(self, query: str) -> "RawQuerySet[MODEL]":
         from tortoise.query.raw import RawQuerySet
         return RawQuerySet(self, query)
 

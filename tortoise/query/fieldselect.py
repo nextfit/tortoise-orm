@@ -7,20 +7,18 @@ from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
 from tortoise.exceptions import FieldError
 from tortoise.fields import JSONField
-from tortoise.query.base import AwaitableQuery
+from tortoise.query.base import AwaitableQuery, MODEL
 
 
-class FieldSelectQuery(AwaitableQuery):
+class FieldSelectQuery(AwaitableQuery[MODEL]):
     # pylint: disable=W0223
     __slots__ = (
         "fields_for_select",
     )
 
-    def __init__(self, model, db, q_objects, annotations,
-        orderings, distinct, limit, offset) -> None:
-
-        super().__init__(model, db, q_objects, annotations,
-            orderings, distinct, limit, offset)
+    def _copy(self, queryset):
+        super()._copy(queryset)
+        queryset.fields_for_select = self.fields_for_select
 
     def _join_table_with_forwarded_fields(
         self, context: QueryContext, field_name: str, forwarded_fields: str
@@ -153,7 +151,6 @@ class FieldSelectQuery(AwaitableQuery):
 class ValuesListQuery(FieldSelectQuery):
     __slots__ = (
         "flat",
-        "fields_for_select_list",
     )
 
     def __init__(
@@ -166,8 +163,11 @@ class ValuesListQuery(FieldSelectQuery):
             raise TypeError("You can flat value_list only if contains one field")
 
         self.fields_for_select = {str(i): field for i, field in enumerate(fields_for_select_list)}
-        self.fields_for_select_list = fields_for_select_list
         self.flat = flat
+
+    def _copy(self, queryset):
+        super()._copy(queryset)
+        queryset.flat = self.flat
 
     async def _execute(self) -> List[Any]:
         _, result = await self._db.execute_query(str(self.query))

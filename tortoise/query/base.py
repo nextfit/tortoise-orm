@@ -25,11 +25,11 @@ QUERY: QueryBuilder = QueryBuilder()
 
 class AwaitableStatement(Generic[MODEL]):
     __slots__ = (
-        "_joined_tables",
         "_db",
-        "query",
-        "model",
         "capabilities",
+        "model",
+        "query",
+        "_joined_tables",
         "q_objects",
         "annotations",
     )
@@ -44,6 +44,20 @@ class AwaitableStatement(Generic[MODEL]):
 
         self.q_objects: List[Q] = q_objects or []
         self.annotations: Dict[str, Annotation] = annotations or {}
+
+    def _copy(self, queryset) -> None:
+        queryset._db = self._db
+        queryset.capabilities = self.capabilities
+        queryset.model = self.model
+        queryset.query = self.query
+        queryset._joined_tables = copy(self._joined_tables)
+        queryset.q_objects = copy(self.q_objects)
+        queryset.annotations = copy(self.annotations)
+
+    def _clone(self):
+        queryset = self.__class__.__new__(self.__class__)
+        self._copy(queryset)
+        return queryset
 
     def resolve_filters(self, context: QueryContext) -> None:
         modifier = QueryModifier()
@@ -128,6 +142,63 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
         self._distinct: bool = distinct
         self._limit: Optional[int] = limit
         self._offset: Optional[int] = offset
+
+    def _copy(self, queryset) -> None:
+        queryset._db = self._db
+        queryset.capabilities = self.capabilities
+        queryset.model = self.model
+        queryset.query = self.query
+        queryset._joined_tables = copy(self._joined_tables)
+        queryset.q_objects = copy(self.q_objects)
+        queryset.annotations = copy(self.annotations)
+
+        queryset._orderings = copy(self._orderings)
+        queryset._distinct = self._distinct
+        queryset._limit = self._limit
+        queryset._offset = self._offset
+
+    def order_by(self, *orderings: str):
+        """
+        Accept args to filter by in format like this:
+
+        .. code-block:: python3
+
+            .order_by('name', '-tournament__name')
+
+        Supports ordering by related models too.
+        """
+        queryset = self._clone()
+        queryset._orderings = self._parse_orderings(*orderings)
+        return queryset
+
+    def limit(self, limit: int):
+        """
+        Limits QuerySet to given length.
+        """
+        queryset = self._clone()
+        queryset._limit = limit
+        return queryset
+
+    def offset(self, offset: int):
+        """
+        Query offset for QuerySet.
+        """
+        queryset = self._clone()
+        queryset._offset = offset
+        if self.capabilities.requires_limit and queryset._limit is None:
+            queryset._limit = 1000000
+        return queryset
+
+    def distinct(self):
+        """
+        Make QuerySet distinct.
+
+        Only makes sense in combination with a ``.values()`` or ``.values_list()`` as it
+        precedes all the fetched fields with a distinct.
+        """
+        queryset = self._clone()
+        queryset._distinct = True
+        return queryset
 
     def _parse_orderings(self, *orderings: str) -> "List[QueryOrdering]":
         return QueryOrdering.parse_orderings(self.model, self.annotations, *orderings)
