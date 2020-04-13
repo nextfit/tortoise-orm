@@ -67,19 +67,22 @@ class MetaInfo:
         self.app: Optional[str] = getattr(meta, "app", None)
         self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
         self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")
-        self.db_columns: Set[str] = set()
-        self.fetch_fields: Set[str] = set()
-        self.field_to_db_column_name_map: Dict[str, str] = {}
-        self.db_column_to_field_name_map: Dict[str, str] = {}
-        self.fields_map: Dict[str, Field] = {}
-        self._inited: bool = False
-        self.default_connection: Optional[str] = None
-        self.basequery: Query = Query()
-        self.basetable: Table = Table("")
-        self.pk_attr: str = getattr(meta, "pk_attr", "")
-        self.generated_column_names: List[str] = []
-        self._model: "Model"
         self.table_description: str = getattr(meta, "table_description", "")
+
+        self.default_connection: Optional[str] = None
+        self._inited: bool = False
+
+        self.db_columns: Set[str]
+        self.fetch_fields: Set[str] = set()
+        self.fields_map: Dict[str, Field]
+        self.field_to_db_column_name_map: Dict[str, str]
+        self.db_column_to_field_name_map: Dict[str, str]
+
+        self.basequery: Query
+        self.basetable: Table
+        self.pk_attr: str
+        self.generated_column_names: List[str]
+        self._model: "Model"
 
         self._filter_cache: Dict[str, Optional[FieldFilter]] = {}
 
@@ -256,9 +259,8 @@ class ModelMeta(type):
 
         meta.fields_map = fields_map
         meta.field_to_db_column_name_map = field_to_db_column_name_map
-        meta.default_connection = None
         meta.pk_attr = pk_attr
-        meta._inited = False
+
         if not fields_map:
             meta.abstract = True
 
