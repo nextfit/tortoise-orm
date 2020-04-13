@@ -248,8 +248,6 @@ class QuerySet(AwaitableQuery[MODEL]):
         Like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
         """
         queryset = self._clone()
-        queryset._prefetch_map = {}
-
         for relation in args:
             if not isinstance(relation, Prefetch):
                 relation = Prefetch(relation)
