@@ -25,23 +25,19 @@ class QuerySetSingle(Protocol[T_co]):
 
 class QuerySet(AwaitableQuery[MODEL]):
     __slots__ = (
-        "fields",
         "_prefetch_map",
         "_prefetch_queries",
         "_single",
         "_get",
-        "_filter_kwargs",
     )
 
     def __init__(self, model: Type[MODEL]) -> None:
         super().__init__(model)
-        self.fields = model._meta.db_columns
 
         self._prefetch_map: Dict[str, Set[str]] = {}
         self._prefetch_queries: Dict[str, QuerySet] = {}
         self._single: bool = False
         self._get: bool = False
-        self._filter_kwargs: Dict[str, Any] = {}
 
     def _copy(self, queryset) -> None:
         queryset._db = self._db
@@ -57,12 +53,10 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._limit = self._limit
         queryset._offset = self._offset
 
-        queryset.fields = self.fields
         queryset._prefetch_map = copy(self._prefetch_map)
         queryset._prefetch_queries = copy(self._prefetch_queries)
         queryset._single = self._single
         queryset._get = self._get
-        queryset._filter_kwargs = copy(self._filter_kwargs)
 
     def _filter_or_exclude(self, *args, negate: bool, **kwargs):
         queryset = self._clone()
