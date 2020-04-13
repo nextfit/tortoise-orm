@@ -63,8 +63,8 @@ class Function(Annotation):
         self.default_values = default_values
 
     def _resolve_field(self, context: QueryContext, field: str, *default_values) -> AnnotationInfo:
-        model = context.stack[-1].model
-        table = context.stack[-1].table
+        model = context.top.model
+        table = context.top.table
 
         (field_name, _, field_sub) = field.partition(LOOKUP_SEP)
         if not field_sub:

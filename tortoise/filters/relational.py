@@ -16,7 +16,7 @@ class RelationFilter(FieldFilter):
         self.backward_key = backward_key
 
     def __call__(self, context: QueryContext, value) -> QueryModifier:
-        context_item = context.stack[-1]
+        context_item = context.top
         model = context_item.model
         table = context_item.table
 

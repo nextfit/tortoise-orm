@@ -356,7 +356,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             annotation_info.field.is_aggregate
             for annotation_info in annotation_info_map.values()
         ):
-            table = context.stack[-1].table
+            table = context.top.table
             self.query = self.query.groupby(table.id)
 
         for key, annotation_info in annotation_info_map.items():

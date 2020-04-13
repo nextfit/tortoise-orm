@@ -59,7 +59,7 @@ class Q:
         self._is_negated = not self._is_negated
 
     def _resolve_nested_filter(self, context: QueryContext, key, value) -> QueryModifier:
-        context_item = context.stack[-1]
+        context_item = context.top
 
         model = context_item.model
         table = context_item.table
@@ -77,7 +77,7 @@ class Q:
         return QueryModifier(joins=required_joins) & modifier
 
     def _resolve_field_filters(self, context: QueryContext, key, value) -> QueryModifier:
-        model = context.stack[-1].model
+        model = context.top.model
 
         if value is None and "isnull" in model._meta.db.filter_class.FILTER_FUNC_MAP:
             value = True
@@ -93,7 +93,7 @@ class Q:
         raise FieldError(f'Unknown field "{key}" for model "{model}"')
 
     def _resolve_annotation_filters(self, context: QueryContext, key, value) -> QueryModifier:
-        model = context.stack[-1].model
+        model = context.top.model
         (field_name, sep, comparision) = key.partition(LOOKUP_SEP)
         (filter_operator, _) = model._meta.db.filter_class.FILTER_FUNC_MAP[comparision]
 
@@ -139,7 +139,7 @@ class Q:
     def _resolve_filters(self, context: QueryContext) -> QueryModifier:
         modifier = QueryModifier()
         for raw_key, raw_value in self.filters.items():
-            key = self._get_actual_key(context.stack[-1].model, raw_key)
+            key = self._get_actual_key(context.top.model, raw_key)
             value = self._get_actual_value(context, raw_value)
 
             if key.split(LOOKUP_SEP)[0] in self._annotations:

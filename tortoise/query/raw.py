@@ -22,7 +22,16 @@ class RawQuery(Node):
 class RawQuerySet(QuerySet[MODEL]):
     def __init__(self, base: QuerySet, raw_sql: str):
         base._copy(self)
-        self.query = RawQuery(raw_sql)
+        self.raw_sql = raw_sql
+
+    def _copy(self, queryset):
+        super()._copy(queryset)
+        queryset.raw_sql = self.raw_sql
+
+    def _clone(self) -> "QuerySet[MODEL]":
+        queryset = RawQuerySet.__new__(RawQuerySet)
+        self._copy(queryset)
+        return queryset
 
     def _make_query(self, context: QueryContext, alias=None) -> None:
-        pass
+        self.query = RawQuery(self.raw_sql.format(context=context))

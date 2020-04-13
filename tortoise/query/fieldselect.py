@@ -26,7 +26,7 @@ class FieldSelectQuery(AwaitableQuery):
         self, context: QueryContext, field_name: str, forwarded_fields: str
     ) -> Tuple[Table, str]:
 
-        context_item = context.stack[-1]
+        context_item = context.top
         model = context_item.model
         table = context_item.table
 
@@ -59,7 +59,7 @@ class FieldSelectQuery(AwaitableQuery):
         return output
 
     def add_field_to_select_query(self, context: QueryContext, field_name, return_as) -> None:
-        table = context.stack[-1].table
+        table = context.top.table
 
         if field_name == "pk":
             field_name = self.model._meta.pk_attr

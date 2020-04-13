@@ -20,5 +20,9 @@ class QueryContext:
         self.stack.append(QueryContextItem(model, table, through_tables))
         return self
 
-    def pop(self):
+    def pop(self) -> QueryContextItem:
         return self.stack.pop()
+
+    @property
+    def top(self) -> QueryContextItem:
+        return self.stack[-1]

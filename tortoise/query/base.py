@@ -136,8 +136,8 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
         self.__resolve_ordering(context, self._orderings, self.annotations)
 
     def __resolve_ordering(self, context: QueryContext, orderings, annotations) -> None:
-        table = context.stack[-1].table
-        model = context.stack[-1].model
+        table = context.top.table
+        model = context.top.model
 
         for ordering in orderings:
             field_name = ordering.field_name

@@ -11,7 +11,7 @@ class DataFieldFilter(FieldFilter):
         self.db_column = field.db_column or field.model_field_name
 
     def __call__(self, context: QueryContext, value) -> QueryModifier:
-        context_item = context.stack[-1]
+        context_item = context.top
         model = context_item.model
         table = context_item.table
 
@@ -45,7 +45,7 @@ class JSONFieldFilter(FieldFilter):
         self.db_column = field.db_column or field.model_field_name
 
     def __call__(self, context: QueryContext, value) -> QueryModifier:
-        context_item = context.stack[-1]
+        context_item = context.top
         model = context_item.model
         table = context_item.table
 
