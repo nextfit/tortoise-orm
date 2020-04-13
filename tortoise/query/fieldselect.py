@@ -136,15 +136,7 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
         for return_as, field_name in self.fields_for_select.items():
             self.add_field_to_select_query(context, field_name, return_as)
 
-        self.resolve_filters(context=context)
-        if self._limit:
-            self.query._limit = self._limit
-        if self._offset:
-            self.query._offset = self._offset
-        if self._distinct:
-            self.query._distinct = True
-
-        self.resolve_ordering(context=context)
+        self._add_query_details(context=context)
         context.pop()
 
 

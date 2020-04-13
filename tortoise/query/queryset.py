@@ -296,7 +296,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._db = _db
         return queryset
 
-    def _resolve_annotations(self, context: QueryContext) -> None:
+    def __resolve_annotations(self, context: QueryContext) -> None:
         if not self.annotations:
             return
 
@@ -319,23 +319,10 @@ class QuerySet(AwaitableQuery[MODEL]):
     def _make_query(self, context: QueryContext, alias=None) -> None:
         self.query = self.create_base_query_all_fields(alias)
         context.push(self.model, self.query._from[-1])
-        self._add_query_details(context)
+
+        self.__resolve_annotations(context=context)
+        self._add_query_details(context=context)
         context.pop()
-
-    def _add_query_details(self, context: QueryContext):
-        self._resolve_annotations(context=context)
-        self.resolve_filters(context=context)
-
-        if self._limit:
-            self.query._limit = self._limit
-
-        if self._offset:
-            self.query._offset = self._offset
-
-        if self._distinct:
-            self.query._distinct = True
-
-        self.resolve_ordering(context=context)
 
     async def _execute(self) -> List[MODEL]:
         executor = self._db.executor_class(

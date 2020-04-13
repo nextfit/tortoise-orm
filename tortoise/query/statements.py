@@ -23,7 +23,7 @@ class UpdateQuery(AwaitableStatement):
         self.query = self._db.query_class.update(table)
 
         context.push(self.model, table)
-        self.resolve_filters(context=context)
+        self._add_query_details(context=context)
 
         # Need to get executor to get correct column_map
         executor = self._db.executor_class(model=self.model, db=self._db)
@@ -70,7 +70,7 @@ class DeleteQuery(AwaitableStatement):
     def _make_query(self, context: QueryContext, alias=None) -> None:
         self.query = self.create_base_query(alias)
         context.push(self.model, self.query._from[-1])
-        self.resolve_filters(context=context)
+        self._add_query_details(context=context)
         self.query._delete_from = True
         context.pop()
 
@@ -87,7 +87,7 @@ class CountQuery(AwaitableStatement):
     def _make_query(self, context: QueryContext, alias=None) -> None:
         self.query = copy(self.model._meta.basequery)
         context.push(self.model, self.query._from[-1])
-        self.resolve_filters(context=context)
+        self._add_query_details(context=context)
         self.query._select_other(Count("*"))
         context.pop()
 

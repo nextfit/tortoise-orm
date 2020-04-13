@@ -59,7 +59,7 @@ class AwaitableStatement(Generic[MODEL]):
         self._copy(queryset)
         return queryset
 
-    def resolve_filters(self, context: QueryContext) -> None:
+    def __resolve_filters(self, context: QueryContext) -> None:
         modifier = QueryModifier()
         for node in self.q_objects:
             modifier &= node.resolve(context, self.annotations)
@@ -100,6 +100,9 @@ class AwaitableStatement(Generic[MODEL]):
 
     def create_base_query_all_fields(self, alias):
         return self.create_base_query(alias).select(*self.model._meta.db_columns)
+
+    def _add_query_details(self, context: QueryContext) -> None:
+        self.__resolve_filters(context)
 
     def _make_query(self, context: QueryContext, alias=None) -> None:
         raise NotImplementedError()  # pragma: nocoverage
@@ -203,10 +206,10 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
     def _parse_orderings(self, *orderings: str) -> "List[QueryOrdering]":
         return QueryOrdering.parse_orderings(self.model, self.annotations, *orderings)
 
-    def resolve_ordering(self, context: QueryContext) -> None:
-        self.__resolve_ordering(context, self._orderings, self.annotations)
+    def __resolve_orderings(self, context: QueryContext) -> None:
+        self.__resolve_orderings_deep(context, self._orderings, self.annotations)
 
-    def __resolve_ordering(self, context: QueryContext, orderings, annotations) -> None:
+    def __resolve_orderings_deep(self, context: QueryContext, orderings, annotations) -> None:
         table = context.top.table
         model = context.top.model
 
@@ -222,7 +225,7 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
                 relation_field = model._meta.fields_map[relation_field_name]
                 related_table = self._join_table_by_field(table, relation_field)
                 context.push(relation_field.remote_model, related_table)
-                self.__resolve_ordering(
+                self.__resolve_orderings_deep(
                     context,
                     [QueryOrdering(field_sub, ordering.direction)],
                     {},
@@ -246,6 +249,18 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
                     field = func(field_object, field)
 
                 self.query = self.query.orderby(field, order=ordering.direction)
+
+    def _add_query_details(self, context: QueryContext) -> None:
+        super()._add_query_details(context)
+        self.__resolve_orderings(context=context)
+        if self._limit:
+            self.query._limit = self._limit
+
+        if self._offset:
+            self.query._offset = self._offset
+
+        if self._distinct:
+            self.query._distinct = True
 
     async def __aiter__(self) -> AsyncIterator[Any]:
         for val in await self:
