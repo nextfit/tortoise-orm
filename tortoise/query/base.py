@@ -139,7 +139,7 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
 
         self._orderings: List[QueryOrdering] = \
             orderings if orderings else \
-            self._parse_orderings(*model._meta.ordering) if model._meta.ordering \
+            self.__parse_orderings(*model._meta.ordering) if model._meta.ordering \
             else []
 
         self._distinct: bool = distinct
@@ -147,13 +147,7 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
         self._offset: Optional[int] = offset
 
     def _copy(self, queryset) -> None:
-        queryset._db = self._db
-        queryset.capabilities = self.capabilities
-        queryset.model = self.model
-        queryset.query = self.query
-        queryset._joined_tables = copy(self._joined_tables)
-        queryset.q_objects = copy(self.q_objects)
-        queryset.annotations = copy(self.annotations)
+        super()._copy(queryset)
 
         queryset._orderings = copy(self._orderings)
         queryset._distinct = self._distinct
@@ -171,7 +165,7 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
         Supports ordering by related models too.
         """
         queryset = self._clone()
-        queryset._orderings = self._parse_orderings(*orderings)
+        queryset._orderings = self.__parse_orderings(*orderings)
         return queryset
 
     def limit(self, limit: int):
@@ -203,7 +197,7 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
         queryset._distinct = True
         return queryset
 
-    def _parse_orderings(self, *orderings: str) -> "List[QueryOrdering]":
+    def __parse_orderings(self, *orderings: str) -> "List[QueryOrdering]":
         return QueryOrdering.parse_orderings(self.model, self.annotations, *orderings)
 
     def __resolve_orderings(self, context: QueryContext) -> None:

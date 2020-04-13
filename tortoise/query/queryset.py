@@ -40,18 +40,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._get: bool = False
 
     def _copy(self, queryset) -> None:
-        queryset._db = self._db
-        queryset.capabilities = self.capabilities
-        queryset.model = self.model
-        queryset.query = self.query
-        queryset._joined_tables = copy(self._joined_tables)
-        queryset.q_objects = copy(self.q_objects)
-        queryset.annotations = copy(self.annotations)
-
-        queryset._orderings = copy(self._orderings)
-        queryset._distinct = self._distinct
-        queryset._limit = self._limit
-        queryset._offset = self._offset
+        super()._copy(queryset)
 
         queryset._prefetch_map = copy(self._prefetch_map)
         queryset._prefetch_queries = copy(self._prefetch_queries)

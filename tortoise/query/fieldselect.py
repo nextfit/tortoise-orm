@@ -165,7 +165,7 @@ class ValuesListQuery(FieldSelectQuery):
         _, result = await self._db.execute_query(str(self.query))
         columns = [
             (key, self.resolve_to_python_value(self.model, name))
-            for key, name in sorted(list(self.fields_for_select.items()))
+            for key, name in sorted(self.fields_for_select.items())
         ]
         if self.flat:
             func = columns[0][1]
