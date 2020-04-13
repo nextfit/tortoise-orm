@@ -62,18 +62,18 @@ class MetaInfo:
 
     def __init__(self, meta) -> None:
         self.abstract: bool = getattr(meta, "abstract", False)
-        self.db_table: str = getattr(meta, "db_table", "")
         self.ordering: List[Tuple[str, Order]] = getattr(meta, "ordering", None)
         self.app: Optional[str] = getattr(meta, "app", None)
         self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
         self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")
         self.table_description: str = getattr(meta, "table_description", "")
 
+        self.fetch_fields: Set[str] = set()
         self.default_connection: Optional[str] = None
         self._inited: bool = False
 
+        self.db_table: str
         self.db_columns: Set[str]
-        self.fetch_fields: Set[str] = set()
         self.fields_map: Dict[str, Field]
         self.field_to_db_column_name_map: Dict[str, str]
         self.db_column_to_field_name_map: Dict[str, str]
@@ -265,6 +265,8 @@ class ModelMeta(type):
             meta.abstract = True
 
         new_class: "Model" = super().__new__(mcs, name, bases, attrs)  # type: ignore
+
+        meta.db_table = getattr(meta_class, "db_table", new_class.__name__.lower())
         for field in meta.fields_map.values():
             field.model = new_class
 
