@@ -1,11 +1,12 @@
 
 from typing import TypeVar
 from pypika import Order
-from pypika.terms import Node
+from pypika.terms import Node, Term
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
 from tortoise.exceptions import FieldError
+from tortoise.expressions import F
 
 MODEL = TypeVar("MODEL", bound="Model")
 
@@ -16,9 +17,10 @@ class QueryOrdering:
 
 
 class QueryOrderingField(QueryOrdering):
-    def __init__(self, field_name: str, direction: Order):
+    def __init__(self, field_name: str, direction: Order, check_annotations=True):
         self.field_name = field_name
         self.direction = direction
+        self.check_annotations = check_annotations
 
     def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext):
         table = context.top.table
@@ -33,11 +35,12 @@ class QueryOrderingField(QueryOrdering):
         if relation_field_name in model._meta.fetch_fields:
             relation_field = model._meta.fields_map[relation_field_name]
             related_table = queryset._join_table_by_field(table, relation_field)
+
             context.push(relation_field.remote_model, related_table)
-            QueryOrderingField(field_sub, self.direction).resolve_into(queryset, context)
+            QueryOrderingField(field_sub, self.direction, False).resolve_into(queryset, context)
             context.pop()
 
-        elif self.field_name in queryset.annotations:
+        elif self.check_annotations and self.field_name in queryset.annotations:
             annotation = queryset.annotations[self.field_name]
             annotation_info = annotation.resolve(QueryContext().push(queryset.model, queryset.model._meta.basetable))
             queryset.query = queryset.query.orderby(annotation_info.field, order=self.direction)
@@ -60,7 +63,7 @@ class QueryOrderingField(QueryOrdering):
 #
 
 
-class OrderingMethod(Node):
+class OrderingNode(Node):
     alias = None
 
     def __str__(self):
@@ -73,21 +76,17 @@ class OrderingMethod(Node):
         raise NotImplementedError()
 
 
-class RandomOrderingMethod(OrderingMethod):
+class RandomOrdering(OrderingNode):
     def get_sql(self, **kwargs):
         return "RANDOM()"
 
 
-class QueryOrderingMethod(QueryOrdering):
-    def __init__(self, method: OrderingMethod):
-        self.method = method
+class QueryOrderingNode(QueryOrdering):
+    def __init__(self, node: Node):
+        self.node = node
 
     def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext):
-        queryset.query = queryset.query.orderby(self.method)
+        if isinstance(self.node, Term):
+            self.node = F.resolve(self.node, context)
 
-
-class RandomOrdering(QueryOrderingMethod):
-    random_method = RandomOrderingMethod()
-
-    def __init__(self):
-        super().__init__(method=self.random_method)
+        queryset.query = queryset.query.orderby(self.node)

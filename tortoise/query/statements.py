@@ -2,7 +2,7 @@
 from copy import copy
 
 from pypika.functions import Count
-from pypika.terms import ArithmeticExpression
+from pypika.terms import Term
 
 from tortoise.context import QueryContext
 from tortoise.exceptions import IntegrityError, FieldError
@@ -47,8 +47,8 @@ class UpdateQuery(AwaitableStatement):
                 except KeyError:
                     raise FieldError(f"Field {key} is virtual and can not be updated")
 
-                if isinstance(value, (F, ArithmeticExpression)):
-                    value = F.resolve(self.model._meta.field_to_db_column_name_map, value)
+                if isinstance(value, Term):
+                    value = F.resolve(value, context)
 
                 else:
                     value = executor.column_map[key](value, None)  # type: ignore

@@ -4,6 +4,7 @@ from typing import Generic, Type, List, TYPE_CHECKING, Dict, Generator, Any, Opt
 
 from pypika import Table, JoinType, EmptyCriterion, Order
 from pypika.queries import QueryBuilder
+from pypika.terms import Node
 
 from tortoise import BaseDBAsyncClient
 from tortoise.backends.base.client import Capabilities
@@ -13,7 +14,7 @@ from tortoise.exceptions import FieldError, ParamsError
 from tortoise.filters import EmptyCriterion as TortoiseEmptyCriterion, QueryModifier
 from tortoise.filters.q import Q
 from tortoise.functions import Annotation
-from tortoise.ordering import QueryOrdering, QueryOrderingField
+from tortoise.ordering import QueryOrdering, QueryOrderingField, QueryOrderingNode
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -137,10 +138,13 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
 
         super().__init__(model, db, q_objects, annotations)
 
-        self._orderings: List[QueryOrdering] = \
-            orderings if orderings else \
-            self.__parse_orderings(*model._meta.ordering) if model._meta.ordering \
-            else []
+        self._orderings: List[QueryOrdering]
+        if orderings:
+            self._orderings = orderings
+        elif model._meta.ordering:
+            self.__parse_orderings(*model._meta.ordering)
+        else:
+            self._orderings = []
 
         self._distinct: bool = distinct
         self._limit: Optional[int] = limit
@@ -154,7 +158,7 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
         queryset._limit = self._limit
         queryset._offset = self._offset
 
-    def order_by(self, *orderings: Union[str, QueryOrdering]):
+    def order_by(self, *orderings: Union[str, Node]):
         """
         Accept args to filter by in format like this:
 
@@ -165,7 +169,7 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
         Supports ordering by related models too.
         """
         queryset = self._clone()
-        queryset._orderings = self.__parse_orderings(*orderings)
+        queryset.__parse_orderings(*orderings)
         return queryset
 
     def limit(self, limit: int):
@@ -197,13 +201,13 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
         queryset._distinct = True
         return queryset
 
-    def __parse_orderings(self, *orderings: Union[str, QueryOrdering]) -> "List[QueryOrdering]":
+    def __parse_orderings(self, *orderings: Union[str, Node]) -> None:
         model = self.model
 
-        output = []
+        parsed_orders = []
         for ordering in orderings:
-            if isinstance(ordering, QueryOrdering):
-                output.append(ordering)
+            if isinstance(ordering, Node):
+                parsed_orders.append(QueryOrderingNode(ordering))
 
             elif isinstance(ordering, str):
                 if ordering[0] == "-":
@@ -216,12 +220,12 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
                 if not (field_name.split(LOOKUP_SEP)[0] in model._meta.fields_map or field_name in self.annotations):
                     raise FieldError(f"Unknown field {field_name} for model {model.__name__}")
 
-                output.append(QueryOrderingField(field_name, order_type))
+                parsed_orders.append(QueryOrderingField(field_name, order_type))
 
             else:
                 raise ParamsError("Unknown ordering type: {} at {}".format(type(ordering), ordering))
 
-        return output
+        self._orderings = parsed_orders
 
     def __resolve_orderings(self, context: QueryContext) -> None:
         for ordering in self._orderings:
