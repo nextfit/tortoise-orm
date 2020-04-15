@@ -1,19 +1,19 @@
 
 from copy import copy
-from typing import Generic, Type, List, TYPE_CHECKING, Dict, Generator, Any, Optional, AsyncIterator, TypeVar
+from typing import Generic, Type, List, TYPE_CHECKING, Dict, Generator, Any, Optional, AsyncIterator, TypeVar, Union
 
-from pypika import Table, JoinType, EmptyCriterion
+from pypika import Table, JoinType, EmptyCriterion, Order
 from pypika.queries import QueryBuilder
 
 from tortoise import BaseDBAsyncClient
 from tortoise.backends.base.client import Capabilities
 from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
-from tortoise.exceptions import FieldError
+from tortoise.exceptions import FieldError, ParamsError
 from tortoise.filters import EmptyCriterion as TortoiseEmptyCriterion, QueryModifier
 from tortoise.filters.q import Q
 from tortoise.functions import Annotation
-from tortoise.ordering import QueryOrdering
+from tortoise.ordering import QueryOrdering, QueryOrderingField
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -154,7 +154,7 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
         queryset._limit = self._limit
         queryset._offset = self._offset
 
-    def order_by(self, *orderings: str):
+    def order_by(self, *orderings: Union[str, QueryOrdering]):
         """
         Accept args to filter by in format like this:
 
@@ -197,52 +197,35 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
         queryset._distinct = True
         return queryset
 
-    def __parse_orderings(self, *orderings: str) -> "List[QueryOrdering]":
-        return QueryOrdering.parse_orderings(self.model, self.annotations, *orderings)
+    def __parse_orderings(self, *orderings: Union[str, QueryOrdering]) -> "List[QueryOrdering]":
+        model = self.model
 
-    def __resolve_orderings(self, context: QueryContext) -> None:
-        self.__resolve_orderings_deep(context, self._orderings, self.annotations)
-
-    def __resolve_orderings_deep(self, context: QueryContext, orderings, annotations) -> None:
-        table = context.top.table
-        model = context.top.model
-
+        output = []
         for ordering in orderings:
-            field_name = ordering.field_name
-            if field_name in model._meta.fetch_fields:
-                raise FieldError(
-                    "Filtering by relation is not possible. Filter by nested field of related model"
-                )
+            if isinstance(ordering, QueryOrdering):
+                output.append(ordering)
 
-            relation_field_name, _, field_sub = field_name.partition(LOOKUP_SEP)
-            if relation_field_name in model._meta.fetch_fields:
-                relation_field = model._meta.fields_map[relation_field_name]
-                related_table = self._join_table_by_field(table, relation_field)
-                context.push(relation_field.remote_model, related_table)
-                self.__resolve_orderings_deep(
-                    context,
-                    [QueryOrdering(field_sub, ordering.direction)],
-                    {},
-                )
-                context.pop()
+            elif isinstance(ordering, str):
+                if ordering[0] == "-":
+                    field_name = ordering[1:]
+                    order_type = Order.desc
+                else:
+                    field_name = ordering
+                    order_type = Order.asc
 
-            elif field_name in annotations:
-                annotation = annotations[field_name]
-                annotation_info = annotation.resolve(QueryContext().push(self.model, self.model._meta.basetable))
-                self.query = self.query.orderby(annotation_info.field, order=ordering.direction)
+                if not (field_name.split(LOOKUP_SEP)[0] in model._meta.fields_map or field_name in self.annotations):
+                    raise FieldError(f"Unknown field {field_name} for model {model.__name__}")
+
+                output.append(QueryOrderingField(field_name, order_type))
 
             else:
-                field_object = model._meta.fields_map.get(field_name)
-                if not field_object:
-                    raise FieldError(f"Unknown field {field_name} for model {model.__name__}")
-                field_name = field_object.db_column or field_name
-                field = table[field_name]
+                raise ParamsError("Unknown ordering type: {} at {}".format(type(ordering), ordering))
 
-                func = field_object.get_for_dialect(model._meta.db.capabilities.dialect, "function_cast")
-                if func:
-                    field = func(field_object, field)
+        return output
 
-                self.query = self.query.orderby(field, order=ordering.direction)
+    def __resolve_orderings(self, context: QueryContext) -> None:
+        for ordering in self._orderings:
+            ordering.resolve_into(self, context=context)
 
     def _add_query_details(self, context: QueryContext) -> None:
         super()._add_query_details(context)
