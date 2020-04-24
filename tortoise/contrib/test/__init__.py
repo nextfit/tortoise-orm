@@ -138,7 +138,7 @@ def env_initializer() -> None:  # pragma: nocoverage
     modules = str(_os.environ.get("TORTOISE_TEST_MODULES", "tests.testmodels")).split(",")
     db_url = _os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
     if not modules:  # pragma: nocoverage
-        raise Exception("TORTOISE_TEST_MODULES envvar not defined")
+        raise Exception("TORTOISE_TEST_MODULES env var not defined")
     initializer(modules, db_url=db_url)
 
 

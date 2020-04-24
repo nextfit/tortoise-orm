@@ -38,7 +38,7 @@ class UpdateQuery(AwaitableStatement):
                 raise IntegrityError(f"Field {key} is primary key and can not be updated")
 
             if isinstance(field_object, (ForeignKey, OneToOneField)):
-                fk_field: str = field_object.db_column  # type: ignore
+                fk_field: str = field_object.id_field_name()
                 column_name = self.model._meta.fields_map[fk_field].db_column
                 value = executor.column_map[fk_field](value.pk, None)
             else:
