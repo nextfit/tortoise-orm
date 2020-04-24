@@ -314,7 +314,7 @@ class Model(metaclass=ModelMeta):
                             f"You should first call .save() on {value} before referring to it"
                         )
                     setattr(self, key, value)
-                    passed_fields.add(field_object.id_field_name())
+                    passed_fields.add(field_object.id_field_name)
 
                 elif key in meta.field_to_db_column_name_map:
                     if field_object.generated:

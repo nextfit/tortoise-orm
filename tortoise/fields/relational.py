@@ -419,8 +419,14 @@ class ForeignKey(RelationField):
         **kwargs,
     ) -> None:
 
-        super().__init__(remote_model=None, related_name=related_name,
-            primary_key=primary_key, unique=unique, **kwargs)
+        super().__init__(
+            remote_model=None,
+            related_name=related_name,
+            primary_key=primary_key,
+            unique=unique,
+            **kwargs)
+
+        self.id_field_name: str
 
         if primary_key and not unique:
             raise ConfigurationError(f"{self.__class__.__name__} cannot be a primary key if not unique")
@@ -436,9 +442,6 @@ class ForeignKey(RelationField):
             raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
 
         self.on_delete = on_delete
-
-    def id_field_name(self) -> str:
-        return f"{self.model_field_name}_id"
 
     @staticmethod
     def _fk_setter(self, value, _key, id_field_name):
@@ -457,24 +460,22 @@ class ForeignKey(RelationField):
 
     def attribute_property(self):
         _key = f"_{self.model_field_name}"
-        id_field_name = self.id_field_name()
         return property(
             partial(
                 ForeignKey._fk_getter,
                 _key=_key,
                 ftype=self.remote_model,
-                id_field_name=id_field_name,
+                id_field_name=self.id_field_name,
             ),
-            partial(ForeignKey._fk_setter, _key=_key, id_field_name=id_field_name),
-            partial(ForeignKey._fk_setter, value=None, _key=_key, id_field_name=id_field_name),
+            partial(ForeignKey._fk_setter, _key=_key, id_field_name=self.id_field_name),
+            partial(ForeignKey._fk_setter, value=None, _key=_key, id_field_name=self.id_field_name),
         )
 
     async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
         related_objects_for_fetch = set()
-        id_field_name = self.id_field_name()
         for instance in instance_list:
-            if getattr(instance, id_field_name):
-                related_objects_for_fetch.add(getattr(instance, id_field_name))
+            if getattr(instance, self.id_field_name):
+                related_objects_for_fetch.add(getattr(instance, self.id_field_name))
             else:
                 setattr(instance, self.model_field_name, None)
 
@@ -483,7 +484,7 @@ class ForeignKey(RelationField):
             related_object_map = {obj.pk: obj for obj in related_object_list}
             for instance in instance_list:
                 setattr(instance, self.model_field_name,
-                    related_object_map.get(getattr(instance, id_field_name)))
+                    related_object_map.get(getattr(instance, self.id_field_name)))
 
         return instance_list
 
@@ -491,25 +492,26 @@ class ForeignKey(RelationField):
         from tortoise import Tortoise
         remote_model = Tortoise.get_model(self.model_name)
 
-        key_field_name = self.id_field_name()
-        key_field_object = deepcopy(remote_model._meta.pk)
-        key_field_object.primary_key = self.primary_key
-        key_field_object.unique = self.unique
-        key_field_object.db_index = self.db_index
-        key_field_object.default = self.default
-        key_field_object.null = self.null
-        key_field_object.generated = self.generated
-        key_field_object.auto_created = True
-        key_field_object.reference = self
-        key_field_object.description = self.description
-        key_field_object.db_column = self.db_column if self.db_column else key_field_name
+        self.id_field_name = f"{self.model_field_name}_id"
 
-        self.db_column = key_field_object.db_column
-        self.model._meta.add_field(key_field_name, key_field_object)
+        id_field_object = deepcopy(remote_model._meta.pk)
+        id_field_object.primary_key = self.primary_key
+        id_field_object.unique = self.unique
+        id_field_object.db_index = self.db_index
+        id_field_object.default = self.default
+        id_field_object.null = self.null
+        id_field_object.generated = self.generated
+        id_field_object.auto_created = True
+        id_field_object.reference = self
+        id_field_object.description = self.description
+        id_field_object.db_column = self.db_column if self.db_column else self.id_field_name
+
+        self.db_column = id_field_object.db_column
+        self.model._meta.add_field(self.id_field_name, id_field_object)
         self.remote_model = remote_model
 
         if self.primary_key:
-            self.model._meta.pk_attr = key_field_name
+            self.model._meta.pk_attr = self.id_field_name
 
         backward_relation_name = self.related_name
         if backward_relation_name is not False:
@@ -524,7 +526,7 @@ class ForeignKey(RelationField):
                 )
 
             backward_relation_field = self.backward_relation_class(
-                self.model, key_field_name, True, self.description)
+                self.model, self.id_field_name, True, self.description)
             remote_model._meta.add_field(backward_relation_name, backward_relation_field)
 
     def get_joins(self, table: Table) -> List[Tuple[Table, Criterion]]:
@@ -536,7 +538,7 @@ class ForeignKey(RelationField):
 
     def describe(self, serializable: bool = True) -> dict:
         desc = super().describe(serializable)
-        desc["raw_field"] = self.id_field_name()
+        desc["raw_field"] = self.id_field_name
         return desc
 
 

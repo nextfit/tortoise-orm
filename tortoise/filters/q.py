@@ -110,7 +110,7 @@ class Q:
         if field_name in model._meta.fields_map:
             field = model._meta.fields_map[field_name]
             if isinstance(field, (ForeignKey, OneToOneField)):
-                return field.id_field_name()
+                return field.id_field_name
 
             return key
 
