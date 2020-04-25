@@ -27,7 +27,11 @@ class QueryOrderingField(QueryOrdering):
         model = context.top.model
 
         relation_field_name, _, field_sub = self.field_name.partition(LOOKUP_SEP)
-        if relation_field_name in model._meta.fetch_fields:
+        if self.check_annotations and self.field_name in queryset.annotations:
+            annotation = queryset.annotations[self.field_name]
+            queryset.query = queryset.query.orderby(annotation.field, order=self.direction)
+
+        elif relation_field_name in model._meta.fetch_fields:
             if not field_sub:
                 raise FieldError(
                     "Filtering by relation is not possible. Filter by nested field of related model"
@@ -39,10 +43,6 @@ class QueryOrderingField(QueryOrdering):
             context.push(relation_field.remote_model, related_table)
             QueryOrderingField(field_sub, self.direction, False).resolve_into(queryset, context)
             context.pop()
-
-        elif self.check_annotations and self.field_name in queryset.annotations:
-            annotation = queryset.annotations[self.field_name]
-            queryset.query = queryset.query.orderby(annotation.field, order=self.direction)
 
         else:
             if field_sub:

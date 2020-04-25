@@ -1,4 +1,4 @@
-
+import itertools
 from copy import copy
 from typing import List, Dict, TypeVar, Generator, Any, Type, Union, Optional, Set
 
@@ -6,9 +6,9 @@ from typing_extensions import Protocol
 
 from tortoise import BaseDBAsyncClient
 from tortoise.context import QueryContext
-from tortoise.exceptions import MultipleObjectsReturned, DoesNotExist, FieldError
+from tortoise.exceptions import MultipleObjectsReturned, DoesNotExist, FieldError, ParamsError
 from tortoise.filters.q import Q
-from tortoise.functions import Annotation
+from tortoise.functions import Annotation, Function
 from tortoise.query.fieldselect import ValuesListQuery, ValuesQuery
 from tortoise.query.statements import DeleteQuery, UpdateQuery, CountQuery
 from tortoise.query.prefetch import Prefetch
@@ -83,17 +83,36 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         return self._filter_or_exclude(negate=True, *args, **kwargs)
 
-    def annotate(self, **kwargs) -> "QuerySet[MODEL]":
+    def annotate(self, *args, **kwargs) -> "QuerySet[MODEL]":
         """
         Annotate result with aggregation or function result.
         """
-        queryset = self._clone()
-        for key, annotation in kwargs.items():
-            if not isinstance(annotation, Annotation):
-                raise TypeError("value is expected to be Annotation instance")
-            queryset.annotations[key] = annotation
 
+        for annotation in itertools.chain(args, kwargs.values()):
+            if not isinstance(annotation, Annotation):
+                raise TypeError("{} is expected to be Annotation instance".format(annotation))
+
+        args_dict = {arg.default_name(): arg for arg in args}
+        duplicate_keys = args_dict.keys() & kwargs.keys()
+        if duplicate_keys:
+            raise ParamsError("Duplicate annotations: {}".format(duplicate_keys))
+
+        args_dict.update(kwargs)
+        duplicate_keys = args_dict.keys() & self.annotations
+        if duplicate_keys:
+            raise ParamsError("Duplicate annotations: {}".format(duplicate_keys))
+
+        queryset = self._clone()
+        queryset.annotations.update(args_dict)
         return queryset
+
+    def aggregate(self, *args, **kwargs) -> ValuesQuery:
+        queryset = self.annotate(*args, **kwargs)
+        for annotation in queryset.annotations.values():
+            if isinstance(annotation, Function):
+                annotation.add_group_by = False
+
+        return queryset.values(*queryset.annotations.keys())
 
     def values_list(self, *fields_: str, flat: bool = False) -> ValuesListQuery:
         """
@@ -141,6 +160,7 @@ class QuerySet(AwaitableQuery[MODEL]):
                 if return_as in fields_for_select:
                     raise FieldError(f"Duplicate key {return_as}")
                 fields_for_select[return_as] = field
+
         else:
             fields_for_select = {
                 field: field

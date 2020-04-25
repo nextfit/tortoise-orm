@@ -3,11 +3,11 @@ from typing import TypeVar
 
 from pypika import functions
 from pypika.terms import AggregateFunction
-from pypika.terms import Function as BaseFunction
+from pypika.terms import Function as PyPikaFunction
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
-from tortoise.exceptions import FieldError, BaseORMException
+from tortoise.exceptions import FieldError, BaseORMException, ParamsError
 
 MODEL = TypeVar("MODEL", bound="Model")
 
@@ -20,6 +20,9 @@ class Annotation:
 
     def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, alias: str):
         raise NotImplementedError()
+
+    def default_name(self):
+        raise ParamsError("No obvious default name exists for this annotation")
 
     @property
     def field(self):
@@ -59,13 +62,16 @@ class OuterRef:
 class Function(Annotation):
     __slots__ = ("field_name", "default_values", "add_group_by")
 
-    database_func = BaseFunction
+    database_func = PyPikaFunction
 
     def __init__(self, field_name, *default_values, add_group_by=True) -> None:
         super().__init__()
         self.field_name = field_name
         self.default_values = default_values
         self.add_group_by = add_group_by
+
+    def default_name(self):
+        return "{}__{}".format(self.field_name, self.database_func(None).name.lower())
 
     def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, alias: str):
         model = context.top.model
