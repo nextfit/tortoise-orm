@@ -205,15 +205,10 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         return queryset
 
-    def __resolve_annotations(self, context: QueryContext) -> None:
-        for key, annotation in self.annotations.items():
-            annotation.resolve_into(self, context=context, alias=key)
-
     def _make_query(self, context: QueryContext, alias=None) -> None:
         self.query = self.create_base_query_all_fields(alias)
         context.push(self.model, self.query._from[-1])
 
-        self.__resolve_annotations(context=context)
         self._add_query_details(context=context)
         context.pop()
 

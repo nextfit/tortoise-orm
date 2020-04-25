@@ -93,6 +93,10 @@ class AwaitableStatement(Generic[MODEL]):
         self.query._wheres = modifier.where_criterion
         self.query._havings = modifier.having_criterion
 
+    def __resolve_annotations(self, context: QueryContext) -> None:
+        for key, annotation in self.annotations.items():
+            annotation.resolve_into(self, context=context, alias=key)
+
     def _join_table_by_field(self, table, relation_field) -> Table:
         """
         :param table:
@@ -119,6 +123,7 @@ class AwaitableStatement(Generic[MODEL]):
         return self.create_base_query(alias).select(*self.model._meta.db_columns)
 
     def _add_query_details(self, context: QueryContext) -> None:
+        self.__resolve_annotations(context=context)
         self.__resolve_filters(context)
 
     def _make_query(self, context: QueryContext, alias=None) -> None:

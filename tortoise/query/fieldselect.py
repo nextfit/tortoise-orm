@@ -74,7 +74,7 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
             )
 
         if field_name in self.annotations:
-            self.annotations[field_name].resolve_into(self, context, return_as)
+            self.query._select_other(self.annotations[field_name].field.as_(return_as))
             return
 
         base_field_name, _, sub_field = field_name.partition(LOOKUP_SEP)
@@ -126,11 +126,10 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
     def _make_query(self, context: QueryContext, alias=None) -> None:
         self.query = self.create_base_query(alias)
         context.push(self.model, self.query._from[-1])
-
+        self._add_query_details(context=context)
         for return_as, field_name in self.fields_for_select.items():
             self.add_field_to_select_query(context, field_name, return_as)
 
-        self._add_query_details(context=context)
         context.pop()
 
 
