@@ -61,12 +61,3 @@ class TestAggregation(test.TestCase):
         ##############
         with self.assertRaisesRegex(FieldError, "name is not a relation for model Event"):
             await Event.all().annotate(tournament_test_id=Sum("name__id")).first()
-
-        ##############
-        event_multiple = (
-            await Event.all().annotate(min_team_id=Min("participants__id"), tournament_sum=Sum("tournament__id"))
-        )
-        self.assertEqual(event_multiple[0].tournament_sum, event_multiple[0].tournament_id)
-        self.assertEqual(event_multiple[1].tournament_sum, event_multiple[1].tournament_id)
-        self.assertIsNone(event_multiple[0].min_team_id)
-        self.assertEqual(event_multiple[1].min_team_id, participants[0].id)
