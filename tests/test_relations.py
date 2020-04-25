@@ -102,7 +102,7 @@ class TestRelations(test.TestCase):
         team = await Team.create(name="1")
         team_second = await Team.create(name="2")
         await event.participants.add(team, team_second)
-        fetched_event = await Event.first().prefetch_related("participants")
+        fetched_event = await Event.all().prefetch_related("participants").first()
         self.assertEqual(len(fetched_event.participants), 2)
 
     async def test_m2m_add_already_added(self):
@@ -112,7 +112,7 @@ class TestRelations(test.TestCase):
         team_second = await Team.create(name="2")
         await event.participants.add(team, team_second)
         await event.participants.add(team, team_second)
-        fetched_event = await Event.first().prefetch_related("participants")
+        fetched_event = await Event.all().prefetch_related("participants").first()
         self.assertEqual(len(fetched_event.participants), 2)
 
     async def test_m2m_clear(self):
@@ -122,7 +122,7 @@ class TestRelations(test.TestCase):
         team_second = await Team.create(name="2")
         await event.participants.add(team, team_second)
         await event.participants.clear()
-        fetched_event = await Event.first().prefetch_related("participants")
+        fetched_event = await Event.all().prefetch_related("participants").first()
         self.assertEqual(len(fetched_event.participants), 0)
 
     async def test_m2m_remove(self):
@@ -132,7 +132,7 @@ class TestRelations(test.TestCase):
         team_second = await Team.create(name="2")
         await event.participants.add(team, team_second)
         await event.participants.remove(team)
-        fetched_event = await Event.first().prefetch_related("participants")
+        fetched_event = await Event.all().prefetch_related("participants").first()
         self.assertEqual(len(fetched_event.participants), 1)
 
     async def test_o2o_lazy(self):
@@ -150,7 +150,7 @@ class TestRelations(test.TestCase):
         team_second = await Team.create(name="2")
         await event.participants.add(team, team_second)
         await event.participants.remove(team, team_second)
-        fetched_event = await Event.first().prefetch_related("participants")
+        fetched_event = await Event.all().prefetch_related("participants").first()
         self.assertEqual(len(fetched_event.participants), 0)
 
     async def test_self_ref(self):

@@ -1,7 +1,7 @@
 from tests import testmodels
 from tortoise.contrib import test
 from tortoise.exceptions import IntegrityError, NoValuesFetched, OperationalError
-from tortoise.query import QuerySet
+from tortoise.query.single import SingleQuerySet
 
 
 class TestForeignKeyField(test.TestCase):
@@ -32,7 +32,7 @@ class TestForeignKeyField(test.TestCase):
         tour = await testmodels.Tournament.create(name="Team1")
         rel = await testmodels.MinRelation.create(tournament=tour)
         rel = await testmodels.MinRelation.get(id=rel.id)
-        self.assertIsInstance(rel.tournament, QuerySet)
+        self.assertIsInstance(rel.tournament, SingleQuerySet)
 
     async def test_minimal__by_name__re_awaited(self):
         tour = await testmodels.Tournament.create(name="Team1")

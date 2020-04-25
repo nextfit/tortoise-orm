@@ -1,34 +1,23 @@
+
 import itertools
 from copy import copy
-from typing import List, Dict, TypeVar, Generator, Any, Type, Union, Optional, Set
+from typing import List, Dict, Type, Union, Set
 
-from typing_extensions import Protocol
-
-from tortoise import BaseDBAsyncClient
 from tortoise.context import QueryContext
-from tortoise.exceptions import MultipleObjectsReturned, DoesNotExist, FieldError, ParamsError
+from tortoise.exceptions import ParamsError, FieldError
 from tortoise.filters.q import Q
 from tortoise.functions import Annotation, Function
 from tortoise.query.fieldselect import ValuesListQuery, ValuesQuery
 from tortoise.query.statements import DeleteQuery, UpdateQuery, CountQuery
 from tortoise.query.prefetch import Prefetch
 from tortoise.query.base import AwaitableQuery, MODEL
-
-T_co = TypeVar("T_co", covariant=True)
-
-
-class QuerySetSingle(Protocol[T_co]):
-    # pylint: disable=W0104
-    def __await__(self) -> Generator[Any, None, T_co]:
-        pass  # pragma: nocoverage
+from tortoise.query.single import GetQuerySet, FirstQuerySet
 
 
 class QuerySet(AwaitableQuery[MODEL]):
     __slots__ = (
         "_prefetch_map",
         "_prefetch_queries",
-        "_single",
-        "_get",
     )
 
     def __init__(self, model: Type[MODEL]) -> None:
@@ -36,34 +25,12 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         self._prefetch_map: Dict[str, Set[str]] = {}
         self._prefetch_queries: Dict[str, QuerySet] = {}
-        self._single: bool = False
-        self._get: bool = False
 
     def _copy(self, queryset) -> None:
         super()._copy(queryset)
 
         queryset._prefetch_map = copy(self._prefetch_map)
         queryset._prefetch_queries = copy(self._prefetch_queries)
-        queryset._single = self._single
-        queryset._get = self._get
-
-    def _filter_or_exclude(self, *args, negate: bool, **kwargs):
-        queryset = self._clone()
-        for arg in args:
-            if not isinstance(arg, Q):
-                raise TypeError("expected Q objects as args")
-            if negate:
-                queryset.q_objects.append(~arg)
-            else:
-                queryset.q_objects.append(arg)
-
-        for key, value in kwargs.items():
-            if negate:
-                queryset.q_objects.append(~Q(**{key: value}))
-            else:
-                queryset.q_objects.append(Q(**{key: value}))
-
-        return queryset
 
     def filter(self, *args, **kwargs) -> "QuerySet[MODEL]":
         """
@@ -106,13 +73,13 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset.annotations.update(args_dict)
         return queryset
 
-    def aggregate(self, *args, **kwargs) -> ValuesQuery:
+    def aggregate(self, *args, **kwargs) -> FirstQuerySet:
         queryset = self.annotate(*args, **kwargs)
         for annotation in queryset.annotations.values():
             if isinstance(annotation, Function):
                 annotation.add_group_by = False
 
-        return queryset.values(*queryset.annotations.keys())
+        return queryset.values(*queryset.annotations.keys()).first()
 
     def values_list(self, *fields_: str, flat: bool = False) -> ValuesListQuery:
         """
@@ -225,33 +192,6 @@ class QuerySet(AwaitableQuery[MODEL]):
         from tortoise.query.raw import RawQuerySet
         return RawQuerySet(self, query)
 
-    def first(self) -> QuerySetSingle[Optional[MODEL]]:
-        """
-        Limit queryset to one object and return one object instead of list.
-        """
-        queryset = self._clone()
-        queryset._limit = 1
-        queryset._single = True
-        return queryset  # type: ignore
-
-    def get(self, *args, **kwargs) -> QuerySetSingle[MODEL]:
-        """
-        Fetch exactly one object matching the parameters.
-        """
-        queryset = self.filter(*args, **kwargs)
-        queryset._limit = 2
-        queryset._get = True
-        return queryset  # type: ignore
-
-    def get_or_none(self, *args, **kwargs) -> QuerySetSingle[MODEL]:
-        """
-        Fetch exactly one object matching the parameters.
-        """
-        queryset = self.filter(*args, **kwargs)
-        queryset._limit = 1
-        queryset._single = True
-        return queryset  # type: ignore
-
     def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySet[MODEL]":
         """
         Like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
@@ -263,38 +203,6 @@ class QuerySet(AwaitableQuery[MODEL]):
 
             relation.resolve_for_queryset(queryset)
 
-        return queryset
-
-    async def explain(self) -> Any:
-        """Fetch and return information about the query execution plan.
-
-        This is done by executing an ``EXPLAIN`` query whose exact prefix depends
-        on the database backend, as documented below.
-
-        - PostgreSQL: ``EXPLAIN (FORMAT JSON, VERBOSE) ...``
-        - SQLite: ``EXPLAIN QUERY PLAN ...``
-        - MySQL: ``EXPLAIN FORMAT=JSON ...``
-
-        .. note::
-            This is only meant to be used in an interactive environment for debugging
-            and query optimization.
-            **The output format may (and will) vary greatly depending on the database backend.**
-        """
-        if self._db is None:
-            self._db = self.model._meta.db  # type: ignore
-
-        self._make_query(context=QueryContext())
-        return await self._db\
-            .executor_class(model=self.model, db=self._db)\
-            .execute_explain(self.query)
-
-    def using_db(self, _db: BaseDBAsyncClient) -> "QuerySet[MODEL]":
-        """
-        Executes query in provided db client.
-        Useful for transactions workaround.
-        """
-        queryset = self._clone()
-        queryset._db = _db
         return queryset
 
     def __resolve_annotations(self, context: QueryContext) -> None:
@@ -317,19 +225,4 @@ class QuerySet(AwaitableQuery[MODEL]):
             prefetch_queries=self._prefetch_queries,
         )
 
-        instance_list = await executor.execute_select(self.query, custom_fields=list(self.annotations.keys()))
-
-        if self._get:
-            if len(instance_list) == 1:
-                return instance_list[0]
-            if not instance_list:
-                raise DoesNotExist("Object does not exist")
-            raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
-
-        if self._single:
-            if not instance_list:
-                return None  # type: ignore
-            return instance_list[0]
-
-        return instance_list
-
+        return await executor.execute_select(self.query, custom_fields=list(self.annotations.keys()))

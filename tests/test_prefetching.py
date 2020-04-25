@@ -26,7 +26,7 @@ class TestPrefetching(test.TestCase):
             .prefetch_related(Prefetch("events", queryset=Event.filter(name="First")))
             .first()
         )
-        tournament = await Tournament.first().prefetch_related("events")
+        tournament = await Tournament.all().prefetch_related("events").first()
         self.assertEqual(len(tournament_with_filtered.events), 1)
         self.assertEqual(len(tournament.events), 2)
 
@@ -100,14 +100,14 @@ class TestPrefetching(test.TestCase):
     async def test_prefetch_direct_relation(self):
         tournament = await Tournament.create(name="tournament")
         await Event.create(name="First", tournament=tournament)
-        event = await Event.first().prefetch_related("tournament")
+        event = await Event.all().prefetch_related("tournament").first()
         self.assertEqual(event.tournament.id, tournament.id)
 
     async def test_prefetch_bad_key(self):
         tournament = await Tournament.create(name="tournament")
         await Event.create(name="First", tournament=tournament)
         with self.assertRaisesRegex(FieldError, "Relation tour1nament for models.Event not found"):
-            await Event.first().prefetch_related("tour1nament")
+            await Event.all().prefetch_related("tour1nament").first()
 
     async def test_prefetch_m2m_filter(self):
         tournament = await Tournament.create(name="tournament")
@@ -115,8 +115,9 @@ class TestPrefetching(test.TestCase):
         team_second = await Team.create(name="2")
         event = await Event.create(name="First", tournament=tournament)
         await event.participants.add(team, team_second)
-        event = await Event.first().prefetch_related(
+        event = await Event.all().prefetch_related(
             Prefetch("participants", Team.filter(name="2"))
-        )
+        ).first()
+
         self.assertEqual(len(event.participants), 1)
         self.assertEqual(list(event.participants), [team_second])

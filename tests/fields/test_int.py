@@ -45,13 +45,13 @@ class TestIntFields(test.TestCase):
 
     async def test_values(self):
         obj0 = await testmodels.IntFields.create(intnum=1)
-        values = await testmodels.IntFields.get(id=obj0.id).values("intnum")
-        self.assertEqual(values[0]["intnum"], 1)
+        values = await testmodels.IntFields.all().values("intnum").get(id=obj0.id)
+        self.assertEqual(values["intnum"], 1)
 
     async def test_values_list(self):
         obj0 = await testmodels.IntFields.create(intnum=1)
-        values = await testmodels.IntFields.get(id=obj0.id).values_list("intnum", flat=True)
-        self.assertEqual(values[0], 1)
+        values = await testmodels.IntFields.all().values_list("intnum", flat=True).get(id=obj0.id)
+        self.assertEqual(values, 1)
 
     async def test_f_expression(self):
         obj0 = await testmodels.IntFields.create(intnum=1)
@@ -85,15 +85,15 @@ class TestSmallIntFields(test.TestCase):
 
     async def test_values(self):
         obj0 = await testmodels.SmallIntFields.create(smallintnum=2)
-        values = await testmodels.SmallIntFields.get(id=obj0.id).values("smallintnum")
-        self.assertEqual(values[0]["smallintnum"], 2)
+        values = await testmodels.SmallIntFields.all().values("smallintnum").get(id=obj0.id)
+        self.assertEqual(values["smallintnum"], 2)
 
     async def test_values_list(self):
         obj0 = await testmodels.SmallIntFields.create(smallintnum=2)
-        values = await testmodels.SmallIntFields.get(id=obj0.id).values_list(
+        values = await testmodels.SmallIntFields.all().values_list(
             "smallintnum", flat=True
-        )
-        self.assertEqual(values[0], 2)
+        ).get(id=obj0.id)
+        self.assertEqual(values, 2)
 
     async def test_f_expression(self):
         obj0 = await testmodels.SmallIntFields.create(smallintnum=1)
@@ -132,13 +132,13 @@ class TestBigIntFields(test.TestCase):
 
     async def test_values(self):
         obj0 = await testmodels.BigIntFields.create(intnum=1)
-        values = await testmodels.BigIntFields.get(id=obj0.id).values("intnum")
-        self.assertEqual(values[0]["intnum"], 1)
+        values = await testmodels.BigIntFields.all().values("intnum").get(id=obj0.id)
+        self.assertEqual(values["intnum"], 1)
 
     async def test_values_list(self):
         obj0 = await testmodels.BigIntFields.create(intnum=1)
-        values = await testmodels.BigIntFields.get(id=obj0.id).values_list("intnum", flat=True)
-        self.assertEqual(values[0], 1)
+        values = await testmodels.BigIntFields.all().values_list("intnum", flat=True).get(id=obj0.id)
+        self.assertEqual(values, 1)
 
     async def test_f_expression(self):
         obj0 = await testmodels.BigIntFields.create(intnum=1)

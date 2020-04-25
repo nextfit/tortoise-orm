@@ -18,8 +18,9 @@ from tortoise.fields.relational import (
 
 from tortoise.filters import FieldFilter
 
-from tortoise.query import QuerySet, QuerySetSingle
+from tortoise.query import QuerySet
 from tortoise.query.raw import RawQuerySet
+from tortoise.query.single import FirstQuerySet, GetQuerySet
 from tortoise.transactions import current_transaction_map
 
 MODEL = TypeVar("MODEL", bound="Model")
@@ -513,7 +514,7 @@ class Model(metaclass=ModelMeta):
         await db.executor_class(model=cls, db=db).execute_bulk_insert(objects)  # type: ignore
 
     @classmethod
-    def first(cls: Type[MODEL]) -> QuerySetSingle[Optional[MODEL]]:
+    def first(cls: Type[MODEL]) -> FirstQuerySet[MODEL]:
         """
         Generates a QuerySet that returns the first record.
         """
@@ -552,7 +553,7 @@ class Model(metaclass=ModelMeta):
         return QuerySet(cls).raw(raw_sql)
 
     @classmethod
-    def get(cls: Type[MODEL], *args, **kwargs) -> QuerySetSingle[MODEL]:
+    def get(cls: Type[MODEL], *args, **kwargs) -> GetQuerySet[MODEL]:
         """
         Fetches a single record for a Model type using the provided filter parameters.
 
@@ -566,7 +567,7 @@ class Model(metaclass=ModelMeta):
         return QuerySet(cls).get(*args, **kwargs)
 
     @classmethod
-    def get_or_none(cls: Type[MODEL], *args, **kwargs) -> QuerySetSingle[Optional[MODEL]]:
+    def get_or_none(cls: Type[MODEL], *args, **kwargs) -> FirstQuerySet[MODEL]:
         """
         Fetches a single record for a Model type using the provided filter parameters or None.
 
@@ -574,7 +575,7 @@ class Model(metaclass=ModelMeta):
 
             user = await User.get(username="foo")
         """
-        return QuerySet(cls).filter(*args, **kwargs).first()
+        return QuerySet(cls).get_or_none(*args, **kwargs)
 
     @classmethod
     async def fetch_for_list(

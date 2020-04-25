@@ -1,6 +1,7 @@
 
 from copy import copy
-from typing import Generic, Type, List, TYPE_CHECKING, Dict, Generator, Any, Optional, AsyncIterator, TypeVar, Union
+from typing import TYPE_CHECKING
+from typing import Any, AsyncIterator, Dict, Generator, Generic, List, Optional, Type, TypeVar, Union
 
 from pypika import Table, JoinType, Order
 from pypika.queries import QueryBuilder
@@ -15,6 +16,7 @@ from tortoise.filters import QueryModifier
 from tortoise.filters.q import Q
 from tortoise.functions import Annotation
 from tortoise.ordering import QueryOrdering, QueryOrderingField, QueryOrderingNode
+from tortoise.query.single import FirstQuerySet, GetQuerySet
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -58,6 +60,24 @@ class AwaitableStatement(Generic[MODEL]):
     def _clone(self):
         queryset = self.__class__.__new__(self.__class__)
         self._copy(queryset)
+        return queryset
+
+    def _filter_or_exclude(self, *args, negate: bool, **kwargs):
+        queryset = self._clone()
+        for arg in args:
+            if not isinstance(arg, Q):
+                raise TypeError("expected Q objects as args")
+            if negate:
+                queryset.q_objects.append(~arg)
+            else:
+                queryset.q_objects.append(arg)
+
+        for key, value in kwargs.items():
+            if negate:
+                queryset.q_objects.append(~Q(**{key: value}))
+            else:
+                queryset.q_objects.append(Q(**{key: value}))
+
         return queryset
 
     def __resolve_filters(self, context: QueryContext) -> None:
@@ -112,6 +132,38 @@ class AwaitableStatement(Generic[MODEL]):
             self._db = self.model._meta.db  # type: ignore
         self._make_query(context=QueryContext())
         return self._execute().__await__()
+
+    def using_db(self, _db: BaseDBAsyncClient) -> "QuerySet[MODEL]":
+        """
+        Executes query in provided db client.
+        Useful for transactions workaround.
+        """
+        queryset = self._clone()
+        queryset._db = _db
+        return queryset
+
+    async def explain(self) -> Any:
+        """Fetch and return information about the query execution plan.
+
+        This is done by executing an ``EXPLAIN`` query whose exact prefix depends
+        on the database backend, as documented below.
+
+        - PostgreSQL: ``EXPLAIN (FORMAT JSON, VERBOSE) ...``
+        - SQLite: ``EXPLAIN QUERY PLAN ...``
+        - MySQL: ``EXPLAIN FORMAT=JSON ...``
+
+        .. note::
+            This is only meant to be used in an interactive environment for debugging
+            and query optimization.
+            **The output format may (and will) vary greatly depending on the database backend.**
+        """
+        if self._db is None:
+            self._db = self.model._meta.db  # type: ignore
+
+        self._make_query(context=QueryContext())
+        return await self._db\
+            .executor_class(model=self.model, db=self._db)\
+            .execute_explain(self.query)
 
 
 class AwaitableQuery(AwaitableStatement[MODEL]):
@@ -196,6 +248,31 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
         queryset = self._clone()
         queryset._distinct = True
         return queryset
+
+    def first(self) -> FirstQuerySet[MODEL]:
+        """
+        Limit queryset to one object and return one object instead of list.
+        """
+        return FirstQuerySet(self.limit(1))
+
+    def get(self, *args, **kwargs) -> GetQuerySet[MODEL]:
+        """
+        Fetch exactly one object matching the parameters or raise
+        DoesNotExist or MultipleObjectsReturned exceptions
+        """
+        queryset = self._filter_or_exclude(negate=False, *args, **kwargs)
+        queryset._limit = 2
+        return GetQuerySet(queryset)
+
+    def get_or_none(self, *args, **kwargs) -> FirstQuerySet[MODEL]:
+        """
+        Fetch exactly one object matching the parameters or
+            return None if objects does not exist or
+            raise MultipleObjectsReturned exception if multiple objects exist
+        """
+        queryset = self._filter_or_exclude(negate=False, *args, **kwargs)
+        queryset._limit = 2
+        return FirstQuerySet(queryset)
 
     def __parse_orderings(self, *orderings: Union[str, Node]) -> None:
         model = self.model

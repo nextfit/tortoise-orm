@@ -20,13 +20,13 @@ class TestTextFields(test.TestCase):
 
     async def test_values(self):
         obj0 = await testmodels.TextFields.create(text="baa")
-        values = await testmodels.TextFields.get(id=obj0.id).values("text")
-        self.assertEqual(values[0]["text"], "baa")
+        values = await testmodels.TextFields.all().values("text").get(id=obj0.id)
+        self.assertEqual(values["text"], "baa")
 
     async def test_values_list(self):
         obj0 = await testmodels.TextFields.create(text="baa")
-        values = await testmodels.TextFields.get(id=obj0.id).values_list("text", flat=True)
-        self.assertEqual(values[0], "baa")
+        values = await testmodels.TextFields.all().values_list("text", flat=True).get(id=obj0.id)
+        self.assertEqual(values, "baa")
 
     def test_unique_fail(self):
         with self.assertRaisesRegex(

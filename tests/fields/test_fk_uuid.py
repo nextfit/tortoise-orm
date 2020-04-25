@@ -2,6 +2,7 @@ from tests import testmodels
 from tortoise.contrib import test
 from tortoise.exceptions import IntegrityError, NoValuesFetched, OperationalError
 from tortoise.query import QuerySet
+from tortoise.query.single import SingleQuerySet
 
 
 class TestForeignKeyUUIDField(test.TestCase):
@@ -47,7 +48,7 @@ class TestForeignKeyUUIDField(test.TestCase):
         tour = await self.UUIDPkModel.create()
         rel = await self.UUIDFkRelatedModel.create(model=tour)
         rel = await self.UUIDFkRelatedModel.get(id=rel.id)
-        self.assertIsInstance(rel.model, QuerySet)
+        self.assertIsInstance(rel.model, SingleQuerySet)
 
     async def test_by_name__re_awaited(self):
         tour = await self.UUIDPkModel.create()

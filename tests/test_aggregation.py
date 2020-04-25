@@ -31,7 +31,7 @@ class TestAggregation(test.TestCase):
 
         ##############
         event_with_lowest_team_id = (
-            await Event.filter(id=event.id).first().annotate(lowest_team_id=Min("participants__id"))
+            await Event.filter(id=event.id).annotate(lowest_team_id=Min("participants__id")).first()
         )
         self.assertEqual(event_with_lowest_team_id.lowest_team_id, participants[0].id)
 
