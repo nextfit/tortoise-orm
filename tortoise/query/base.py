@@ -2,7 +2,7 @@
 from copy import copy
 from typing import Generic, Type, List, TYPE_CHECKING, Dict, Generator, Any, Optional, AsyncIterator, TypeVar, Union
 
-from pypika import Table, JoinType, EmptyCriterion, Order
+from pypika import Table, JoinType, Order
 from pypika.queries import QueryBuilder
 from pypika.terms import Node
 
@@ -11,7 +11,7 @@ from tortoise.backends.base.client import Capabilities
 from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
 from tortoise.exceptions import FieldError, ParamsError
-from tortoise.filters import EmptyCriterion as TortoiseEmptyCriterion, QueryModifier
+from tortoise.filters import QueryModifier
 from tortoise.filters.q import Q
 from tortoise.functions import Annotation
 from tortoise.ordering import QueryOrdering, QueryOrderingField, QueryOrderingNode
@@ -69,10 +69,6 @@ class AwaitableStatement(Generic[MODEL]):
             if join[0] not in self._joined_tables:
                 self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
                 self._joined_tables.append(join[0])
-
-        if not isinstance(modifier.where_criterion, (EmptyCriterion, TortoiseEmptyCriterion)):
-            if not self.query._validate_table(modifier.where_criterion):
-                self.query._foreign_table = True
 
         self.query._wheres = modifier.where_criterion
         self.query._havings = modifier.having_criterion

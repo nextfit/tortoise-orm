@@ -98,12 +98,10 @@ class Q:
         (filter_operator, _) = model._meta.db.filter_class.FILTER_FUNC_MAP[comparision]
 
         annotation = self._annotations[field_name]
-        annotation_info = annotation.resolve(context=context)
-
-        if annotation_info.field.is_aggregate:
-            return QueryModifier(having_criterion=filter_operator(annotation_info.field, value))
+        if annotation.field.is_aggregate:
+            return QueryModifier(having_criterion=filter_operator(annotation.field, value))
         else:
-            return QueryModifier(where_criterion=filter_operator(annotation_info.field, value))
+            return QueryModifier(where_criterion=filter_operator(annotation.field, value))
 
     def _get_actual_key(self, model: "Model", key: str) -> str:
         field_name = key

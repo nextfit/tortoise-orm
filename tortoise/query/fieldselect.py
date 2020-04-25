@@ -74,9 +74,7 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
             )
 
         if field_name in self.annotations:
-            annotation = self.annotations[field_name]
-            annotation_info = annotation.resolve(context=context)
-            self.query._select_other(annotation_info.field.as_(return_as))
+            self.annotations[field_name].resolve_into(self, context, return_as)
             return
 
         base_field_name, _, sub_field = field_name.partition(LOOKUP_SEP)
@@ -103,11 +101,7 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
             return lambda x: x
 
         if field_name in self.annotations:
-            field_object = self.annotations[field_name].field_object
-            if field_object:
-                return field_object.to_python_value
-            else:
-                return lambda x: x
+            return lambda x: x
 
         if field_name in model._meta.fields_map:
             field_object = model._meta.fields_map[field_name]

@@ -92,7 +92,7 @@ class TestDecimalFields(test.TestCase):
             .values("sum_decimal")
         )
         self.assertEqual(
-            values[0], {"sum_decimal": Decimal("37.26")},
+            values[0], {"sum_decimal": 37.26},
         )
 
     async def test_aggregate_avg(self):
@@ -105,7 +105,7 @@ class TestDecimalFields(test.TestCase):
             .values("avg_decimal")
         )
         self.assertEqual(
-            values[0], {"avg_decimal": Decimal("12.42")},
+            values[0], {"avg_decimal": 12.42},
         )
 
     async def test_aggregate_max(self):
@@ -118,5 +118,5 @@ class TestDecimalFields(test.TestCase):
             .values("max_decimal")
         )
         self.assertEqual(
-            values[0], {"max_decimal": Decimal("27.27")},
+            values[0], {"max_decimal": 27.27},
         )

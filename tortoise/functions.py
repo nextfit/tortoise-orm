@@ -1,40 +1,45 @@
-from dataclasses import dataclass
-from typing import Any, List
+
+from typing import TypeVar
 
 from pypika import functions
-from pypika.terms import AggregateFunction, Term
+from pypika.terms import AggregateFunction
 from pypika.terms import Function as BaseFunction
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
-from tortoise.exceptions import ConfigurationError
-from tortoise.fields.relational import ForeignKey
+from tortoise.exceptions import FieldError, BaseORMException
 
-##############################################################################
-# Base
-##############################################################################
-
-
-@dataclass
-class AnnotationInfo:
-    field: Term
-    joins: List
+MODEL = TypeVar("MODEL", bound="Model")
 
 
 class Annotation:
-    def resolve(self, context: QueryContext, alias=None) -> AnnotationInfo:
+    __slots__ = ("_field", )
+
+    def __init__(self):
+        self._field = None
+
+    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, alias: str):
         raise NotImplementedError()
+
+    @property
+    def field(self):
+        if self._field:
+            return self._field
+
+        raise BaseORMException("Trying to access annotation field before it being set")
 
 
 class Subquery(Annotation):
     __slots__ = ("_queryset", )
 
     def __init__(self, queryset):
+        super().__init__()
         self._queryset = queryset
 
-    def resolve(self, context: QueryContext, alias=None) -> AnnotationInfo:
-        self._queryset._make_query(context=context, alias=alias)
-        return AnnotationInfo(self._queryset.query, [])
+    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, alias: str):
+        self._queryset._make_query(context=context)
+        self._field = self._queryset.query.as_(alias)
+        queryset.query._select_other(self._field)
 
     def __str__(self):
         return f"Subquery({self._queryset})"
@@ -44,6 +49,7 @@ class OuterRef:
     __slots__ = ("ref_name", )
 
     def __init__(self, ref_name):
+        super().__init__()
         self.ref_name = ref_name
 
     def __str__(self):
@@ -51,68 +57,59 @@ class OuterRef:
 
 
 class Function(Annotation):
-    __slots__ = ("field", "field_object", "default_values")
+    __slots__ = ("field_name", "default_values", "add_group_by")
 
     database_func = BaseFunction
-    #: Enable populate_field_object where we want to try and preserve the field type.
-    populate_field_object = False
 
-    def __init__(self, field, *default_values) -> None:
-        self.field = field
-        self.field_object: Any = None
+    def __init__(self, field_name, *default_values, add_group_by=True) -> None:
+        super().__init__()
+        self.field_name = field_name
         self.default_values = default_values
+        self.add_group_by = add_group_by
 
-    def _resolve_field(self, context: QueryContext, field: str, *default_values) -> AnnotationInfo:
+    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, alias: str):
         model = context.top.model
         table = context.top.table
 
-        (field_name, _, field_sub) = field.partition(LOOKUP_SEP)
-        if not field_sub:
-            function_joins = []
-            if field_name in model._meta.fetch_fields:
-                relation_field = model._meta.fields_map[field_name]
-                relation_field_meta = relation_field.remote_model._meta
-                join = (table, relation_field)
-                function_joins.append(join)
-                field = relation_field_meta.basetable[relation_field_meta.pk_db_column]
+        relation_field_name, _, field_sub = self.field_name.partition(LOOKUP_SEP)
+        if relation_field_name in model._meta.fetch_fields:
+            relation_field = model._meta.fields_map[relation_field_name]
+
+            if field_sub:
+                related_table = queryset._join_table_by_field(table, relation_field)
+
+                context.push(relation_field.remote_model, related_table)
+                sub_function = self.__class__(field_sub, add_group_by=False, *self.default_values)
+                sub_function.resolve_into(queryset, context, alias)
+                self._field = sub_function._field
+                context.pop()
+
             else:
-                field = table[field_name]
-                if self.populate_field_object:
-                    self.field_object = model._meta.fields_map.get(field_name, None)
-                    if self.field_object:
-                        func = self.field_object.get_for_dialect(
-                            model._meta.db.capabilities.dialect, "function_cast")
-                        if func:
-                            field = func(self.field_object, field)
+                related_table = queryset._join_table_by_field(table, relation_field)
+                relation_field_meta = relation_field.remote_model._meta
+                field = related_table[relation_field_meta.pk_db_column]
 
-            function_field = self.database_func(field, *default_values)
-            return AnnotationInfo(function_field, function_joins)
+                self._field = self.database_func(field, *self.default_values).as_(alias)
+                queryset.query._select_other(self._field)
 
-        if field_name not in model._meta.fetch_fields:
-            raise ConfigurationError(f"{field} not resolvable")
+        else:
+            if field_sub:
+                raise FieldError(f"{relation_field_name} is not a relation for model {model.__name__}")
 
-        relation_field = model._meta.fields_map[field_name]
+            field_object = model._meta.fields_map.get(self.field_name)
+            if not field_object:
+                raise FieldError(f"Unknown field {self.field_name} for model {model.__name__}")
 
-        remote_model = relation_field.remote_model
-        remote_table = remote_model._meta.basetable
-        if isinstance(relation_field, ForeignKey):
-            # Only FK's can be to same table, so we only auto-alias FK join tables
-            remote_table = remote_table.as_(f"{table.get_table_name()}{LOOKUP_SEP}{field_name}")
+            field = table[field_object.db_column]
+            func = field_object.get_for_dialect(model._meta.db.capabilities.dialect, "function_cast")
+            if func:
+                field = func(field_object, field)
 
-        context.push(remote_model, remote_table)
-        annotation_info = self._resolve_field(
-            context, field_sub, *default_values
-        )
-        context.pop()
+            self._field = self.database_func(field, *self.default_values).as_(alias)
+            queryset.query._select_other(self._field)
 
-        join = (table, relation_field)
-        annotation_info.joins.append(join)
-        return annotation_info
-
-    def resolve(self, context: QueryContext, alias=None) -> AnnotationInfo:
-        annotation_info = self._resolve_field(context, self.field, *self.default_values)
-        annotation_info.joins = reversed(annotation_info.joins)
-        return annotation_info
+        if self.add_group_by and self._field.is_aggregate:
+            queryset.query = queryset.query.groupby(table.id)
 
 
 class Aggregate(Function):
@@ -155,19 +152,15 @@ class Count(Aggregate):
 
 class Sum(Aggregate):
     database_func = functions.Sum
-    populate_field_object = True
 
 
 class Max(Aggregate):
     database_func = functions.Max
-    populate_field_object = True
 
 
 class Min(Aggregate):
     database_func = functions.Min
-    populate_field_object = True
 
 
 class Avg(Aggregate):
     database_func = functions.Avg
-    populate_field_object = True

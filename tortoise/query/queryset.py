@@ -278,24 +278,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         return queryset
 
     def __resolve_annotations(self, context: QueryContext) -> None:
-        if not self.annotations:
-            return
-
-        annotation_info_map = {
-            key: annotation.resolve(context) for key, annotation in self.annotations.items()
-        }
-
-        if any(
-            annotation_info.field.is_aggregate
-            for annotation_info in annotation_info_map.values()
-        ):
-            table = context.top.table
-            self.query = self.query.groupby(table.id)
-
-        for key, annotation_info in annotation_info_map.items():
-            for join in annotation_info.joins:
-                self._join_table_by_field(*join)
-            self.query._select_other(annotation_info.field.as_(key))
+        for key, annotation in self.annotations.items():
+            annotation.resolve_into(self, context=context, alias=key)
 
     def _make_query(self, context: QueryContext, alias=None) -> None:
         self.query = self.create_base_query_all_fields(alias)

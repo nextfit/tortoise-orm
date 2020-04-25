@@ -24,9 +24,7 @@ class DataFieldFilter(FieldFilter):
             encoded_value = outer_table[value.ref_name]
 
         elif isinstance(value, Subquery):
-            annotation_info = value.resolve(context, "U{}".format(len(context.stack)))
-            encoded_value = annotation_info.field
-            joins.extend(annotation_info.joins)
+            encoded_value = value.field
 
         elif self.value_encoder:
             encoded_value = self.value_encoder(value, model, field_object)
