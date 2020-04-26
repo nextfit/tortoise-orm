@@ -4,7 +4,7 @@ from typing import Any, Dict, Tuple
 from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
 from tortoise.exceptions import FieldError, OperationalError
-from tortoise.fields.relational import ForeignKey, OneToOneField
+from tortoise.fields.relational import ForeignKey, OneToOneField, ManyToManyField, BackwardFKField
 from tortoise.filters import FieldFilter, QueryClauses
 from tortoise.functions import OuterRef
 
@@ -79,7 +79,7 @@ class Q:
 
     def _get_actual_value(self, context: QueryContext, value):
         if isinstance(value, OuterRef):
-            return OuterRef(self._get_actual_key(context.stack[-2].model, value.ref_name))
+            return value.get_field(context, self._annotations)
 
         if hasattr(value, "pk"):
             return value.pk

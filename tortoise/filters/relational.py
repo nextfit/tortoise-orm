@@ -1,11 +1,10 @@
 
 
-from pypika import Table
+from pypika import Table, Field
 
 from tortoise.context import QueryContext
 from tortoise.fields.relational import BackwardFKField, ManyToManyField
 from tortoise.filters.base import FieldFilter, QueryClauses
-from tortoise.functions import OuterRef
 
 
 class RelationFilter(FieldFilter):
@@ -23,26 +22,8 @@ class RelationFilter(FieldFilter):
         pk_db_column = model._meta.pk_db_column
         joins = [(self.table, table[pk_db_column] == self.table[self.backward_key])]
 
-        if isinstance(value, OuterRef):
-            outer_context_item = context.stack[-2]
-            outer_model = outer_context_item.model
-            outer_table = outer_context_item.table
-
-            outer_field = outer_model._meta.fields_map[value.ref_name]
-
-            if isinstance(outer_field, ManyToManyField):
-                if outer_field.through in outer_context_item.through_tables:
-                    outer_through_table = outer_context_item.through_tables[outer_field.through]
-                    encoded_value = outer_through_table[outer_field.forward_key]
-
-                else:
-                    raise NotImplementedError()
-
-            elif isinstance(outer_field, BackwardFKField):
-                raise NotImplementedError()
-
-            else:
-                encoded_value = outer_table[value.ref_name]
+        if isinstance(value, Field):
+            encoded_value = value
 
         elif self.value_encoder:
             encoded_value = self.value_encoder(value, model)

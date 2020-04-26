@@ -2,12 +2,13 @@
 from typing import TypeVar
 
 from pypika import functions
-from pypika.terms import AggregateFunction
+from pypika.terms import AggregateFunction, Field
 from pypika.terms import Function as PyPikaFunction
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
 from tortoise.exceptions import FieldError, BaseORMException, ParamsError
+from tortoise.fields import ForeignKey, OneToOneField, ManyToManyField, BackwardFKField
 
 MODEL = TypeVar("MODEL", bound="Model")
 
@@ -57,6 +58,47 @@ class OuterRef:
 
     def __str__(self):
         return f"OuterRef(\"{self.ref_name}\")"
+
+    @staticmethod
+    def get_actual_field_name(model, annotations, key: str):
+        field_name = key
+        if field_name in model._meta.fields_map:
+            field = model._meta.fields_map[field_name]
+            if isinstance(field, (ForeignKey, OneToOneField)):
+                return field.id_field_name
+
+            return key
+
+        if key == "pk":
+            return model._meta.pk_attr
+
+        if field_name in annotations:
+            return field_name
+
+        allowed = sorted(list(model._meta.fields_map.keys() | annotations.keys()))
+        raise FieldError(f"Unknown field name '{key}'. Allowed base values are {allowed}")
+
+    def get_field(self, context: QueryContext, annotations) -> Field:
+        outer_context_item = context.stack[-2]
+        outer_model = outer_context_item.model
+        outer_table = outer_context_item.table
+
+        outer_field_name = OuterRef(self.get_actual_field_name(outer_model, annotations, self.ref_name))
+        outer_field = outer_model._meta.fields_map[outer_field_name]
+
+        if isinstance(outer_field, ManyToManyField):
+            if outer_field.through in outer_context_item.through_tables:
+                outer_through_table = outer_context_item.through_tables[outer_field.through]
+                return outer_through_table[outer_field.forward_key]
+
+            else:
+                raise NotImplementedError()
+
+        elif isinstance(outer_field, BackwardFKField):
+            raise NotImplementedError()
+
+        else:
+            return outer_table[self.ref_name]
 
 
 class Function(Annotation):
