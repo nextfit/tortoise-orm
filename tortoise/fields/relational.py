@@ -822,11 +822,14 @@ class ManyToManyField(RelationField):
     def get_joins(self, table: Table, full: bool) -> List[Tuple[Table, Criterion]]:
         table_pk = self.model._meta.pk_db_column
         related_table_pk = self.remote_model._meta.pk_db_column
-        related_table = self.remote_model._meta.basetable
-        through_table = Table(self.through)
-        joins = [(through_table, table[table_pk] == through_table[self.backward_key]),]
+
+        through_table_name = "{}{}{}{}".format(table.get_table_name(), LOOKUP_SEP,
+            self.remote_model.__name__.lower(), self.model.__name__.lower())
+        through_table = Table(self.through).as_(through_table_name)
+        joins = [(through_table, table[table_pk] == through_table[self.backward_key])]
 
         if full:
+            related_table = self.remote_model._meta.basetable.as_(f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}")
             joins.append((related_table, through_table[self.forward_key] == related_table[related_table_pk]))
 
         return joins
