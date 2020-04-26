@@ -43,7 +43,6 @@ class Subquery(Annotation):
     def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, alias: str):
         self._queryset._make_query(context=context)
         self._field = self._queryset.query.as_(alias)
-        queryset.query._select_other(self._field)
 
     def __str__(self):
         return f"Subquery({self._queryset})"
