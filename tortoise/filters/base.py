@@ -97,5 +97,5 @@ class FieldFilter:
         self.opr = opr
         self.value_encoder = value_encoder
 
-    def __call__(self, context: QueryContext, value) -> QueryClauses:
+    def __call__(self, context: QueryContext, value) -> Criterion:
         raise NotImplementedError()

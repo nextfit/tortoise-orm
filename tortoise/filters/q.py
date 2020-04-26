@@ -59,9 +59,8 @@ class Q:
         self._is_negated = not self._is_negated
 
     def _get_actual_key(self, model: "Model", key: str) -> str:
-        field_name = key
-        if field_name in model._meta.fields_map:
-            field = model._meta.fields_map[field_name]
+        if key in model._meta.fields_map:
+            field = model._meta.fields_map[key]
             if isinstance(field, (ForeignKey, OneToOneField)):
                 return field.id_field_name
 
@@ -106,23 +105,20 @@ class Q:
 
         key_filter = model._meta.get_filter(key)
         if key_filter:
-            # return key_filter(context, value)
             if relation_field_name in model._meta.fetch_fields:
                 relation_field = model._meta.fields_map[relation_field_name]
                 if isinstance(relation_field, (BackwardFKField, ManyToManyField)):
                     required_joins = relation_field.get_joins(table)[:1]
                     related_table = required_joins[-1][0]
                     context.push(relation_field.remote_model, related_table)
-                    clauses = key_filter(context, value)
                     clauses = QueryClauses(
-                        where_criterion=clauses.where_criterion,
-                        having_criterion=clauses.having_criterion,
+                        where_criterion=key_filter(context, value),
                         joins=required_joins)
 
                     context.pop()
                     return clauses
 
-            return key_filter(context, value)
+            return QueryClauses(where_criterion=key_filter(context, value))
 
         if relation_field_name in model._meta.fetch_fields:
             relation_field = model._meta.fields_map[relation_field_name]

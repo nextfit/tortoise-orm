@@ -60,23 +60,22 @@ class OuterRef:
         return f"OuterRef(\"{self.ref_name}\")"
 
     @staticmethod
-    def get_actual_field_name(model, annotations, key: str):
-        field_name = key
+    def get_actual_field_name(model, annotations, field_name: str):
         if field_name in model._meta.fields_map:
             field = model._meta.fields_map[field_name]
             if isinstance(field, (ForeignKey, OneToOneField)):
                 return field.id_field_name
 
-            return key
+            return field_name
 
-        if key == "pk":
+        if field_name == "pk":
             return model._meta.pk_attr
 
         if field_name in annotations:
             return field_name
 
         allowed = sorted(list(model._meta.fields_map.keys() | annotations.keys()))
-        raise FieldError(f"Unknown field name '{key}'. Allowed base values are {allowed}")
+        raise FieldError(f"Unknown field name '{field_name}'. Allowed base values are {allowed}")
 
     def get_field(self, context: QueryContext, annotations) -> Field:
         outer_context_item = context.stack[-2]

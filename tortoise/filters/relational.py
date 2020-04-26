@@ -13,27 +13,19 @@ class RelationFilter(FieldFilter):
         self.backward_key = backward_key
 
     def __call__(self, context: QueryContext, value) -> QueryClauses:
-        table = context.top.table
-
-        context_item = context.stack[-2]
-        remote_model = context_item.model
-        remote_table = context_item.table
-        remote_pk_db_column = remote_model._meta.pk_db_column
-
-        joins = [(table, remote_table[remote_pk_db_column] == table[self.backward_key])]
-
         if isinstance(value, Field):
             encoded_value = value
 
         elif self.value_encoder:
+            remote_model = context.stack[-2].model
             encoded_value = self.value_encoder(value, remote_model)
 
         else:
             encoded_value = value
 
+        table = context.top.table
         encoded_key = table[self.field_name]
-        criterion = self.opr(encoded_key, encoded_value)
-        return QueryClauses(where_criterion=criterion, joins=joins)
+        return self.opr(encoded_key, encoded_value)
 
 
 class BackwardFKFilter(RelationFilter):

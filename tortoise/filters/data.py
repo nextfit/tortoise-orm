@@ -1,3 +1,4 @@
+from pypika import Criterion
 
 from tortoise.context import QueryContext
 from tortoise.fields.base import Field
@@ -10,14 +11,12 @@ class DataFieldFilter(FieldFilter):
         super().__init__(field.model_field_name, opr, value_encoder)
         self.db_column = field.db_column or field.model_field_name
 
-    def __call__(self, context: QueryContext, value) -> QueryClauses:
+    def __call__(self, context: QueryContext, value) -> Criterion:
         context_item = context.top
         model = context_item.model
         table = context_item.table
 
         field_object = model._meta.fields_map[self.field_name]
-
-        joins = []
 
         if isinstance(value, OuterRef):
             outer_table = context.stack[-2].table
@@ -33,8 +32,7 @@ class DataFieldFilter(FieldFilter):
             encoded_value = model._meta.db.executor_class._field_to_db(field_object, value, model)
 
         encoded_key = table[self.db_column]
-        criterion = self.opr(encoded_key, encoded_value)
-        return QueryClauses(where_criterion=criterion, joins=joins)
+        return self.opr(encoded_key, encoded_value)
 
 
 class JSONFieldFilter(FieldFilter):
@@ -51,5 +49,4 @@ class JSONFieldFilter(FieldFilter):
         encoded_value = self.value_encoder(value, model, field_object) if self.value_encoder else value
 
         encoded_key = table[self.db_column]
-        criterion = self.opr(encoded_key, encoded_value)
-        return QueryClauses(where_criterion=criterion)
+        return self.opr(encoded_key, encoded_value)
