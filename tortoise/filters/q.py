@@ -114,7 +114,7 @@ class Q:
 
             related_table = required_joins[-1][0]
             context.push(relation_field.remote_model, related_table)
-            modifier = Q(**{field_sub: value}).resolve(context=context, annotations=self._annotations)
+            modifier = Q(**{field_sub: value}).resolve(context=context, annotations={})
             context.pop()
 
             return QueryClauses(joins=required_joins) & modifier
