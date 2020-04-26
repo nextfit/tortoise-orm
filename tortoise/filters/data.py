@@ -2,7 +2,7 @@ from pypika import Criterion
 
 from tortoise.context import QueryContext
 from tortoise.fields.base import Field
-from tortoise.filters.base import FieldFilter, QueryClauses
+from tortoise.filters.base import FieldFilter
 from tortoise.functions import OuterRef, Subquery
 
 
@@ -40,7 +40,7 @@ class JSONFieldFilter(FieldFilter):
         super().__init__(field.model_field_name, opr, value_encoder)
         self.db_column = field.db_column or field.model_field_name
 
-    def __call__(self, context: QueryContext, value) -> QueryClauses:
+    def __call__(self, context: QueryContext, value) -> Criterion:
         context_item = context.top
         model = context_item.model
         table = context_item.table

@@ -1,11 +1,12 @@
 
-from typing import Any, Dict, Tuple
+from typing import Dict, Tuple
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
 from tortoise.exceptions import FieldError, OperationalError
-from tortoise.fields.relational import ForeignKey, OneToOneField, ManyToManyField, BackwardFKField
-from tortoise.filters import FieldFilter, QueryClauses
+from tortoise.fields.relational import ForeignKey, OneToOneField
+from tortoise.filters import FieldFilter
+from tortoise.filters.clause import QueryClauses
 from tortoise.functions import OuterRef
 
 
@@ -15,7 +16,7 @@ class Q:
         "filters",
         "join_type",
         "_is_negated",
-        "_annotations",
+        "check_annotations"
     )
 
     AND = "AND"
@@ -38,7 +39,8 @@ class Q:
 
         self.join_type = join_type
         self._is_negated = False
-        self._annotations: Dict[str, Any] = {}
+
+        self.check_annotations = True
 
     def __and__(self, other) -> "Q":
         if not isinstance(other, Q):
@@ -58,7 +60,7 @@ class Q:
     def negate(self) -> None:
         self._is_negated = not self._is_negated
 
-    def _get_actual_key(self, model: "Model", key: str) -> str:
+    def _get_actual_key(self, queryset: "AwaitableQuery[MODEL]", model: "Model", key: str) -> str:
         if key in model._meta.fields_map:
             field = model._meta.fields_map[key]
             if isinstance(field, (ForeignKey, OneToOneField)):
@@ -70,22 +72,22 @@ class Q:
         if field_name == "pk":
             return f"{model._meta.pk_attr}{sep}{comparision}"
 
-        if field_name in model._meta.fields_map or field_name in self._annotations:
+        if field_name in model._meta.fields_map or field_name in queryset.annotations:
             return key
 
-        allowed = sorted(list(model._meta.fields_map.keys() | self._annotations.keys()))
+        allowed = sorted(list(model._meta.fields_map.keys() | queryset.annotations.keys()))
         raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
 
-    def _get_actual_value(self, context: QueryContext, value):
+    def _get_actual_value(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, value):
         if isinstance(value, OuterRef):
-            return value.get_field(context, self._annotations)
+            return value.get_field(context, queryset.annotations)
 
         if hasattr(value, "pk"):
             return value.pk
 
         return value
 
-    def _resolve_filter(self, context: QueryContext, key, value) -> QueryClauses:
+    def _resolve_filter(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, key, value) -> QueryClauses:
         context_item = context.top
         model = context_item.model
         table = context_item.table
@@ -95,9 +97,9 @@ class Q:
             key = f"{key}{LOOKUP_SEP}isnull"
 
         relation_field_name, _, field_sub = key.partition(LOOKUP_SEP)
-        if relation_field_name in self._annotations:
+        if self.check_annotations and relation_field_name in queryset.annotations:
             (filter_operator, _) = model._meta.db.filter_class.FILTER_FUNC_MAP[field_sub]
-            annotation = self._annotations[relation_field_name]
+            annotation = queryset.annotations[relation_field_name]
             if annotation.field.is_aggregate:
                 return QueryClauses(having_criterion=filter_operator(annotation.field, value))
             else:
@@ -107,13 +109,10 @@ class Q:
         if key_filter:
             if relation_field_name in model._meta.fetch_fields:
                 relation_field = model._meta.fields_map[relation_field_name]
-                required_joins = relation_field.get_joins(table, full=False)
-                if required_joins:
-                    related_table = required_joins[-1][0]
+                related_table = queryset._join_table_by_field(table, relation_field, full=False)
+                if related_table:
                     context.push(relation_field.remote_model, related_table)
-                    clauses = QueryClauses(
-                        where_criterion=key_filter(context, value),
-                        joins=required_joins)
+                    clauses = QueryClauses(where_criterion=key_filter(context, value),)
                     context.pop()
                 else:
                     clauses = QueryClauses(where_criterion=key_filter(context, value))
@@ -124,24 +123,25 @@ class Q:
 
         if relation_field_name in model._meta.fetch_fields:
             relation_field = model._meta.fields_map[relation_field_name]
-            required_joins = relation_field.get_joins(table, full=True)
-
-            related_table = required_joins[-1][0]
+            related_table = queryset._join_table_by_field(table, relation_field)
             context.push(relation_field.remote_model, related_table)
-            modifier = Q(**{field_sub: value}).resolve(context=context, annotations={})
+
+            q = Q(**{field_sub: value})
+            q.check_annotations = False
+            modifier = q._resolve(queryset=queryset, context=context)
             context.pop()
 
-            return QueryClauses(joins=required_joins) & modifier
+            return modifier
 
         raise FieldError(f'Unknown field "{key}" for model "{model}"')
 
-    def _resolve_filters(self, context: QueryContext) -> QueryClauses:
+    def _resolve_filters(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext) -> QueryClauses:
         modifier = QueryClauses()
         model = context.top.model
         for raw_key, raw_value in self.filters.items():
-            key = self._get_actual_key(model, raw_key)
-            value = self._get_actual_value(context, raw_value)
-            filter_modifier = self._resolve_filter(context, key, value)
+            key = self._get_actual_key(queryset, model, raw_key)
+            value = self._get_actual_value(queryset, context, raw_value)
+            filter_modifier = self._resolve_filter(queryset, context, key, value)
 
             if self.join_type == self.AND:
                 modifier &= filter_modifier
@@ -153,10 +153,10 @@ class Q:
 
         return modifier
 
-    def _resolve_children(self, context: QueryContext) -> QueryClauses:
+    def _resolve_children(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext) -> QueryClauses:
         modifier = QueryClauses()
         for node in self.children:
-            node_modifier = node.resolve(context, self._annotations)
+            node_modifier = node._resolve(queryset, context)
             if self.join_type == self.AND:
                 modifier &= node_modifier
             else:
@@ -166,10 +166,13 @@ class Q:
             modifier = ~modifier
         return modifier
 
-    def resolve(self, context: QueryContext, annotations) -> QueryClauses:
-        self._annotations = annotations
+    def _resolve(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext) -> QueryClauses:
         if self.filters:
-            return self._resolve_filters(context)
+            return self._resolve_filters(queryset, context)
+        else:
+            return self._resolve_children(queryset, context)
 
-        return self._resolve_children(context)
-
+    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext):
+        clauses = self._resolve(queryset, context)
+        queryset.query._wheres = clauses.where_criterion
+        queryset.query._havings = clauses.having_criterion

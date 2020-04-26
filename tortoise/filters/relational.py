@@ -1,10 +1,10 @@
 
 
-from pypika import Field
+from pypika import Field, Criterion
 
 from tortoise.context import QueryContext
 from tortoise.fields.relational import BackwardFKField, ManyToManyField
-from tortoise.filters.base import FieldFilter, QueryClauses
+from tortoise.filters.base import FieldFilter
 
 
 class RelationFilter(FieldFilter):
@@ -12,7 +12,7 @@ class RelationFilter(FieldFilter):
         super().__init__(field_name, opr, value_encoder)
         self.backward_key = backward_key
 
-    def __call__(self, context: QueryContext, value) -> QueryClauses:
+    def __call__(self, context: QueryContext, value) -> Criterion:
         if isinstance(value, Field):
             encoded_value = value
 
