@@ -290,7 +290,14 @@ class RelationField(Field):
     def create_relation(self):
         raise NotImplementedError()
 
-    def get_joins(self, table: Table) -> List[Tuple[Table, Criterion]]:
+    def get_joins(self, table: Table, full: bool) -> List[Tuple[Table, Criterion]]:
+        """
+        Get required joins for this relation
+
+        :param table: Reference table to create joins to
+        :param full: Join fully, or only to the point where primary key of the relation is available.
+        :return: List of joins and their joined table
+        """
         raise NotImplementedError()
 
     async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
@@ -368,7 +375,7 @@ class BackwardFKField(RelationField):
 
         return instance_list
 
-    def get_joins(self, table: Table) -> List[Tuple[Table, Criterion]]:
+    def get_joins(self, table: Table, full: bool) -> List[Tuple[Table, Criterion]]:
         table_pk = self.model._meta.pk_db_column
         related_table = self.remote_model._meta.basetable
         related_table = related_table.as_(f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}")
@@ -529,12 +536,16 @@ class ForeignKey(RelationField):
                 self.model, self.id_field_name, True, self.description)
             remote_model._meta.add_field(backward_relation_name, backward_relation_field)
 
-    def get_joins(self, table: Table) -> List[Tuple[Table, Criterion]]:
-        related_table_pk = self.remote_model._meta.pk_db_column
-        related_table = self.remote_model._meta.basetable
-        related_table = related_table.as_(f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}")
+    def get_joins(self, table: Table, full: bool) -> List[Tuple[Table, Criterion]]:
+        if full:
+            related_table_pk = self.remote_model._meta.pk_db_column
+            related_table = self.remote_model._meta.basetable
+            related_table = related_table.as_(f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}")
 
-        return [(related_table, related_table[related_table_pk] == table[self.db_column])]
+            return [(related_table, related_table[related_table_pk] == table[self.db_column])]
+
+        else:
+            return []
 
     def describe(self, serializable: bool = True) -> dict:
         desc = super().describe(serializable)
@@ -808,12 +819,14 @@ class ManyToManyField(RelationField):
 
         return instance_list
 
-    def get_joins(self, table: Table) -> List[Tuple[Table, Criterion]]:
+    def get_joins(self, table: Table, full: bool) -> List[Tuple[Table, Criterion]]:
         table_pk = self.model._meta.pk_db_column
         related_table_pk = self.remote_model._meta.pk_db_column
         related_table = self.remote_model._meta.basetable
         through_table = Table(self.through)
-        return [
-            (through_table, table[table_pk] == through_table[self.backward_key]),
-            (related_table, through_table[self.forward_key] == related_table[related_table_pk])
-        ]
+        joins = [(through_table, table[table_pk] == through_table[self.backward_key]),]
+
+        if full:
+            joins.append((related_table, through_table[self.forward_key] == related_table[related_table_pk]))
+
+        return joins

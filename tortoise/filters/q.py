@@ -108,7 +108,7 @@ class Q:
             if relation_field_name in model._meta.fetch_fields:
                 relation_field = model._meta.fields_map[relation_field_name]
                 if isinstance(relation_field, (BackwardFKField, ManyToManyField)):
-                    required_joins = relation_field.get_joins(table)[:1]
+                    required_joins = relation_field.get_joins(table, full=False)
                     related_table = required_joins[-1][0]
                     context.push(relation_field.remote_model, related_table)
                     clauses = QueryClauses(
@@ -122,7 +122,7 @@ class Q:
 
         if relation_field_name in model._meta.fetch_fields:
             relation_field = model._meta.fields_map[relation_field_name]
-            required_joins = relation_field.get_joins(table)
+            required_joins = relation_field.get_joins(table, full=True)
 
             related_table = required_joins[-1][0]
             context.push(relation_field.remote_model, related_table)

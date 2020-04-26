@@ -7,11 +7,12 @@ from pypika import Table, JoinType, Order
 from pypika.queries import QueryBuilder
 from pypika.terms import Node
 
-from tortoise import BaseDBAsyncClient
+from tortoise import BaseDBAsyncClient, RelationField
 from tortoise.backends.base.client import Capabilities
 from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
 from tortoise.exceptions import FieldError, ParamsError
+from tortoise.fields import ForeignKey, OneToOneField
 from tortoise.filters.q import Q
 from tortoise.functions import Annotation
 from tortoise.ordering import QueryOrdering, QueryOrderingField, QueryOrderingNode
@@ -93,20 +94,27 @@ class AwaitableStatement(Generic[MODEL]):
         for key, annotation in self.annotations.items():
             annotation.resolve_into(self, context=context, alias=key)
 
-    def _join_table_by_field(self, table, relation_field) -> Table:
+    def _join_table_by_field(self, table, relation_field: RelationField, full=True) -> Optional[Table]:
         """
         :param table:
         :param relation_field:
+        :param full: If needed to join fully, or only to the point where primary key of the relation is available.
+            For example for ForeignKey and OneToOneField, when full is False, not joins is needed.
+            Also for ManyToManyField, when full is False, only the through table is needed to be joined
         :return: related_table
         """
 
-        joins = relation_field.get_joins(table)
-        for join in joins:
-            if join[0] not in self._joined_tables:
-                self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
-                self._joined_tables.append(join[0])
+        joins = relation_field.get_joins(table, full)
+        if joins:
+            for join in joins:
+                if join[0] not in self._joined_tables:
+                    self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
+                    self._joined_tables.append(join[0])
 
-        return joins[-1][0]
+            return joins[-1][0]
+
+        else:
+            return None
 
     def create_base_query(self, alias):
         if alias:
