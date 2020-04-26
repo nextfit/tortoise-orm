@@ -12,7 +12,6 @@ from tortoise.backends.base.client import Capabilities
 from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
 from tortoise.exceptions import FieldError, ParamsError
-from tortoise.filters import QueryClauses
 from tortoise.filters.q import Q
 from tortoise.functions import Annotation
 from tortoise.ordering import QueryOrdering, QueryOrderingField, QueryOrderingNode
@@ -81,10 +80,7 @@ class AwaitableStatement(Generic[MODEL]):
         return queryset
 
     def __resolve_filters(self, context: QueryContext) -> None:
-        modifier = QueryClauses()
-        for node in self.q_objects:
-            modifier &= node.resolve(context, self.annotations)
-
+        modifier = Q(*self.q_objects).resolve(context, self.annotations)
         for join in modifier.joins:
             if join[0] not in self._joined_tables:
                 self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])

@@ -58,51 +58,6 @@ class Q:
     def negate(self) -> None:
         self._is_negated = not self._is_negated
 
-    def _resolve_nested_filter(self, context: QueryContext, key, value) -> QueryClauses:
-        context_item = context.top
-
-        model = context_item.model
-        table = context_item.table
-
-        relation_field_name, _, relation_field_sub = key.partition(LOOKUP_SEP)
-        relation_field = model._meta.fields_map[relation_field_name]
-        required_joins = relation_field.get_joins(table)
-
-        related_table = required_joins[-1][0]
-        context.push(relation_field.remote_model, related_table)
-        modifier = Q(**{relation_field_sub: value}).resolve(
-            context=context, annotations=self._annotations)
-        context.pop()
-
-        return QueryClauses(joins=required_joins) & modifier
-
-    def _resolve_field_filters(self, context: QueryContext, key, value) -> QueryClauses:
-        model = context.top.model
-
-        if value is None and "isnull" in model._meta.db.filter_class.FILTER_FUNC_MAP:
-            value = True
-            key = f"{key}{LOOKUP_SEP}isnull"
-
-        key_filter = model._meta.get_filter(key)
-        if key_filter:
-            return key_filter(context, value)
-
-        elif key.split(LOOKUP_SEP)[0] in model._meta.fetch_fields:
-            return self._resolve_nested_filter(context, key, value)
-
-        raise FieldError(f'Unknown field "{key}" for model "{model}"')
-
-    def _resolve_annotation_filters(self, context: QueryContext, key, value) -> QueryClauses:
-        model = context.top.model
-        (field_name, sep, comparision) = key.partition(LOOKUP_SEP)
-        (filter_operator, _) = model._meta.db.filter_class.FILTER_FUNC_MAP[comparision]
-
-        annotation = self._annotations[field_name]
-        if annotation.field.is_aggregate:
-            return QueryClauses(having_criterion=filter_operator(annotation.field, value))
-        else:
-            return QueryClauses(where_criterion=filter_operator(annotation.field, value))
-
     def _get_actual_key(self, model: "Model", key: str) -> str:
         field_name = key
         if field_name in model._meta.fields_map:
@@ -131,17 +86,48 @@ class Q:
 
         return value
 
+    def _resolve_filter(self, context: QueryContext, key, value) -> QueryClauses:
+        context_item = context.top
+        model = context_item.model
+        table = context_item.table
+
+        if value is None and "isnull" in model._meta.db.filter_class.FILTER_FUNC_MAP:
+            value = True
+            key = f"{key}{LOOKUP_SEP}isnull"
+
+        relation_field_name, _, field_sub = key.partition(LOOKUP_SEP)
+        if relation_field_name in self._annotations:
+            (filter_operator, _) = model._meta.db.filter_class.FILTER_FUNC_MAP[field_sub]
+            annotation = self._annotations[relation_field_name]
+            if annotation.field.is_aggregate:
+                return QueryClauses(having_criterion=filter_operator(annotation.field, value))
+            else:
+                return QueryClauses(where_criterion=filter_operator(annotation.field, value))
+
+        key_filter = model._meta.get_filter(key)
+        if key_filter:
+            return key_filter(context, value)
+
+        elif relation_field_name in model._meta.fetch_fields:
+            relation_field = model._meta.fields_map[relation_field_name]
+            required_joins = relation_field.get_joins(table)
+
+            related_table = required_joins[-1][0]
+            context.push(relation_field.remote_model, related_table)
+            modifier = Q(**{field_sub: value}).resolve(context=context, annotations=self._annotations)
+            context.pop()
+
+            return QueryClauses(joins=required_joins) & modifier
+
+        raise FieldError(f'Unknown field "{key}" for model "{model}"')
+
     def _resolve_filters(self, context: QueryContext) -> QueryClauses:
         modifier = QueryClauses()
         model = context.top.model
         for raw_key, raw_value in self.filters.items():
             key = self._get_actual_key(model, raw_key)
             value = self._get_actual_value(context, raw_value)
-
-            if key.split(LOOKUP_SEP)[0] in self._annotations:
-                filter_modifier = self._resolve_annotation_filters(context, key, value)
-            else:
-                filter_modifier = self._resolve_field_filters(context, key, value)
+            filter_modifier = self._resolve_filter(context, key, value)
 
             if self.join_type == self.AND:
                 modifier &= filter_modifier
