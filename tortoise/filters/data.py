@@ -1,7 +1,7 @@
 
 from tortoise.context import QueryContext
 from tortoise.fields.base import Field
-from tortoise.filters.base import FieldFilter, QueryModifier
+from tortoise.filters.base import FieldFilter, QueryClauses
 from tortoise.functions import OuterRef, Subquery
 
 
@@ -10,7 +10,7 @@ class DataFieldFilter(FieldFilter):
         super().__init__(field.model_field_name, opr, value_encoder)
         self.db_column = field.db_column or field.model_field_name
 
-    def __call__(self, context: QueryContext, value) -> QueryModifier:
+    def __call__(self, context: QueryContext, value) -> QueryClauses:
         context_item = context.top
         model = context_item.model
         table = context_item.table
@@ -34,7 +34,7 @@ class DataFieldFilter(FieldFilter):
 
         encoded_key = table[self.db_column]
         criterion = self.opr(encoded_key, encoded_value)
-        return QueryModifier(where_criterion=criterion, joins=joins)
+        return QueryClauses(where_criterion=criterion, joins=joins)
 
 
 class JSONFieldFilter(FieldFilter):
@@ -42,7 +42,7 @@ class JSONFieldFilter(FieldFilter):
         super().__init__(field.model_field_name, opr, value_encoder)
         self.db_column = field.db_column or field.model_field_name
 
-    def __call__(self, context: QueryContext, value) -> QueryModifier:
+    def __call__(self, context: QueryContext, value) -> QueryClauses:
         context_item = context.top
         model = context_item.model
         table = context_item.table
@@ -52,4 +52,4 @@ class JSONFieldFilter(FieldFilter):
 
         encoded_key = table[self.db_column]
         criterion = self.opr(encoded_key, encoded_value)
-        return QueryModifier(where_criterion=criterion)
+        return QueryClauses(where_criterion=criterion)

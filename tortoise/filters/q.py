@@ -5,7 +5,7 @@ from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
 from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.relational import ForeignKey, OneToOneField
-from tortoise.filters import FieldFilter, QueryModifier
+from tortoise.filters import FieldFilter, QueryClauses
 from tortoise.functions import OuterRef
 
 
@@ -58,7 +58,7 @@ class Q:
     def negate(self) -> None:
         self._is_negated = not self._is_negated
 
-    def _resolve_nested_filter(self, context: QueryContext, key, value) -> QueryModifier:
+    def _resolve_nested_filter(self, context: QueryContext, key, value) -> QueryClauses:
         context_item = context.top
 
         model = context_item.model
@@ -74,9 +74,9 @@ class Q:
             context=context, annotations=self._annotations)
         context.pop()
 
-        return QueryModifier(joins=required_joins) & modifier
+        return QueryClauses(joins=required_joins) & modifier
 
-    def _resolve_field_filters(self, context: QueryContext, key, value) -> QueryModifier:
+    def _resolve_field_filters(self, context: QueryContext, key, value) -> QueryClauses:
         model = context.top.model
 
         if value is None and "isnull" in model._meta.db.filter_class.FILTER_FUNC_MAP:
@@ -92,16 +92,16 @@ class Q:
 
         raise FieldError(f'Unknown field "{key}" for model "{model}"')
 
-    def _resolve_annotation_filters(self, context: QueryContext, key, value) -> QueryModifier:
+    def _resolve_annotation_filters(self, context: QueryContext, key, value) -> QueryClauses:
         model = context.top.model
         (field_name, sep, comparision) = key.partition(LOOKUP_SEP)
         (filter_operator, _) = model._meta.db.filter_class.FILTER_FUNC_MAP[comparision]
 
         annotation = self._annotations[field_name]
         if annotation.field.is_aggregate:
-            return QueryModifier(having_criterion=filter_operator(annotation.field, value))
+            return QueryClauses(having_criterion=filter_operator(annotation.field, value))
         else:
-            return QueryModifier(where_criterion=filter_operator(annotation.field, value))
+            return QueryClauses(where_criterion=filter_operator(annotation.field, value))
 
     def _get_actual_key(self, model: "Model", key: str) -> str:
         field_name = key
@@ -131,10 +131,11 @@ class Q:
 
         return value
 
-    def _resolve_filters(self, context: QueryContext) -> QueryModifier:
-        modifier = QueryModifier()
+    def _resolve_filters(self, context: QueryContext) -> QueryClauses:
+        modifier = QueryClauses()
+        model = context.top.model
         for raw_key, raw_value in self.filters.items():
-            key = self._get_actual_key(context.top.model, raw_key)
+            key = self._get_actual_key(model, raw_key)
             value = self._get_actual_value(context, raw_value)
 
             if key.split(LOOKUP_SEP)[0] in self._annotations:
@@ -152,8 +153,8 @@ class Q:
 
         return modifier
 
-    def _resolve_children(self, context: QueryContext) -> QueryModifier:
-        modifier = QueryModifier()
+    def _resolve_children(self, context: QueryContext) -> QueryClauses:
+        modifier = QueryClauses()
         for node in self.children:
             node_modifier = node.resolve(context, self._annotations)
             if self.join_type == self.AND:
@@ -165,7 +166,7 @@ class Q:
             modifier = ~modifier
         return modifier
 
-    def resolve(self, context: QueryContext, annotations) -> QueryModifier:
+    def resolve(self, context: QueryContext, annotations) -> QueryClauses:
         self._annotations = annotations
         if self.filters:
             return self._resolve_filters(context)

@@ -1,2 +1,2 @@
 
-from tortoise.filters.base import EmptyCriterion, QueryModifier, FieldFilter
+from tortoise.filters.base import EmptyCriterion, QueryClauses, FieldFilter

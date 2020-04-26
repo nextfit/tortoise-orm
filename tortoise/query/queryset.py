@@ -5,13 +5,12 @@ from typing import List, Dict, Type, Union, Set
 
 from tortoise.context import QueryContext
 from tortoise.exceptions import ParamsError, FieldError
-from tortoise.filters.q import Q
 from tortoise.functions import Annotation, Function
 from tortoise.query.fieldselect import ValuesListQuery, ValuesQuery
 from tortoise.query.statements import DeleteQuery, UpdateQuery, CountQuery
 from tortoise.query.prefetch import Prefetch
 from tortoise.query.base import AwaitableQuery, MODEL
-from tortoise.query.single import GetQuerySet, FirstQuerySet
+from tortoise.query.single import FirstQuerySet
 
 
 class QuerySet(AwaitableQuery[MODEL]):

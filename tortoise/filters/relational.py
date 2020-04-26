@@ -4,7 +4,7 @@ from pypika import Table
 
 from tortoise.context import QueryContext
 from tortoise.fields.relational import BackwardFKField, ManyToManyField
-from tortoise.filters.base import FieldFilter, QueryModifier
+from tortoise.filters.base import FieldFilter, QueryClauses
 from tortoise.functions import OuterRef
 
 
@@ -15,7 +15,7 @@ class RelationFilter(FieldFilter):
         self.table = table
         self.backward_key = backward_key
 
-    def __call__(self, context: QueryContext, value) -> QueryModifier:
+    def __call__(self, context: QueryContext, value) -> QueryClauses:
         context_item = context.top
         model = context_item.model
         table = context_item.table
@@ -52,7 +52,7 @@ class RelationFilter(FieldFilter):
 
         encoded_key = self.table[self.field_name]
         criterion = self.opr(encoded_key, encoded_value)
-        return QueryModifier(where_criterion=criterion, joins=joins)
+        return QueryClauses(where_criterion=criterion, joins=joins)
 
 
 class BackwardFKFilter(RelationFilter):
