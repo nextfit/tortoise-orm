@@ -1,6 +1,6 @@
 
 
-from pypika import Table, Field
+from pypika import Field
 
 from tortoise.context import QueryContext
 from tortoise.fields.relational import BackwardFKField, ManyToManyField
@@ -8,30 +8,30 @@ from tortoise.filters.base import FieldFilter, QueryClauses
 
 
 class RelationFilter(FieldFilter):
-    def __init__(self, field_name: str, opr, value_encoder, table, backward_key):
+    def __init__(self, field_name: str, opr, value_encoder, backward_key):
         super().__init__(field_name, opr, value_encoder)
-
-        self.table = table
         self.backward_key = backward_key
 
     def __call__(self, context: QueryContext, value) -> QueryClauses:
-        context_item = context.top
-        model = context_item.model
-        table = context_item.table
+        table = context.top.table
 
-        pk_db_column = model._meta.pk_db_column
-        joins = [(self.table, table[pk_db_column] == self.table[self.backward_key])]
+        context_item = context.stack[-2]
+        remote_model = context_item.model
+        remote_table = context_item.table
+        remote_pk_db_column = remote_model._meta.pk_db_column
+
+        joins = [(table, remote_table[remote_pk_db_column] == table[self.backward_key])]
 
         if isinstance(value, Field):
             encoded_value = value
 
         elif self.value_encoder:
-            encoded_value = self.value_encoder(value, model)
+            encoded_value = self.value_encoder(value, remote_model)
 
         else:
             encoded_value = value
 
-        encoded_key = self.table[self.field_name]
+        encoded_key = table[self.field_name]
         criterion = self.opr(encoded_key, encoded_value)
         return QueryClauses(where_criterion=criterion, joins=joins)
 
@@ -42,7 +42,6 @@ class BackwardFKFilter(RelationFilter):
             field.remote_model._meta.pk.model_field_name,
             opr,
             value_encoder,
-            Table(field.remote_model._meta.db_table),
             field.related_name)
 
 
@@ -52,5 +51,4 @@ class ManyToManyRelationFilter(RelationFilter):
             field.forward_key,
             opr,
             value_encoder,
-            Table(field.through),
             field.backward_key)

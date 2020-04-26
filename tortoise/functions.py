@@ -83,16 +83,12 @@ class OuterRef:
         outer_model = outer_context_item.model
         outer_table = outer_context_item.table
 
-        outer_field_name = OuterRef(self.get_actual_field_name(outer_model, annotations, self.ref_name))
+        outer_field_name = self.get_actual_field_name(outer_model, annotations, self.ref_name)
         outer_field = outer_model._meta.fields_map[outer_field_name]
 
         if isinstance(outer_field, ManyToManyField):
-            if outer_field.through in outer_context_item.through_tables:
-                outer_through_table = outer_context_item.through_tables[outer_field.through]
-                return outer_through_table[outer_field.forward_key]
-
-            else:
-                raise NotImplementedError()
+            outer_through_table = outer_context_item.through_tables[outer_field.through]
+            return outer_through_table[outer_field.forward_key]
 
         elif isinstance(outer_field, BackwardFKField):
             raise NotImplementedError()

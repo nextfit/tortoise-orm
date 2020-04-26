@@ -106,9 +106,25 @@ class Q:
 
         key_filter = model._meta.get_filter(key)
         if key_filter:
+            # return key_filter(context, value)
+            if relation_field_name in model._meta.fetch_fields:
+                relation_field = model._meta.fields_map[relation_field_name]
+                if isinstance(relation_field, (BackwardFKField, ManyToManyField)):
+                    required_joins = relation_field.get_joins(table)[:1]
+                    related_table = required_joins[-1][0]
+                    context.push(relation_field.remote_model, related_table)
+                    clauses = key_filter(context, value)
+                    clauses = QueryClauses(
+                        where_criterion=clauses.where_criterion,
+                        having_criterion=clauses.having_criterion,
+                        joins=required_joins)
+
+                    context.pop()
+                    return clauses
+
             return key_filter(context, value)
 
-        elif relation_field_name in model._meta.fetch_fields:
+        if relation_field_name in model._meta.fetch_fields:
             relation_field = model._meta.fields_map[relation_field_name]
             required_joins = relation_field.get_joins(table)
 
