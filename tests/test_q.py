@@ -12,7 +12,7 @@ class TestQ(_TestCase):
         q = Q(moo="cow")
         self.assertEqual(q.children, ())
         self.assertEqual(q.filters, {"moo": "cow"})
-        self.assertEqual(q.join_type, "AND")
+        self.assertEqual(q.join_type, Q.AND)
 
     def test_q_compound(self):
         q1 = Q(moo="cow")
@@ -21,15 +21,15 @@ class TestQ(_TestCase):
 
         self.assertEqual(q1.children, ())
         self.assertEqual(q1.filters, {"moo": "cow"})
-        self.assertEqual(q1.join_type, "AND")
+        self.assertEqual(q1.join_type, Q.AND)
 
         self.assertEqual(q2.children, ())
         self.assertEqual(q2.filters, {"moo": "bull"})
-        self.assertEqual(q2.join_type, "AND")
+        self.assertEqual(q2.join_type, Q.AND)
 
         self.assertEqual(q.children, (q1, q2))
         self.assertEqual(q.filters, {})
-        self.assertEqual(q.join_type, "OR")
+        self.assertEqual(q.join_type, Q.OR)
 
     def test_q_compound_or(self):
         q1 = Q(moo="cow")
@@ -38,15 +38,15 @@ class TestQ(_TestCase):
 
         self.assertEqual(q1.children, ())
         self.assertEqual(q1.filters, {"moo": "cow"})
-        self.assertEqual(q1.join_type, "AND")
+        self.assertEqual(q1.join_type, Q.AND)
 
         self.assertEqual(q2.children, ())
         self.assertEqual(q2.filters, {"moo": "bull"})
-        self.assertEqual(q2.join_type, "AND")
+        self.assertEqual(q2.join_type, Q.AND)
 
         self.assertEqual(q.children, (q1, q2))
         self.assertEqual(q.filters, {})
-        self.assertEqual(q.join_type, "OR")
+        self.assertEqual(q.join_type, Q.OR)
 
     def test_q_compound_and(self):
         q1 = Q(moo="cow")
@@ -55,15 +55,15 @@ class TestQ(_TestCase):
 
         self.assertEqual(q1.children, ())
         self.assertEqual(q1.filters, {"moo": "cow"})
-        self.assertEqual(q1.join_type, "AND")
+        self.assertEqual(q1.join_type, Q.AND)
 
         self.assertEqual(q2.children, ())
         self.assertEqual(q2.filters, {"moo": "bull"})
-        self.assertEqual(q2.join_type, "AND")
+        self.assertEqual(q2.join_type, Q.AND)
 
         self.assertEqual(q.children, (q1, q2))
         self.assertEqual(q.filters, {})
-        self.assertEqual(q.join_type, "AND")
+        self.assertEqual(q.join_type, Q.AND)
 
     def test_q_compound_or_notq(self):
         with self.assertRaisesRegex(OperationalError, "OR operation requires a Q node"):
@@ -85,13 +85,13 @@ class TestQ(_TestCase):
         q = Q(join_type="AND", moo="cow")
         self.assertEqual(q.children, ())
         self.assertEqual(q.filters, {"moo": "cow"})
-        self.assertEqual(q.join_type, "AND")
+        self.assertEqual(q.join_type, Q.AND)
 
     def test_q_partial_or(self):
         q = Q(join_type="OR", moo="cow")
         self.assertEqual(q.children, ())
         self.assertEqual(q.filters, {"moo": "cow"})
-        self.assertEqual(q.join_type, "OR")
+        self.assertEqual(q.join_type, Q.OR)
 
 
 class TestQCall(TestCase):

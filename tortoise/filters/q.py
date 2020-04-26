@@ -1,5 +1,5 @@
-
-from typing import Dict, Tuple
+import operator
+from typing import Dict, Tuple, Callable, Union
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
@@ -19,10 +19,15 @@ class Q:
         "check_annotations"
     )
 
-    AND = "AND"
-    OR = "OR"
+    AND = operator.and_
+    OR = operator.or_
 
-    def __init__(self, *args: "Q", join_type=AND, **kwargs) -> None:
+    join_type_map = {
+        "AND": AND,
+        "OR": OR
+    }
+
+    def __init__(self, *args: "Q", join_type: Union[str, Callable] = AND, **kwargs) -> None:
         if args and kwargs:
             newarg = Q(join_type=join_type, **kwargs)
             args = (newarg,) + args
@@ -33,6 +38,9 @@ class Q:
 
         self.children: Tuple[Q, ...] = args
         self.filters: Dict[str, FieldFilter] = kwargs
+
+        if join_type in self.join_type_map:
+            join_type = self.join_type_map[join_type]
 
         if join_type not in {self.AND, self.OR}:
             raise OperationalError("join_type must be AND or OR")
@@ -112,7 +120,7 @@ class Q:
                 related_table = queryset._join_table_by_field(table, relation_field, full=False)
                 if related_table:
                     context.push(relation_field.remote_model, related_table)
-                    clauses = QueryClauses(where_criterion=key_filter(context, value),)
+                    clauses = QueryClauses(where_criterion=key_filter(context, value))
                     context.pop()
                 else:
                     clauses = QueryClauses(where_criterion=key_filter(context, value))
@@ -142,11 +150,7 @@ class Q:
             key = self._get_actual_key(queryset, model, raw_key)
             value = self._get_actual_value(queryset, context, raw_value)
             filter_modifier = self._resolve_filter(queryset, context, key, value)
-
-            if self.join_type == self.AND:
-                modifier &= filter_modifier
-            else:
-                modifier |= filter_modifier
+            modifier = self.join_type(modifier, filter_modifier)
 
         if self._is_negated:
             modifier = ~modifier
@@ -157,10 +161,7 @@ class Q:
         modifier = QueryClauses()
         for node in self.children:
             node_modifier = node._resolve(queryset, context)
-            if self.join_type == self.AND:
-                modifier &= node_modifier
-            else:
-                modifier |= node_modifier
+            modifier = self.join_type(modifier, node_modifier)
 
         if self._is_negated:
             modifier = ~modifier
