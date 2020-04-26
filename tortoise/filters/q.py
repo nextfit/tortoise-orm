@@ -7,7 +7,7 @@ from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.relational import ForeignKey, OneToOneField
 from tortoise.filters import FieldFilter
 from tortoise.filters.clause import QueryClauses
-from tortoise.functions import OuterRef
+from tortoise.functions import OuterRef, Subquery
 
 
 class Q:
@@ -89,6 +89,10 @@ class Q:
     def _get_actual_value(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, value):
         if isinstance(value, OuterRef):
             return value.get_field(context, queryset.annotations)
+
+        if isinstance(value, Subquery):
+            value.resolve_into(queryset, context)
+            return value.field
 
         if hasattr(value, "pk"):
             return value.pk

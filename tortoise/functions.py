@@ -90,6 +90,9 @@ class OuterRef:
             return outer_through_table[outer_field.forward_key]
 
         elif isinstance(outer_field, BackwardFKField):
+            # I am guessing this is the right code here, but has to be tested
+            # return outer_table[outer_field.related_name]
+
             raise NotImplementedError()
 
         else:

@@ -1,9 +1,9 @@
-from pypika import Criterion
+
+import pypika
 
 from tortoise.context import QueryContext
-from tortoise.fields.base import Field
+from tortoise.fields import Field
 from tortoise.filters.base import FieldFilter
-from tortoise.functions import OuterRef, Subquery
 
 
 class DataFieldFilter(FieldFilter):
@@ -11,19 +11,15 @@ class DataFieldFilter(FieldFilter):
         super().__init__(field.model_field_name, opr, value_encoder)
         self.db_column = field.db_column or field.model_field_name
 
-    def __call__(self, context: QueryContext, value) -> Criterion:
+    def __call__(self, context: QueryContext, value) -> pypika.Criterion:
         context_item = context.top
         model = context_item.model
         table = context_item.table
 
         field_object = model._meta.fields_map[self.field_name]
 
-        if isinstance(value, OuterRef):
-            outer_table = context.stack[-2].table
-            encoded_value = outer_table[value.ref_name]
-
-        elif isinstance(value, Subquery):
-            encoded_value = value.field
+        if isinstance(value, pypika.Field):
+            encoded_value = value
 
         elif self.value_encoder:
             encoded_value = self.value_encoder(value, model, field_object)
@@ -40,7 +36,7 @@ class JSONFieldFilter(FieldFilter):
         super().__init__(field.model_field_name, opr, value_encoder)
         self.db_column = field.db_column or field.model_field_name
 
-    def __call__(self, context: QueryContext, value) -> Criterion:
+    def __call__(self, context: QueryContext, value) -> pypika.Criterion:
         context_item = context.top
         model = context_item.model
         table = context_item.table
