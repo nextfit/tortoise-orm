@@ -1,6 +1,5 @@
 
 from pypika import Criterion
-from tortoise.exceptions import ParamsError
 from typing import Optional
 
 
@@ -70,10 +69,10 @@ class QueryClauses:
             )
 
     def __invert__(self) -> "QueryClauses":
-        if not self.where_criterion and not self.having_criterion:
-            raise Exception("Inverting and empty QueryClause")
-
         if self.having_criterion:
             return QueryClauses(having_criterion=_and(self.where_criterion, self.having_criterion).negate(),)
 
-        return QueryClauses(where_criterion=self.where_criterion.negate())
+        if self.where_criterion:
+            return QueryClauses(where_criterion=self.where_criterion.negate())
+
+        raise Exception("Inverting empty QueryClause")
