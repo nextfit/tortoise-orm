@@ -108,15 +108,8 @@ class AwaitableStatement(Generic[MODEL]):
         else:
             return None
 
-    def create_base_query(self, alias):
-        if alias:
-            table = Table(self.model._meta.db_table, alias=alias)
-            return self.model._meta.db.query_class.from_(table)
-        else:
-            return copy(self.model._meta.basequery)
-
-    def create_base_query_all_fields(self, alias):
-        return self.create_base_query(alias).select(*self.model._meta.db_columns)
+    def query_builder_select_all_fields(self, alias=None):
+        return self.model._meta.query_builder(alias).select(*self.model._meta.db_columns)
 
     def _add_query_details(self, context: QueryContext) -> None:
         self.__resolve_annotations(context=context)

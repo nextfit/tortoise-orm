@@ -779,7 +779,7 @@ class ManyToManyField(RelationField):
 
         related_query_table = related_query.model._meta.table()
         related_pk_field = related_query.model._meta.pk_db_column
-        related_query.query = related_query.create_base_query_all_fields(alias=None)
+        related_query.query = related_query.query_builder_select_all_fields()
         related_query.query = (
             related_query.query.join(subquery)
             .on(getattr(subquery, field_object.forward_key) == related_query_table[related_pk_field])

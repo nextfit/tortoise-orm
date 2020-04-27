@@ -76,7 +76,7 @@ class BaseExecutor:
 
             table = self.model._meta.table()
             self.delete_query = str(
-                self.model._meta.basequery.where(
+                self.model._meta.query_builder().where(
                     table[self.model._meta.pk_db_column] == self.parameter(0)
                 ).delete()
             )

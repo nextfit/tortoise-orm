@@ -124,7 +124,7 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
         raise FieldError(f'Unknown field "{field_name}" for model "{model}"')
 
     def _make_query(self, context: QueryContext, alias=None) -> None:
-        self.query = self.create_base_query(alias)
+        self.query = self.model._meta.query_builder(alias)
         context.push(self.model, self.query._from[-1])
         self._add_query_details(context=context)
         for return_as, field_name in self.fields_for_select.items():

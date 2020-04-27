@@ -3,6 +3,7 @@ from copy import deepcopy
 from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar
 
 from pypika import Query, Table, Order
+from pypika.queries import QueryBuilder
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import ConfigurationError, OperationalError, FieldError
@@ -50,7 +51,6 @@ class MetaInfo:
         "db_column_to_field_name_map",
         "fields_map",
         "default_connection",
-        "basequery",
         "unique_together",
         "indexes",
         "pk_attr",
@@ -78,7 +78,6 @@ class MetaInfo:
         self.field_to_db_column_name_map: Dict[str, str]
         self.db_column_to_field_name_map: Dict[str, str]
 
-        self.basequery: Query
         self.pk_attr: str
         self.generated_column_names: List[str]
         self._model: "Model"
@@ -106,6 +105,9 @@ class MetaInfo:
 
     def table(self, alias=None) -> Table:
         return Table(self.db_table, alias=alias)
+
+    def query_builder(self, alias=None) -> QueryBuilder:
+        return self.db.query_class.from_(self.table(alias))
 
     @property
     def db(self) -> "BaseDBAsyncClient":

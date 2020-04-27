@@ -205,7 +205,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         return queryset
 
     def _make_query(self, context: QueryContext, alias=None) -> None:
-        self.query = self.create_base_query_all_fields(alias)
+        self.query = self.query_builder_select_all_fields(alias)
         context.push(self.model, self.query._from[-1])
 
         self._add_query_details(context=context)
