@@ -121,7 +121,7 @@ class Function(Annotation):
             relation_field = model._meta.fields_map[relation_field_name]
 
             if field_sub:
-                related_table = queryset._join_table_by_field(table, relation_field)
+                related_table = queryset.join_table_by_field(table, relation_field)
 
                 context.push(relation_field.remote_model, related_table)
                 sub_function = self.__class__(field_sub, add_group_by=False, *self.default_values)
@@ -130,7 +130,7 @@ class Function(Annotation):
                 context.pop()
 
             else:
-                related_table = queryset._join_table_by_field(table, relation_field)
+                related_table = queryset.join_table_by_field(table, relation_field)
                 relation_field_meta = relation_field.remote_model._meta
                 field = related_table[relation_field_meta.pk_db_column]
 

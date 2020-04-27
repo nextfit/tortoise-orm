@@ -38,7 +38,7 @@ class QueryOrderingField(QueryOrdering):
                 )
 
             relation_field = model._meta.fields_map[relation_field_name]
-            related_table = queryset._join_table_by_field(table, relation_field)
+            related_table = queryset.join_table_by_field(table, relation_field)
 
             context.push(relation_field.remote_model, related_table)
             QueryOrderingField(field_sub, self.direction, False).resolve_into(queryset, context)

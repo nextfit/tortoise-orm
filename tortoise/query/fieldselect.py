@@ -44,7 +44,7 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
         if not field_object:
             raise FieldError(f'Unknown field "{field_name}" for model "{model.__name__}"')
 
-        field_table = self._join_table_by_field(table, field_object)
+        field_table = self.join_table_by_field(table, field_object)
         forwarded_base, _, forwarded_sub = forwarded_fields.partition(LOOKUP_SEP)
 
         context.push(field_object.remote_model, field_table)

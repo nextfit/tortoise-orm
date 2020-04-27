@@ -121,7 +121,7 @@ class Q:
         if key_filter:
             if relation_field_name in model._meta.fetch_fields:
                 relation_field = model._meta.fields_map[relation_field_name]
-                related_table = queryset._join_table_by_field(table, relation_field, full=False)
+                related_table = queryset.join_table_by_field(table, relation_field, full=False)
                 if related_table:
                     context.push(relation_field.remote_model, related_table)
                     clauses = QueryClauses(where_criterion=key_filter(context, value))
@@ -135,7 +135,7 @@ class Q:
 
         if relation_field_name in model._meta.fetch_fields:
             relation_field = model._meta.fields_map[relation_field_name]
-            related_table = queryset._join_table_by_field(table, relation_field)
+            related_table = queryset.join_table_by_field(table, relation_field)
             context.push(relation_field.remote_model, related_table)
 
             q = Q(**{field_sub: value})

@@ -86,7 +86,7 @@ class AwaitableStatement(Generic[MODEL]):
         for key, annotation in self.annotations.items():
             annotation.resolve_into(self, context=context, alias=key)
 
-    def _join_table_by_field(self, table, relation_field: RelationField, full=True) -> Optional[Table]:
+    def join_table_by_field(self, table, relation_field: RelationField, full=True) -> Optional[Table]:
         """
         :param table:
         :param relation_field:
