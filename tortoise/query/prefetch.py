@@ -1,6 +1,4 @@
 
-from copy import copy
-
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import FieldError
 

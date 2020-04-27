@@ -1,5 +1,4 @@
 
-
 from pypika import Criterion
 from pypika.terms import Term
 

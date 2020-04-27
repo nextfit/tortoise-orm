@@ -1,6 +1,4 @@
 
-from copy import copy
-
 from pypika.functions import Count
 from pypika.terms import Term
 

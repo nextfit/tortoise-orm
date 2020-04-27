@@ -8,8 +8,6 @@ import warnings
 from inspect import isclass
 from typing import Coroutine, Dict, List, Optional, Type
 
-from pypika import Table
-
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config, obscure_password
 from tortoise.exceptions import ConfigurationError
@@ -167,7 +165,6 @@ class Tortoise:
 
     @classmethod
     def _init_models(cls) -> None:
-
         models_list = []
         for app_name, app_models_map in cls.app_models_map.items():
             for model in app_models_map.values():
