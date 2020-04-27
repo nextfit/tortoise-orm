@@ -79,7 +79,7 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
 
         base_field_name, _, sub_field = field_name.partition(LOOKUP_SEP)
         if base_field_name in self.model._meta.fetch_fields:
-            context.push(model=self.model, table=self.model._meta.basetable)
+            context.push(model=self.model, table=self.model._meta.table())
             related_table, related_db_column = self._join_table_with_forwarded_fields(
                 context=context, field_name=base_field_name, forwarded_fields=sub_field)
             context.pop()

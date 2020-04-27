@@ -51,7 +51,6 @@ class MetaInfo:
         "fields_map",
         "default_connection",
         "basequery",
-        "basetable",
         "unique_together",
         "indexes",
         "pk_attr",
@@ -80,7 +79,6 @@ class MetaInfo:
         self.db_column_to_field_name_map: Dict[str, str]
 
         self.basequery: Query
-        self.basetable: Table
         self.pk_attr: str
         self.generated_column_names: List[str]
         self._model: "Model"
@@ -105,6 +103,9 @@ class MetaInfo:
             return self.fields_map[name]
 
         raise FieldError(f"Field {name} does not exist")
+
+    def table(self, alias=None) -> Table:
+        return Table(self.db_table, alias=alias)
 
     @property
     def db(self) -> "BaseDBAsyncClient":

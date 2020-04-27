@@ -74,7 +74,7 @@ class BaseExecutor:
                 else:
                     self.column_map[field_name] = field_object.to_db_value
 
-            table = self.model._meta.basetable
+            table = self.model._meta.table()
             self.delete_query = str(
                 self.model._meta.basequery.where(
                     table[self.model._meta.pk_db_column] == self.parameter(0)
@@ -125,7 +125,7 @@ class BaseExecutor:
         return field_object.to_db_value(attr, instance)
 
     def _prepare_insert_statement(self, columns: List[str]) -> str:
-        return self.db.query_class.into(self.model._meta.basetable)\
+        return self.db.query_class.into(self.model._meta.table())\
             .columns(*columns)\
             .insert(*[self.parameter(i) for i in range(len(columns))])\
             .get_sql()
@@ -171,7 +171,7 @@ class BaseExecutor:
         if key in self.update_cache:
             return self.update_cache[key]
 
-        table = self.model._meta.basetable
+        table = self.model._meta.table()
         query = self.db.query_class.update(table)
         count = 0
 

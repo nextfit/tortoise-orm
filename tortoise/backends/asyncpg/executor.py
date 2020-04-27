@@ -17,7 +17,7 @@ class AsyncpgExecutor(BaseExecutor):
 
     def _prepare_insert_statement(self, columns: List[str], has_generated: bool = True) -> str:
         query = (
-            self.db.query_class.into(self.model._meta.basetable)
+            self.db.query_class.into(self.model._meta.table())
             .columns(*columns)
             .insert(*[self.parameter(i) for i in range(len(columns))])
         )

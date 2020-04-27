@@ -19,7 +19,7 @@ class UpdateQuery(AwaitableStatement):
         self.update_kwargs = update_kwargs
 
     def _make_query(self, context: QueryContext, alias=None) -> None:
-        table = self.model._meta.basetable
+        table = self.model._meta.table()
         self.query = self._db.query_class.update(table)
 
         context.push(self.model, table)

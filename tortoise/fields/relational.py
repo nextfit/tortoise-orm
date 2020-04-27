@@ -377,8 +377,9 @@ class BackwardFKField(RelationField):
 
     def get_joins(self, table: Table, full: bool) -> List[Tuple[Table, Criterion]]:
         table_pk = self.model._meta.pk_db_column
-        related_table = self.remote_model._meta.basetable
-        related_table = related_table.as_(f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}")
+        related_table = self.remote_model._meta\
+            .table(alias=f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}")
+
         return [(related_table, table[table_pk] == related_table[self.related_name])]
 
 
@@ -539,8 +540,8 @@ class ForeignKey(RelationField):
     def get_joins(self, table: Table, full: bool) -> List[Tuple[Table, Criterion]]:
         if full:
             related_table_pk = self.remote_model._meta.pk_db_column
-            related_table = self.remote_model._meta.basetable
-            related_table = related_table.as_(f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}")
+            related_table = self.remote_model._meta\
+                .table(alias=f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}")
 
             return [(related_table, related_table[related_table_pk] == table[self.db_column])]
 
@@ -776,7 +777,7 @@ class ManyToManyField(RelationField):
             .where(through_table[field_object.backward_key].isin(instance_id_set))
         )
 
-        related_query_table = related_query.model._meta.basetable
+        related_query_table = related_query.model._meta.table()
         related_pk_field = related_query.model._meta.pk_db_column
         related_query.query = related_query.create_base_query_all_fields(alias=None)
         related_query.query = (
@@ -829,7 +830,9 @@ class ManyToManyField(RelationField):
         joins = [(through_table, table[table_pk] == through_table[self.backward_key])]
 
         if full:
-            related_table = self.remote_model._meta.basetable.as_(f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}")
+            related_table = self.remote_model._meta\
+                .table(alias=f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}")
+
             joins.append((related_table, through_table[self.forward_key] == related_table[related_table_pk]))
 
         return joins
