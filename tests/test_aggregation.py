@@ -49,7 +49,6 @@ class TestAggregation(test.TestCase):
         self.assertEqual(len(default_name_tournaments), 2)
         self.assertEqual(default_name_tournaments[1].id, tournament.id)
 
-
         ##############
         event_with_annotation = (
             await Event.all().annotate(tournament_test_id=Sum("tournament__id")).first()

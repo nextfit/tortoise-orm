@@ -148,34 +148,26 @@ class Q:
 
         raise FieldError(f'Unknown field "{key}" for model "{model}"')
 
-    def _resolve_filters(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext) -> QueryClauses:
+    def _resolve(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext) -> QueryClauses:
         clause_collector = QueryClauses()
         model = context.top.model
+
+        #
+        # In reality only one of children or filters is non-empty
+        #
+        for node in self.children:
+            clause = node._resolve(queryset, context)
+            clause_collector = self.join_type(clause_collector, clause)
+
         for raw_key, raw_value in self.filters.items():
             key = self._get_actual_key(queryset, model, raw_key)
             value = self._get_actual_value(queryset, context, raw_value)
-            filter_clause = self._resolve_filter(queryset, context, key, value)
-            clause_collector = self.join_type(clause_collector, filter_clause)
+            clause = self._resolve_filter(queryset, context, key, value)
+            clause_collector = self.join_type(clause_collector, clause)
 
         if self._is_negated:
             clause_collector = ~clause_collector
         return clause_collector
-
-    def _resolve_children(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext) -> QueryClauses:
-        clause_collector = QueryClauses()
-        for node in self.children:
-            node_clause = node._resolve(queryset, context)
-            clause_collector = self.join_type(clause_collector, node_clause)
-
-        if self._is_negated:
-            clause_collector = ~clause_collector
-        return clause_collector
-
-    def _resolve(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext) -> QueryClauses:
-        if self.filters:
-            return self._resolve_filters(queryset, context)
-        else:
-            return self._resolve_children(queryset, context)
 
     def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext):
         clauses = self._resolve(queryset, context)
