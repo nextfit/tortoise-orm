@@ -16,7 +16,7 @@ class Q:
         "filters",
         "join_type",
         "_is_negated",
-        "check_annotations"
+        "_check_annotations"
     )
 
     AND = operator.and_
@@ -48,7 +48,7 @@ class Q:
         self.join_type = join_type
         self._is_negated = False
 
-        self.check_annotations = True
+        self._check_annotations = True
 
     def __and__(self, other) -> "Q":
         if not isinstance(other, Q):
@@ -109,7 +109,7 @@ class Q:
             key = f"{key}{LOOKUP_SEP}isnull"
 
         relation_field_name, _, field_sub = key.partition(LOOKUP_SEP)
-        if self.check_annotations and relation_field_name in queryset.annotations:
+        if self._check_annotations and relation_field_name in queryset.annotations:
             (filter_operator, _) = model._meta.db.filter_class.FILTER_FUNC_MAP[field_sub]
             annotation = queryset.annotations[relation_field_name]
             if annotation.field.is_aggregate:
@@ -139,7 +139,7 @@ class Q:
             context.push(relation_field.remote_model, related_table)
 
             q = Q(**{field_sub: value})
-            q.check_annotations = False
+            q._check_annotations = False
             modifier = q._resolve(queryset=queryset, context=context)
             context.pop()
 
