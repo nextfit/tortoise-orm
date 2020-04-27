@@ -86,6 +86,9 @@ class AwaitableStatement(Generic[MODEL]):
         for key, annotation in self.annotations.items():
             annotation.resolve_into(self, context=context, alias=key)
 
+    def is_aggregate(self):
+        return any([annotation.field.is_aggregate for annotation in self.annotations.values()])
+
     def join_table_by_field(self, table, relation_field: RelationField, full=True) -> Optional[Table]:
         """
         :param table:
@@ -271,7 +274,7 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
     def __parse_orderings(self, *orderings: Union[str, Node]) -> None:
         model = self.model
 
-        parsed_orders = []
+        parsed_orders: List[QueryOrdering] = []
         for ordering in orderings:
             if isinstance(ordering, Node):
                 parsed_orders.append(QueryOrderingNode(ordering))

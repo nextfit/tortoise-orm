@@ -101,7 +101,7 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
             return lambda x: x
 
         if field_name in self.annotations:
-            return lambda x: x
+            return self.annotations[field_name].to_python_value
 
         if field_name in model._meta.fields_map:
             field_object = model._meta.fields_map[field_name]

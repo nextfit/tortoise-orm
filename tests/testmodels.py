@@ -152,6 +152,9 @@ class BinaryFields(Model):
 
 
 class DecimalFields(Model):
+    class Meta:
+        ordering = ['id', ]
+
     id = fields.IntegerField(primary_key=True)
     decimal = fields.DecimalField(max_digits=18, decimal_places=4)
     decimal_nodec = fields.DecimalField(max_digits=18, decimal_places=0)

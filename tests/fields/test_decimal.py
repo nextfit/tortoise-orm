@@ -92,7 +92,7 @@ class TestDecimalFields(test.TestCase):
             .values("sum_decimal")
         )
         self.assertEqual(
-            values, [{"sum_decimal": 0}, {"sum_decimal": 9.99}, {"sum_decimal": 27.27}]
+            values, [{"sum_decimal": Decimal("0")}, {"sum_decimal": Decimal("9.99")}, {"sum_decimal": Decimal("27.27")}]
         )
 
     async def test_true_aggregate_sum(self):
@@ -101,7 +101,7 @@ class TestDecimalFields(test.TestCase):
         await testmodels.DecimalFields.create(decimal=Decimal("27.27"), decimal_nodec=1)
         values = await testmodels.DecimalFields.all().aggregate(sum_decimal=Sum("decimal"))
         self.assertEqual(
-            values, {"sum_decimal": 37.26},
+            values, {"sum_decimal": Decimal("37.26")},
         )
 
     async def test_aggregate_avg(self):
@@ -114,7 +114,7 @@ class TestDecimalFields(test.TestCase):
             .values("avg_decimal")
         )
         self.assertEqual(
-            values, [{"avg_decimal": 0}, {"avg_decimal": 9.99}, {"avg_decimal": 27.27}]
+            values, [{"avg_decimal": Decimal("0")}, {"avg_decimal": Decimal("9.99")}, {"avg_decimal": Decimal("27.27")}]
         )
 
     async def test_true_aggregate_avg(self):
@@ -123,7 +123,7 @@ class TestDecimalFields(test.TestCase):
         await testmodels.DecimalFields.create(decimal=Decimal("27.27"), decimal_nodec=1)
         values = await testmodels.DecimalFields.all().aggregate(Avg("decimal"))
         self.assertEqual(
-            values, {"decimal__avg": 12.42},
+            values, {"decimal__avg": Decimal("12.42")},
         )
 
     async def test_aggregate_max(self):
@@ -136,7 +136,7 @@ class TestDecimalFields(test.TestCase):
             .values("max_decimal")
         )
         self.assertEqual(
-            values, [{"max_decimal": 0}, {"max_decimal": 9.99}, {"max_decimal": 27.27}]
+            values, [{"max_decimal": Decimal("0")}, {"max_decimal": Decimal("9.99")}, {"max_decimal": Decimal("27.27")}]
         )
 
     async def test_true_aggregate_max(self):
@@ -145,5 +145,5 @@ class TestDecimalFields(test.TestCase):
         await testmodels.DecimalFields.create(decimal=Decimal("27.27"), decimal_nodec=1)
         values = await testmodels.DecimalFields.all().aggregate(max_decimal=Max("decimal"))
         self.assertEqual(
-            values, {"max_decimal": 27.27}
+            values, {"max_decimal": Decimal("27.27")}
         )

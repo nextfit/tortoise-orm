@@ -2,13 +2,13 @@
 from typing import TypeVar
 
 from pypika import functions
-from pypika.terms import AggregateFunction, Field
+from pypika.terms import AggregateFunction, Field as PyPikaField
 from pypika.terms import Function as PyPikaFunction
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.context import QueryContext
 from tortoise.exceptions import FieldError, BaseORMException, ParamsError
-from tortoise.fields import ForeignKey, OneToOneField, ManyToManyField, BackwardFKField
+from tortoise.fields import ForeignKey, OneToOneField, ManyToManyField, BackwardFKField, Field
 
 MODEL = TypeVar("MODEL", bound="Model")
 
@@ -17,7 +17,7 @@ class Annotation:
     __slots__ = ("_field", )
 
     def __init__(self):
-        self._field = None
+        self._field: PyPikaField
 
     def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, alias: str):
         raise NotImplementedError()
@@ -31,6 +31,9 @@ class Annotation:
             return self._field
 
         raise BaseORMException("Trying to access annotation field before it being set")
+
+    def to_python_value(self, value):
+        return value
 
 
 class Subquery(Annotation):
@@ -76,7 +79,7 @@ class OuterRef:
         allowed = sorted(list(model._meta.fields_map.keys() | annotations.keys()))
         raise FieldError(f"Unknown field name '{field_name}'. Allowed base values are {allowed}")
 
-    def get_field(self, context: QueryContext, annotations) -> Field:
+    def get_field(self, context: QueryContext, annotations) -> PyPikaField:
         outer_context_item = context.stack[-2]
         outer_model = outer_context_item.model
         outer_table = outer_context_item.table
@@ -99,13 +102,19 @@ class OuterRef:
 
 
 class Function(Annotation):
-    __slots__ = ("field_name", "default_values", "add_group_by")
+    __slots__ = (
+        "field_name",
+        "field_object",
+        "default_values",
+        "add_group_by"
+    )
 
     database_func = PyPikaFunction
 
     def __init__(self, field_name, *default_values, add_group_by=True) -> None:
         super().__init__()
         self.field_name = field_name
+        self.field_object: Field
         self.default_values = default_values
         self.add_group_by = add_group_by
 
@@ -135,23 +144,21 @@ class Function(Annotation):
                 field = related_table[relation_field_meta.pk_db_column]
 
                 self._field = self.database_func(field, *self.default_values).as_(alias)
-                queryset.query._select_other(self._field)
 
         else:
             if field_sub:
                 raise FieldError(f"{relation_field_name} is not a relation for model {model.__name__}")
 
-            field_object = model._meta.fields_map.get(self.field_name)
-            if not field_object:
+            self.field_object = model._meta.fields_map.get(self.field_name)
+            if not self.field_object:
                 raise FieldError(f"Unknown field {self.field_name} for model {model.__name__}")
 
-            field = table[field_object.db_column]
-            func = field_object.get_for_dialect(model._meta.db.capabilities.dialect, "function_cast")
+            field = table[self.field_object.db_column]
+            func = self.field_object.get_for_dialect(model._meta.db.capabilities.dialect, "function_cast")
             if func:
-                field = func(field_object, field)
+                field = func(self.field_object, field)
 
             self._field = self.database_func(field, *self.default_values).as_(alias)
-            queryset.query._select_other(self._field)
 
         if self.add_group_by and self._field.is_aggregate:
             queryset.query = queryset.query.groupby(table.id)
@@ -159,6 +166,9 @@ class Function(Annotation):
 
 class Aggregate(Function):
     database_func = AggregateFunction
+
+    def to_python_value(self, value):
+        return self.field_object.to_python_value(value)
 
 
 ##############################################################################

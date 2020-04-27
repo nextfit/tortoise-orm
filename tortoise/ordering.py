@@ -53,11 +53,12 @@ class QueryOrderingField(QueryOrdering):
                 raise FieldError(f"Unknown field {self.field_name} for model {model.__name__}")
 
             field = table[field_object.db_column]
-            func = field_object.get_for_dialect(model._meta.db.capabilities.dialect, "function_cast")
-            if func:
-                field = func(field_object, field)
+            if not queryset.is_aggregate() or field in queryset.query._groupbys:
+                func = field_object.get_for_dialect(model._meta.db.capabilities.dialect, "function_cast")
+                if func:
+                    field = func(field_object, field)
 
-            queryset.query = queryset.query.orderby(field, order=self.direction)
+                queryset.query = queryset.query.orderby(field, order=self.direction)
 
 
 #
