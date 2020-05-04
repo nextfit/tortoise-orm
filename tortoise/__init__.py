@@ -159,7 +159,7 @@ class Tortoise:
                 app_models += cls._discover_models(module, app_name)
 
             for model in app_models:
-                model._meta.default_connection = connection_name
+                model._meta.connection_name = connection_name
 
             cls.app_models_map[app_name] = {model.__name__: model for model in app_models}
 
@@ -324,7 +324,7 @@ class Tortoise:
     async def _reset_apps(cls) -> None:
         for models_map in cls.app_models_map.values():
             for model in models_map.values():
-                model._meta.default_connection = None
+                model._meta.connection_name = None
 
         cls.app_models_map.clear()
         current_transaction_map.clear()

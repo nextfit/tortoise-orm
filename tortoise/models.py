@@ -50,7 +50,7 @@ class MetaInfo:
         "_inited",
         "db_column_to_field_name_map",
         "fields_map",
-        "default_connection",
+        "connection_name",
         "unique_together",
         "indexes",
         "pk_attr",
@@ -69,7 +69,7 @@ class MetaInfo:
         self.table_description: str = getattr(meta, "table_description", "")
 
         self.fetch_fields: Set[str] = set()
-        self.default_connection: Optional[str] = None
+        self.connection_name: Optional[str] = None
         self._inited: bool = False
 
         self.db_table: str
@@ -112,7 +112,7 @@ class MetaInfo:
     @property
     def db(self) -> "BaseDBAsyncClient":
         try:
-            return current_transaction_map[self.default_connection].get()
+            return current_transaction_map[self.connection_name].get()
         except KeyError:
             raise ConfigurationError("No DB associated to model")
 
