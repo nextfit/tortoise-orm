@@ -125,12 +125,6 @@ class SqliteClient(BaseDBAsyncClient):
             return (connection.total_changes - start) or len(rows), rows
 
     @translate_exceptions
-    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
-        async with self.acquire_connection() as connection:
-            self.log.debug("%s: %s", query, values)
-            return list(map(dict, await connection.execute_fetchall(query, values)))
-
-    @translate_exceptions
     async def execute_script(self, query: str) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug(query)

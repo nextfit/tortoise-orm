@@ -185,7 +185,8 @@ class ValuesQuery(FieldSelectQuery):
             for alias, field_name in self.fields_for_select.items()
         ]
 
-        result = await self._db.execute_query_dict(str(self.query))
+        _, result = await self._db.execute_query(str(self.query))
+        result = list(map(dict, result))
         for row in result:
             for col_name, col_mapper in column_mappers:
                 row[col_name] = col_mapper(row[col_name])

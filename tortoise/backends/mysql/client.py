@@ -184,9 +184,6 @@ class MySQLClient(BaseDBAsyncClient):
                     return cursor.rowcount, [dict(zip(fields, row)) for row in rows]
                 return cursor.rowcount, []
 
-    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
-        return (await self.execute_query(query, values))[1]
-
     @translate_exceptions
     async def execute_script(self, query: str) -> None:
         async with self.acquire_connection() as connection:
