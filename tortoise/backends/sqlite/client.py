@@ -168,6 +168,7 @@ class TransactionWrapper(SqliteClient, AsyncDbClientTransactionMixin):
             await self._connection.execute("BEGIN")
         except sqlite3.OperationalError as exc:  # pragma: nocoverage
             raise TransactionManagementError(exc)
+        self.transaction_finalized = False
 
     async def rollback(self) -> None:
         if self.transaction_finalized:

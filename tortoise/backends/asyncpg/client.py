@@ -68,12 +68,24 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self.pool_minsize = int(self.extra.pop("minsize", 1))
         self.pool_maxsize = int(self.extra.pop("maxsize", 5))
 
-        self._template: dict = {}
         self._pool: Optional[asyncpg.pool] = None
-        self._connection = None
+
+    def _copy(self, base: "AsyncpgDBClient"):
+        super()._copy(base)
+
+        self.user = base.user
+        self.password = base.password
+        self.database = base.database
+        self.host = base.host
+        self.post = base.port
+        self.extra = base.extra
+        self.schema = base.schema
+        self.pool_minsize = base.pool_minsize
+        self.pool_maxsize = base.pool_maxsize
+        self._pool = base._pool
 
     async def create_connection(self, with_db: bool) -> None:
-        self._template = {
+        pool_template = {
             "host": self.host,
             "port": self.port,
             "user": self.user,
@@ -84,15 +96,13 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         }
 
         if self.schema:
-            self._template["server_settings"] = {"search_path": self.schema}
+            pool_template["server_settings"] = {"search_path": self.schema}
 
         try:
-            self._pool = await asyncpg.create_pool(None, password=self.password, **self._template)
-            self.log.debug("Created connection pool %s with params: %s", self._pool, self._template)
+            self._pool = await asyncpg.create_pool(None, password=self.password, **pool_template)
+            self.log.debug("Created connection pool %s with params: %s", self._pool, pool_template)
         except asyncpg.InvalidCatalogNameError:
             raise DBConnectionError(f"Can't establish connection to database {self.database}")
-
-        # Set post-connection variables
 
     async def _expire_connections(self) -> None:
         if self._pool:  # pragma: nobranch
@@ -104,12 +114,12 @@ class AsyncpgDBClient(BaseDBAsyncClient):
                 await asyncio.wait_for(self._pool.close(), 10)
             except asyncio.TimeoutError:  # pragma: nocoverage
                 self._pool.terminate()
+
+            self.log.debug("Closed connection pool %s", self._pool)
             self._pool = None
-            self.log.debug("Closed connection pool %s with params: %s", self._pool, self._template)
 
     async def close(self) -> None:
         await self._close()
-        self._template.clear()
 
     async def db_create(self) -> None:
         await self.create_connection(with_db=False)
@@ -182,13 +192,12 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
 class TransactionWrapper(AsyncpgDBClient, AsyncDbClientTransactionMixin):
     def __init__(self, db_client: AsyncpgDBClient) -> None:
-        self._connection: asyncpg.Connection = db_client._connection
+        super()._copy(db_client)
         self._lock = asyncio.Lock()
-        self.log = db_client.log
-        self.connection_name = db_client.connection_name
-        self.transaction: Transaction = None
-        self._finalized = False
-        self._parent = db_client
+
+        self._connection: Optional[asyncpg.Connection] = None
+        self._transaction: Optional[Transaction] = None
+        self.transaction_finalized = False
 
     def in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(self)
@@ -204,25 +213,26 @@ class TransactionWrapper(AsyncpgDBClient, AsyncDbClientTransactionMixin):
             await connection.executemany(query, values)
 
     async def acquire(self) -> None:
-        self._connection = await self._parent._pool.acquire()
+        self._connection = await self._pool.acquire()
 
     async def release(self) -> None:
-        if self._parent._pool:
-            await self._parent._pool.release(self._connection)
+        if self._pool:
+            await self._pool.release(self._connection)
 
     @translate_exceptions
     async def start(self) -> None:
-        self.transaction = self._connection.transaction()
-        await self.transaction.start()
+        self._transaction = self._connection.transaction()
+        await self._transaction.start()
+        self.transaction_finalized = False
 
     async def commit(self) -> None:
-        if self._finalized:
+        if self.transaction_finalized:
             raise TransactionManagementError("Transaction already finalized")
-        await self.transaction.commit()
-        self._finalized = True
+        await self._transaction.commit()
+        self.transaction_finalized = True
 
     async def rollback(self) -> None:
-        if self._finalized:
+        if self.transaction_finalized:
             raise TransactionManagementError("Transaction already finalized")
-        await self.transaction.rollback()
-        self._finalized = True
+        await self._transaction.rollback()
+        self.transaction_finalized = True

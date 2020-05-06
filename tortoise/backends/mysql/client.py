@@ -75,14 +75,29 @@ class MySQLClient(BaseDBAsyncClient):
         self.pool_minsize = int(self.extra.pop("minsize", 1))
         self.pool_maxsize = int(self.extra.pop("maxsize", 5))
 
-        self._template: dict = {}
         self._pool: Optional[aiomysql.Pool] = None
-        self._connection = None
+
+    def _copy(self, base: "MySQLClient"):
+        super()._copy(base)
+
+        self.user = base.user
+        self.password = base.password
+        self.database = base.database
+        self.host = base.host
+        self.port = base.port
+        self.extra = base.extra
+        self.storage_engine = base.storage_engine
+        self.charset = base.charset
+        self.pool_minsize = base.pool_minsize
+        self.pool_maxsize = base.pool_maxsize
+
+        self._pool = base._pool
 
     async def create_connection(self, with_db: bool) -> None:
         if charset_by_name(self.charset) is None:  # type: ignore
             raise DBConnectionError(f"Unknown charset {self.charset}")
-        self._template = {
+
+        pool_template = {
             "host": self.host,
             "port": self.port,
             "user": self.user,
@@ -93,8 +108,9 @@ class MySQLClient(BaseDBAsyncClient):
             "maxsize": self.pool_maxsize,
             **self.extra,
         }
+
         try:
-            self._pool = await aiomysql.create_pool(password=self.password, **self._template)
+            self._pool = await aiomysql.create_pool(password=self.password, **pool_template)
 
             if isinstance(self._pool, aiomysql.Pool):
                 async with self.acquire_connection() as connection:
@@ -106,9 +122,10 @@ class MySQLClient(BaseDBAsyncClient):
                             if self.storage_engine.lower() != "innodb":  # pragma: nobranch
                                 self.capabilities.__dict__["supports_transactions"] = False
 
-            self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)
+            self.log.debug("Created connection %s pool with params: %s", self._pool, pool_template)
+
         except pymysql.err.OperationalError:
-            raise DBConnectionError(f"Can't connect to MySQL server: {self._template}")
+            raise DBConnectionError(f"Can't connect to MySQL server: {pool_template}")
 
     async def _expire_connections(self) -> None:
         if self._pool:  # pragma: nobranch
@@ -119,12 +136,12 @@ class MySQLClient(BaseDBAsyncClient):
         if self._pool:  # pragma: nobranch
             self._pool.close()
             await self._pool.wait_closed()
-            self.log.debug("Closed connection %s with params: %s", self._connection, self._template)
+
+            self.log.debug("Closed connection pool %s", self._pool)
             self._pool = None
 
     async def close(self) -> None:
         await self._close()
-        self._template.clear()
 
     async def db_create(self) -> None:
         await self.create_connection(with_db=False)
@@ -194,12 +211,11 @@ class MySQLClient(BaseDBAsyncClient):
 
 class TransactionWrapper(MySQLClient, AsyncDbClientTransactionMixin):
     def __init__(self, db_client) -> None:
-        self.connection_name = db_client.connection_name
-        self._connection: aiomysql.Connection = db_client._connection
+        super()._copy(db_client)
         self._lock = asyncio.Lock()
-        self.log = db_client.log
-        self._finalized: Optional[bool] = None
-        self._parent = db_client
+
+        self._connection: Optional[aiomysql.Connection] = None
+        self.transaction_finalized = False
 
     def in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(self)
@@ -215,25 +231,25 @@ class TransactionWrapper(MySQLClient, AsyncDbClientTransactionMixin):
                 await cursor.executemany(query, values)
 
     async def acquire(self) -> None:
-        self._connection = await self._parent._pool.acquire()
+        self._connection = await self._pool.acquire()
 
     async def release(self) -> None:
-        if self._parent._pool:
-            await self._parent._pool.release(self._connection)
+        if self._pool:
+            await self._pool.release(self._connection)
 
     @translate_exceptions
     async def start(self) -> None:
         await self._connection.begin()
-        self._finalized = False
+        self.transaction_finalized = False
 
     async def commit(self) -> None:
-        if self._finalized:
+        if self.transaction_finalized:
             raise TransactionManagementError("Transaction already finalized")
         await self._connection.commit()
-        self._finalized = True
+        self.transaction_finalized = True
 
     async def rollback(self) -> None:
-        if self._finalized:
+        if self.transaction_finalized:
             raise TransactionManagementError("Transaction already finalized")
         await self._connection.rollback()
-        self._finalized = True
+        self.transaction_finalized = True
