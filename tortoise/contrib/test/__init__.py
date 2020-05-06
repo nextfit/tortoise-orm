@@ -31,6 +31,9 @@ __all__ = (
     "skipIf",
     "skipUnless",
 )
+
+from tortoise.transactions.context import TransactionContext
+
 _TORTOISE_TEST_DB = "sqlite://:memory:"
 # pylint: disable=W0201
 
@@ -340,25 +343,21 @@ class TruncationTestCase(SimpleTestCase):
                 await model._meta.db.execute_script(f"DELETE FROM {model._meta.db_table}")  # nosec
 
 
-class TransactionTestContext:
-    __slots__ = ("connection", "connection_name", "token")
-
-    def __init__(self, connection) -> None:
-        self.connection = connection
-        self.connection_name = connection.connection_name
+class TestTransactionContext(TransactionContext):
+    __slots__ = ("token", )
 
     async def __aenter__(self):
         current_transaction = current_transaction_map[self.connection_name]
-        self.token = current_transaction.set(self.connection)
-        if hasattr(self.connection, "_parent"):
-            self.connection._connection = await self.connection._parent._pool.acquire()
-        await self.connection.start()
-        return self.connection
+        self.token = current_transaction.set(self.db_client)
+        if hasattr(self.db_client, "_parent"):
+            self.db_client._connection = await self.db_client._parent._pool.acquire()
+        await self.db_client.start()
+        return self.db_client
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        await self.connection.rollback()
-        if hasattr(self.connection, "_parent"):
-            await self.connection._parent._pool.release(self.connection._connection)
+        await self.db_client.rollback()
+        if hasattr(self.db_client, "_parent"):
+            await self.db_client._parent._pool.release(self.db_client._connection)
         current_transaction_map[self.connection_name].reset(self.token)
 
 
@@ -374,8 +373,8 @@ class TestCase(TruncationTestCase):
         _restore_default()
         self.__db__ = Tortoise.get_connection("models")
         if self.__db__.capabilities.supports_transactions:
-            connection = self.__db__.in_transaction().connection
-            async with TransactionTestContext(connection):
+            db_client = self.__db__.in_transaction().db_client
+            async with TestTransactionContext(db_client):
                 await super()._run_outcome(outcome, expecting_failure, testMethod)
         else:
             await super()._run_outcome(outcome, expecting_failure, testMethod)

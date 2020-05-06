@@ -193,13 +193,13 @@ class MySQLClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
-    def __init__(self, connection) -> None:
-        self.connection_name = connection.connection_name
-        self._connection: aiomysql.Connection = connection._connection
+    def __init__(self, db_client) -> None:
+        self.connection_name = db_client.connection_name
+        self._connection: aiomysql.Connection = db_client._connection
         self._lock = asyncio.Lock()
-        self.log = connection.log
+        self.log = db_client.log
         self._finalized: Optional[bool] = None
-        self._parent = connection
+        self._parent = db_client
 
     def in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(self)

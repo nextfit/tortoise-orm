@@ -131,12 +131,12 @@ class SqliteClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
-    def __init__(self, connection: SqliteClient) -> None:
-        self.connection_name = connection.connection_name
-        self._connection: aiosqlite.Connection = connection._connection
+    def __init__(self, db_client: SqliteClient) -> None:
+        self.connection_name = db_client.connection_name
+        self._connection: aiosqlite.Connection = db_client._connection
         self._lock = asyncio.Lock()
-        self._trxlock = connection._lock
-        self.log = connection.log
+        self._trxlock = db_client._lock
+        self.log = db_client.log
         self._finalized = False
 
     def in_transaction(self) -> TransactionContext:

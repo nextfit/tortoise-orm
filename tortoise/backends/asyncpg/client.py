@@ -181,14 +181,14 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
-    def __init__(self, connection: AsyncpgDBClient) -> None:
-        self._connection: asyncpg.Connection = connection._connection
+    def __init__(self, db_client: AsyncpgDBClient) -> None:
+        self._connection: asyncpg.Connection = db_client._connection
         self._lock = asyncio.Lock()
-        self.log = connection.log
-        self.connection_name = connection.connection_name
+        self.log = db_client.log
+        self.connection_name = db_client.connection_name
         self.transaction: Transaction = None
         self._finalized = False
-        self._parent = connection
+        self._parent = db_client
 
     def in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(self)
