@@ -111,10 +111,9 @@ class BaseDBAsyncClient:
     schema_generator: Type[BaseSchemaGenerator] = BaseSchemaGenerator
     capabilities: Capabilities = Capabilities("")
 
-    def __init__(self, connection_name: str, fetch_inserted: bool = True, **kwargs) -> None:
+    def __init__(self, connection_name: str, **kwargs) -> None:
         self.log = logging.getLogger("tortoise")
         self.connection_name = connection_name
-        self.fetch_inserted = fetch_inserted
 
     def get_schema_sql(self, safe: bool) -> str:
         generator = self.schema_generator(self)

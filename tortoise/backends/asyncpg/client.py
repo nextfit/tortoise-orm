@@ -63,7 +63,6 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self.extra = kwargs.copy()
         self.schema = self.extra.pop("schema", None)
         self.extra.pop("connection_name", None)
-        self.extra.pop("fetch_inserted", None)
         self.extra.pop("loop", None)
         self.extra.pop("connection_class", None)
         self.pool_minsize = int(self.extra.pop("minsize", 1))

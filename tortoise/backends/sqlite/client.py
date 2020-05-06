@@ -43,7 +43,6 @@ class SqliteClient(BaseDBAsyncClient):
 
         self.pragmas = kwargs.copy()
         self.pragmas.pop("connection_name", None)
-        self.pragmas.pop("fetch_inserted", None)
         self.pragmas.setdefault("journal_mode", "WAL")
         self.pragmas.setdefault("journal_size_limit", 16384)
         self.pragmas.setdefault("foreign_keys", "ON")
@@ -139,7 +138,6 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
         self._trxlock = connection._lock
         self.log = connection.log
         self._finalized = False
-        self.fetch_inserted = connection.fetch_inserted
 
     def in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(self)

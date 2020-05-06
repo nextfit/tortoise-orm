@@ -68,7 +68,6 @@ class MySQLClient(BaseDBAsyncClient):
         self.extra = kwargs.copy()
         self.storage_engine = self.extra.pop("storage_engine", "")
         self.extra.pop("connection_name", None)
-        self.extra.pop("fetch_inserted", None)
         self.extra.pop("db", None)
         self.extra.pop("autocommit", None)
         self.extra.setdefault("sql_mode", "STRICT_TRANS_TABLES")
@@ -200,7 +199,6 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         self._lock = asyncio.Lock()
         self.log = connection.log
         self._finalized: Optional[bool] = None
-        self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
 
     def in_transaction(self) -> TransactionContext:
