@@ -16,7 +16,7 @@ from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
 from tortoise.exceptions import IntegrityError, OperationalError, TransactionManagementError
 
 from tortoise.transactions import BaseTransactionWrapper
-from tortoise.transactions.context import TransactionContext, NestedTransactionContext
+from tortoise.transactions.context import TransactionContext, NestedTransactionContext, LockTransactionContext
 
 
 def translate_exceptions(func):
@@ -91,7 +91,7 @@ class SqliteClient(BaseDBAsyncClient):
         return LockConnectionWrapper(self._connection, self._lock)
 
     def in_transaction(self) -> "TransactionContext":
-        return TransactionContext(TransactionWrapper(self))
+        return LockTransactionContext(TransactionWrapper(self))
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:

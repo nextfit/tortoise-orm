@@ -23,7 +23,7 @@ from tortoise.exceptions import (
     TransactionManagementError,
 )
 from tortoise.transactions import BaseTransactionWrapper
-from tortoise.transactions.context import TransactionContextPooled, NestedTransactionContext, TransactionContext
+from tortoise.transactions.context import NestedTransactionContext, TransactionContext, PoolTransactionContext
 
 
 def translate_exceptions(func):
@@ -128,7 +128,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         return PoolConnectionWrapper(self._pool)
 
     def in_transaction(self) -> TransactionContext:
-        return TransactionContextPooled(TransactionWrapper(self))
+        return PoolTransactionContext(TransactionWrapper(self))
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> Optional[asyncpg.Record]:

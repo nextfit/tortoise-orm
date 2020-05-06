@@ -4,11 +4,24 @@ from tortoise.transactions import current_transaction_map
 
 
 class TransactionContext:
-    __slots__ = ("connection", "connection_name", "token", "lock")
+    __slots__ = ("connection", "connection_name", )
 
     def __init__(self, connection) -> None:
         self.connection = connection
         self.connection_name = connection.connection_name
+
+    async def __aenter__(self):
+        raise NotImplementedError()
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        raise NotImplementedError()
+
+
+class LockTransactionContext(TransactionContext):
+    __slots__ = ("token", "lock")
+
+    def __init__(self, connection) -> None:
+        super().__init__(connection)
         self.lock = getattr(connection, "_trxlock", None)
 
     async def __aenter__(self):
@@ -30,8 +43,8 @@ class TransactionContext:
         self.lock.release()
 
 
-class TransactionContextPooled(TransactionContext):
-    __slots__ = ("connection", "connection_name", "token")
+class PoolTransactionContext(TransactionContext):
+    __slots__ = ("token", )
 
     async def __aenter__(self):
         current_transaction = current_transaction_map[self.connection_name]
