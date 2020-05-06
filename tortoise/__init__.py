@@ -29,9 +29,9 @@ class Tortoise:
     @classmethod
     def get_db_client(cls, connection_name: str) -> BaseDBAsyncClient:
         """
-        Returns the connection by name.
+        Returns db_client by name.
 
-        :raises KeyError: If connection name does not exist.
+        :raises KeyError: If db_client name does not exist.
         """
         return cls._db_client_map[connection_name]
 
@@ -106,14 +106,14 @@ class Tortoise:
             client_class = cls._discover_client_class(conn_config.get("engine"))
             db_params = conn_config["credentials"].copy()
             db_params.update({"connection_name": connection_name})
-            connection = client_class(**db_params)  # type: ignore
+            db_client = client_class(**db_params)  # type: ignore
 
             if create_db:
-                await connection.db_create()
+                await db_client.db_create()
 
-            await connection.create_connection(with_db=True)
-            cls._db_client_map[connection_name] = connection
-            current_transaction_map[connection_name] = ContextVar(connection_name, default=connection)
+            await db_client.create_connection(with_db=True)
+            cls._db_client_map[connection_name] = db_client
+            current_transaction_map[connection_name] = ContextVar(connection_name, default=db_client)
 
     @classmethod
     def _discover_models(cls, models_path: str, app_label: str) -> List[Type[Model]]:
@@ -314,8 +314,8 @@ class Tortoise:
         else your event loop may never complete
         as it is waiting for the connections to die.
         """
-        for connection in cls._db_client_map.values():
-            await connection.close()
+        for db_client in cls._db_client_map.values():
+            await db_client.close()
 
         cls._db_client_map = {}
         logger.info("Tortoise-ORM shutdown")
@@ -343,8 +343,8 @@ class Tortoise:
         """
         if not cls._inited:
             raise ConfigurationError("You have to call .init() first before generating schemas")
-        for connection in cls._db_client_map.values():
-            await connection.generate_schema(safe)
+        for db_client in cls._db_client_map.values():
+            await db_client.generate_schema(safe)
 
     @classmethod
     async def _drop_databases(cls) -> None:
@@ -354,9 +354,9 @@ class Tortoise:
         """
         if not cls._inited:
             raise ConfigurationError("You have to call .init() first before deleting schemas")
-        for connection in cls._db_client_map.values():
-            await connection.close()
-            await connection.db_delete()
+        for db_client in cls._db_client_map.values():
+            await db_client.close()
+            await db_client.db_delete()
 
         cls._db_client_map = {}
         await cls._reset_apps()
