@@ -25,7 +25,7 @@ from tortoise.exceptions import (
     TransactionManagementError,
 )
 from tortoise.transactions import AsyncDbClientTransactionMixin
-from tortoise.transactions.context import PoolTransactionContext, NestedTransactionContext, TransactionContext
+from tortoise.transactions.context import NestedTransactionContext, TransactionContext, LockTransactionContext
 
 
 def translate_exceptions(func):
@@ -143,7 +143,7 @@ class MySQLClient(BaseDBAsyncClient):
         return PoolConnectionWrapper(self._pool)
 
     def in_transaction(self) -> "TransactionContext":
-        return PoolTransactionContext(TransactionWrapper(self))
+        return LockTransactionContext(TransactionWrapper(self))
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
@@ -213,6 +213,13 @@ class TransactionWrapper(MySQLClient, AsyncDbClientTransactionMixin):
             self.log.debug("%s: %s", query, values)
             async with connection.cursor() as cursor:
                 await cursor.executemany(query, values)
+
+    async def acquire(self) -> None:
+        self._connection = await self._parent._pool.acquire()
+
+    async def release(self) -> None:
+        if self._parent._pool:
+            await self._parent._pool.release(self._connection)
 
     @translate_exceptions
     async def start(self) -> None:

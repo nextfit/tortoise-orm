@@ -63,10 +63,16 @@ def atomic(connection_name: Optional[str] = None) -> Callable:
 
 
 class AsyncDbClientTransactionMixin:
-    async def start(self) -> None:
+
+    # lock acquisition and release
+    async def acquire(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
-    def release(self) -> None:
+    async def release(self) -> None:
+        raise NotImplementedError()  # pragma: nocoverage
+
+    # transaction operations
+    async def start(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def rollback(self) -> None:

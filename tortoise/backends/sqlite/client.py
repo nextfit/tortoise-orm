@@ -149,6 +149,12 @@ class TransactionWrapper(SqliteClient, AsyncDbClientTransactionMixin):
             # Already within transaction, so ideal for performance
             await connection.executemany(query, values)
 
+    async def acquire(self) -> None:
+        await self._trxlock.acquire()
+
+    async def release(self) -> None:
+        self._trxlock.release()
+
     async def start(self) -> None:
         try:
             await self._connection.commit()

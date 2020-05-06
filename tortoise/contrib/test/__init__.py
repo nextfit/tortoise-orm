@@ -349,16 +349,15 @@ class TestTransactionContext(TransactionContext):
     async def __aenter__(self):
         current_transaction = current_transaction_map[self.connection_name]
         self.token = current_transaction.set(self.db_client)
-        if hasattr(self.db_client, "_parent"):
-            self.db_client._connection = await self.db_client._parent._pool.acquire()
+
+        await self.db_client.acquire()
         await self.db_client.start()
         return self.db_client
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self.db_client.rollback()
-        if hasattr(self.db_client, "_parent"):
-            await self.db_client._parent._pool.release(self.db_client._connection)
         current_transaction_map[self.connection_name].reset(self.token)
+        await self.db_client.release()
 
 
 class TestCase(TruncationTestCase):

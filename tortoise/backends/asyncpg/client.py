@@ -23,7 +23,7 @@ from tortoise.exceptions import (
     TransactionManagementError,
 )
 from tortoise.transactions import AsyncDbClientTransactionMixin
-from tortoise.transactions.context import NestedTransactionContext, TransactionContext, PoolTransactionContext
+from tortoise.transactions.context import NestedTransactionContext, TransactionContext, LockTransactionContext
 
 
 def translate_exceptions(func):
@@ -128,7 +128,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         return PoolConnectionWrapper(self._pool)
 
     def in_transaction(self) -> TransactionContext:
-        return PoolTransactionContext(TransactionWrapper(self))
+        return LockTransactionContext(TransactionWrapper(self))
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> Optional[asyncpg.Record]:
@@ -202,6 +202,13 @@ class TransactionWrapper(AsyncpgDBClient, AsyncDbClientTransactionMixin):
             self.log.debug("%s: %s", query, values)
             # TODO: Consider using copy_records_to_table instead
             await connection.executemany(query, values)
+
+    async def acquire(self) -> None:
+        self._connection = await self._parent._pool.acquire()
+
+    async def release(self) -> None:
+        if self._parent._pool:
+            await self._parent._pool.release(self._connection)
 
     @translate_exceptions
     async def start(self) -> None:
