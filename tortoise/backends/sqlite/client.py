@@ -50,15 +50,24 @@ class SqliteClient(BaseDBAsyncClient):
         self._connection: Optional[aiosqlite.Connection] = None
         self._lock = asyncio.Lock()
 
+    def _copy(self, base: "SqliteClient"):
+        super()._copy(base)
+        self.filename = base.filename
+        self.pragmas = base.pragmas
+        self._connection = base._connection
+        self._lock = base._lock
+
     async def create_connection(self, with_db: bool) -> None:
         if not self._connection:  # pragma: no branch
             self._connection = aiosqlite.connect(self.filename, isolation_level=None)
             self._connection.start()
             await self._connection._connect()
             self._connection._conn.row_factory = sqlite3.Row
+
             for pragma, val in self.pragmas.items():
                 cursor = await self._connection.execute(f"PRAGMA {pragma}={val}")
                 await cursor.close()
+
             self.log.debug(
                 "Created connection %s with params: filename=%s %s",
                 self._connection,
@@ -132,12 +141,10 @@ class SqliteClient(BaseDBAsyncClient):
 
 class TransactionWrapper(SqliteClient, AsyncDbClientTransactionMixin):
     def __init__(self, db_client: SqliteClient) -> None:
-        self.connection_name = db_client.connection_name
-        self._connection: aiosqlite.Connection = db_client._connection
+        super()._copy(db_client)
+        self._trxlock = self._lock
         self._lock = asyncio.Lock()
-        self._trxlock = db_client._lock
-        self.log = db_client.log
-        self._finalized = False
+        self.transaction_finalized = False
 
     def in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(self)
@@ -163,13 +170,13 @@ class TransactionWrapper(SqliteClient, AsyncDbClientTransactionMixin):
             raise TransactionManagementError(exc)
 
     async def rollback(self) -> None:
-        if self._finalized:
+        if self.transaction_finalized:
             raise TransactionManagementError("Transaction already finalized")
         await self._connection.rollback()
-        self._finalized = True
+        self.transaction_finalized = True
 
     async def commit(self) -> None:
-        if self._finalized:
+        if self.transaction_finalized:
             raise TransactionManagementError("Transaction already finalized")
         await self._connection.commit()
-        self._finalized = True
+        self.transaction_finalized = True

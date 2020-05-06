@@ -104,6 +104,7 @@ class PoolConnectionWrapper(ConnectionWrapper):
 
 
 class BaseDBAsyncClient:
+    log = logging.getLogger("tortoise")
 
     query_class: Type[Query] = Query
     filter_class: Type[BaseFilter] = BaseFilter
@@ -112,8 +113,10 @@ class BaseDBAsyncClient:
     capabilities: Capabilities = Capabilities("")
 
     def __init__(self, connection_name: str, **kwargs) -> None:
-        self.log = logging.getLogger("tortoise")
         self.connection_name = connection_name
+
+    def _copy(self, base: "BaseDBAsyncClient"):
+        self.connection_name = base.connection_name
 
     def get_schema_sql(self, safe: bool) -> str:
         generator = self.schema_generator(self)

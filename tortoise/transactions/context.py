@@ -29,7 +29,7 @@ class LockTransactionContext(TransactionContext):
         return self.db_client
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        if not self.db_client._finalized:
+        if not self.db_client.transaction_finalized:
             if exc_type:
                 # Can't rollback a transaction that already failed.
                 if exc_type is not TransactionManagementError:
@@ -47,7 +47,7 @@ class NestedTransactionContext(TransactionContext):
         return self.db_client
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        if not self.db_client._finalized:
+        if not self.db_client.transaction_finalized:
             if exc_type:
                 # Can't rollback a transaction that already failed.
                 if exc_type is not TransactionManagementError:
