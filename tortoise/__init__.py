@@ -23,7 +23,7 @@ logger = logging.getLogger("tortoise")
 
 class Tortoise:
     app_models_map: Dict[str, Dict[str, Type[Model]]] = {}
-    _connections: Dict[str, BaseDBAsyncClient] = {}
+    _db_client_map: Dict[str, BaseDBAsyncClient] = {}
     _inited: bool = False
 
     @classmethod
@@ -33,7 +33,7 @@ class Tortoise:
 
         :raises KeyError: If connection name does not exist.
         """
-        return cls._connections[connection_name]
+        return cls._db_client_map[connection_name]
 
     @classmethod
     def get_model(cls, full_name: str):
@@ -112,7 +112,7 @@ class Tortoise:
                 await connection.db_create()
 
             await connection.create_connection(with_db=True)
-            cls._connections[connection_name] = connection
+            cls._db_client_map[connection_name] = connection
             current_transaction_map[connection_name] = ContextVar(connection_name, default=connection)
 
     @classmethod
@@ -314,10 +314,10 @@ class Tortoise:
         else your event loop may never complete
         as it is waiting for the connections to die.
         """
-        for connection in cls._connections.values():
+        for connection in cls._db_client_map.values():
             await connection.close()
 
-        cls._connections = {}
+        cls._db_client_map = {}
         logger.info("Tortoise-ORM shutdown")
 
     @classmethod
@@ -343,8 +343,8 @@ class Tortoise:
         """
         if not cls._inited:
             raise ConfigurationError("You have to call .init() first before generating schemas")
-        for connection in cls._connections.values():
-            await connection.generate_schema_for_client(safe)
+        for connection in cls._db_client_map.values():
+            await connection.generate_schema(safe)
 
     @classmethod
     async def _drop_databases(cls) -> None:
@@ -354,11 +354,11 @@ class Tortoise:
         """
         if not cls._inited:
             raise ConfigurationError("You have to call .init() first before deleting schemas")
-        for connection in cls._connections.values():
+        for connection in cls._db_client_map.values():
             await connection.close()
             await connection.db_delete()
 
-        cls._connections = {}
+        cls._db_client_map = {}
         await cls._reset_apps()
 
 

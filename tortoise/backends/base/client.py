@@ -119,7 +119,7 @@ class BaseDBAsyncClient:
         generator = self.schema_generator(self)
         return generator.get_create_schema_sql(safe)
 
-    async def generate_schema_for_client(self, safe: bool) -> None:
+    async def generate_schema(self, safe: bool) -> None:
         generator = self.schema_generator(self)
         schema = generator.get_create_schema_sql(safe)
         self.log.debug("Creating schema: %s", schema)

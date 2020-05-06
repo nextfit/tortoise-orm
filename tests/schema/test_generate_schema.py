@@ -12,7 +12,7 @@ class TestGenerateSchema(test.SimpleTestCase):
     async def setUp(self):
         try:
             Tortoise.app_models_map = {}
-            Tortoise._connections = {}
+            Tortoise._db_client_map = {}
             Tortoise._inited = False
         except ConfigurationError:
             pass
@@ -24,7 +24,7 @@ class TestGenerateSchema(test.SimpleTestCase):
         ]
 
     async def tearDown(self):
-        Tortoise._connections = {}
+        Tortoise._db_client_map = {}
         await Tortoise._reset_apps()
 
     async def init_for(self, module: str, safe=False) -> None:
@@ -42,7 +42,7 @@ class TestGenerateSchema(test.SimpleTestCase):
                     "apps": {"models": {"models": [module], "default_connection": "default"}},
                 }
             )
-            self.sqls = Tortoise._connections["default"].get_schema_sql(safe).split(";\n")
+            self.sqls = Tortoise._db_client_map["default"].get_schema_sql(safe).split(";\n")
 
     def get_sql(self, text: str) -> str:
         return re.sub(r"[ \t\n\r]+", " ", " ".join([sql for sql in self.sqls if text in sql]))
@@ -312,7 +312,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
                         "apps": {"models": {"models": [module], "default_connection": "default"}},
                     }
                 )
-                self.sqls = Tortoise._connections["default"].get_schema_sql(safe).split("; ")
+                self.sqls = Tortoise._db_client_map["default"].get_schema_sql(safe).split("; ")
         except ImportError:
             raise test.SkipTest("aiomysql not installed")
 
@@ -551,7 +551,7 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
                         "apps": {"models": {"models": [module], "default_connection": "default"}},
                     }
                 )
-                self.sqls = Tortoise._connections["default"].get_schema_sql(safe).split("; ")
+                self.sqls = Tortoise._db_client_map["default"].get_schema_sql(safe).split("; ")
         except ImportError:
             raise test.SkipTest("asyncpg not installed")
 

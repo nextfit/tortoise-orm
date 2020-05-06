@@ -79,7 +79,7 @@ async def _init_db(config: dict) -> None:
 
 def _restore_default() -> None:
     Tortoise.app_models_map = {}
-    Tortoise._connections = _CONNECTIONS.copy()
+    Tortoise._db_client_map = _CONNECTIONS.copy()
     current_transaction_map.update(_CONN_MAP)
     Tortoise._init_apps(_CONFIG["apps"])
     Tortoise._inited = True
@@ -112,10 +112,10 @@ def initializer(
     _LOOP = loop
     _SELECTOR = loop._selector  # type: ignore
     loop.run_until_complete(_init_db(_CONFIG))
-    _CONNECTIONS = Tortoise._connections.copy()
+    _CONNECTIONS = Tortoise._db_client_map.copy()
     _CONN_MAP = current_transaction_map.copy()
     Tortoise.app_models_map = {}
-    Tortoise._connections = {}
+    Tortoise._db_client_map = {}
     Tortoise._inited = False
 
 
@@ -205,7 +205,7 @@ class SimpleTestCase(_TestCase):  # type: ignore
             self.tearDown()
         await self._tearDownDB()
         Tortoise.app_models_map = {}
-        Tortoise._connections = {}
+        Tortoise._db_client_map = {}
         Tortoise._inited = False
 
         # post-test checks
@@ -315,10 +315,10 @@ class IsolatedTestCase(SimpleTestCase):
         config = getDBConfig(app_label="models", modules=self.tortoise_test_modules or _MODULES)
         await Tortoise.init(config, _create_db=True)
         await Tortoise.generate_schemas(safe=False)
-        self._connections = Tortoise._connections.copy()
+        self._db_client_map = Tortoise._db_client_map.copy()
 
     async def _tearDownDB(self) -> None:
-        Tortoise._connections = self._connections.copy()
+        Tortoise._db_client_map = self._db_client_map.copy()
         await Tortoise._drop_databases()
 
 

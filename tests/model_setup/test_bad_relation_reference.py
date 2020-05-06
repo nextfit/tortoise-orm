@@ -7,7 +7,7 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
     async def setUp(self):
         try:
             Tortoise.app_models_map = {}
-            Tortoise._connections = {}
+            Tortoise._db_client_map = {}
             Tortoise._inited = False
         except ConfigurationError:
             pass
