@@ -6,7 +6,7 @@ from tortoise.exceptions import ConfigurationError
 class TestBadReleationReferenceErrors(test.SimpleTestCase):
     async def setUp(self):
         try:
-            Tortoise.app_models_map = {}
+            Tortoise._app_models_map = {}
             Tortoise._db_client_map = {}
             Tortoise._inited = False
         except ConfigurationError:

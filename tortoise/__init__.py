@@ -22,7 +22,7 @@ logger = logging.getLogger("tortoise")
 
 
 class Tortoise:
-    app_models_map: Dict[str, Dict[str, Type[Model]]] = {}
+    _app_models_map: Dict[str, Dict[str, Type[Model]]] = {}
     _db_client_map: Dict[str, BaseDBAsyncClient] = {}
     _inited: bool = False
 
@@ -49,10 +49,10 @@ class Tortoise:
             raise ConfigurationError('Model name needs to be in format "app.Model"')
 
         app_name, model_name = full_name.split(".")
-        if app_name not in cls.app_models_map:
+        if app_name not in cls._app_models_map:
             raise ConfigurationError(f"No app with name '{app_name}' registered.")
 
-        related_app = cls.app_models_map[app_name]
+        related_app = cls._app_models_map[app_name]
         if model_name not in related_app:
             raise ConfigurationError(
                 f"No model with name '{model_name}' registered in app '{app_name}'."
@@ -86,7 +86,7 @@ class Tortoise:
         """
 
         if not models:
-            models = [model for models_map in cls.app_models_map.values() for model in models_map.values()]
+            models = [model for models_map in cls._app_models_map.values() for model in models_map.values()]
 
         return {model.full_name(): model.describe(serializable) for model in models}
 
@@ -164,13 +164,13 @@ class Tortoise:
             for model in app_models:
                 model._meta.connection_name = connection_name
 
-            cls.app_models_map[app_name] = {model.__name__: model for model in app_models}
+            cls._app_models_map[app_name] = {model.__name__: model for model in app_models}
 
     @classmethod
     def _init_models(cls) -> None:
         models_list = []
-        for app_name, app_models_map in cls.app_models_map.items():
-            for model in app_models_map.values():
+        for app_name, _app_models_map in cls._app_models_map.items():
+            for model in _app_models_map.values():
                 if not model._meta._inited:
                     field_objects = list(model._meta.fields_map.values())
                     for field in field_objects:
@@ -204,7 +204,7 @@ class Tortoise:
     @classmethod
     def get_models_for_connection(cls, connection_name) -> List[Type[Model]]:
         return [model
-            for models_map in cls.app_models_map.values()
+            for models_map in cls._app_models_map.values()
             for model in models_map.values()
             if model._meta.connection_name == connection_name
         ]
@@ -333,11 +333,11 @@ class Tortoise:
 
     @classmethod
     async def _reset_apps(cls) -> None:
-        for models_map in cls.app_models_map.values():
+        for models_map in cls._app_models_map.values():
             for model in models_map.values():
                 model._meta.connection_name = None
 
-        cls.app_models_map.clear()
+        cls._app_models_map.clear()
         current_transaction_map.clear()
 
     @classmethod

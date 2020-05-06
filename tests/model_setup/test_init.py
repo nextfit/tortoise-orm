@@ -8,7 +8,7 @@ from tortoise.exceptions import ConfigurationError
 class TestInitErrors(test.SimpleTestCase):
     async def setUp(self):
         try:
-            Tortoise.app_models_map = {}
+            Tortoise._app_models_map = {}
             Tortoise._db_client_map = {}
             Tortoise._inited = False
         except ConfigurationError:
@@ -33,7 +33,7 @@ class TestInitErrors(test.SimpleTestCase):
                 },
             }
         )
-        self.assertIn("models", Tortoise.app_models_map)
+        self.assertIn("models", Tortoise._app_models_map)
         self.assertIsNotNone(Tortoise.get_db_client("default"))
 
     async def test_empty_modules_init(self):
@@ -215,7 +215,7 @@ class TestInitErrors(test.SimpleTestCase):
                 "apps": {"models": {"models": ["tests.testmodels"]}},
             }
         )
-        self.assertIn("models", Tortoise.app_models_map)
+        self.assertIn("models", Tortoise._app_models_map)
         self.assertIsNotNone(Tortoise.get_db_client("default"))
 
     async def test_db_url_init(self):
@@ -227,14 +227,14 @@ class TestInitErrors(test.SimpleTestCase):
                 },
             }
         )
-        self.assertIn("models", Tortoise.app_models_map)
+        self.assertIn("models", Tortoise._app_models_map)
         self.assertIsNotNone(Tortoise.get_db_client("default"))
 
     async def test_shorthand_init(self):
         await Tortoise.init(
             db_url=f"sqlite://{':memory:'}", modules={"models": ["tests.testmodels"]}
         )
-        self.assertIn("models", Tortoise.app_models_map)
+        self.assertIn("models", Tortoise._app_models_map)
         self.assertIsNotNone(Tortoise.get_db_client("default"))
 
     async def test_init_wrong_connection_engine(self):
@@ -322,12 +322,12 @@ class TestInitErrors(test.SimpleTestCase):
 
     async def test_init_json_file(self):
         await Tortoise.init(config_file=os.path.dirname(__file__) + "/init.json")
-        self.assertIn("models", Tortoise.app_models_map)
+        self.assertIn("models", Tortoise._app_models_map)
         self.assertIsNotNone(Tortoise.get_db_client("default"))
 
     async def test_init_yaml_file(self):
         await Tortoise.init(config_file=os.path.dirname(__file__) + "/init.yaml")
-        self.assertIn("models", Tortoise.app_models_map)
+        self.assertIn("models", Tortoise._app_models_map)
         self.assertIsNotNone(Tortoise.get_db_client("default"))
 
     async def test_generate_schema_without_init(self):

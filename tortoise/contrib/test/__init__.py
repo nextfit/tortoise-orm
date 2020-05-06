@@ -78,7 +78,7 @@ async def _init_db(config: dict) -> None:
 
 
 def _restore_default() -> None:
-    Tortoise.app_models_map = {}
+    Tortoise._app_models_map = {}
     Tortoise._db_client_map = _CONNECTIONS.copy()
     current_transaction_map.update(_CONN_MAP)
     Tortoise._init_apps(_CONFIG["apps"])
@@ -114,7 +114,7 @@ def initializer(
     loop.run_until_complete(_init_db(_CONFIG))
     _CONNECTIONS = Tortoise._db_client_map.copy()
     _CONN_MAP = current_transaction_map.copy()
-    Tortoise.app_models_map = {}
+    Tortoise._app_models_map = {}
     Tortoise._db_client_map = {}
     Tortoise._inited = False
 
@@ -204,7 +204,7 @@ class SimpleTestCase(_TestCase):  # type: ignore
         else:
             self.tearDown()
         await self._tearDownDB()
-        Tortoise.app_models_map = {}
+        Tortoise._app_models_map = {}
         Tortoise._db_client_map = {}
         Tortoise._inited = False
 
@@ -338,7 +338,7 @@ class TruncationTestCase(SimpleTestCase):
     async def _tearDownDB(self) -> None:
         _restore_default()
         # TODO: This is a naive implementation: Will fail to clear M2M and non-cascade foreign keys
-        for models_map in Tortoise.app_models_map.values():
+        for models_map in Tortoise._app_models_map.values():
             for model in models_map.values():
                 await model._meta.db.execute_script(f"DELETE FROM {model._meta.db_table}")  # nosec
 
