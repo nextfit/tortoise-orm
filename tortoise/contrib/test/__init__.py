@@ -371,7 +371,7 @@ class TestCase(TruncationTestCase):
 
     async def _run_outcome(self, outcome, expecting_failure, testMethod) -> None:
         _restore_default()
-        self.__db__ = Tortoise.get_connection("models")
+        self.__db__ = Tortoise.get_db_client("models")
         if self.__db__.capabilities.supports_transactions:
             db_client = self.__db__.in_transaction().db_client
             async with TestTransactionContext(db_client):
@@ -421,7 +421,7 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
 
             @wraps(test_item)
             def skip_wrapper(*args, **kwargs):
-                db = Tortoise.get_connection(connection_name)
+                db = Tortoise.get_db_client(connection_name)
                 for key, val in conditions.items():
                     if getattr(db.capabilities, key) != val:
                         raise SkipTest(f"Capability {key} != {val}")

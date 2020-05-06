@@ -30,7 +30,7 @@ class TestPostgreSQL(test.SimpleTestCase):
         with self.assertRaises(InvalidSchemaNameError):
             await Tortoise.generate_schemas()
 
-        conn = Tortoise.get_connection("models")
+        conn = Tortoise.get_db_client("models")
         await conn.execute_script("CREATE SCHEMA mytestschema;")
         await Tortoise.generate_schemas()
 
@@ -43,7 +43,7 @@ class TestPostgreSQL(test.SimpleTestCase):
         with self.assertRaises(OperationalError):
             await Tournament.filter(name="Test").first()
 
-        conn = Tortoise.get_connection("models")
+        conn = Tortoise.get_db_client("models")
         _, res = await conn.execute_query(
             "SELECT id, name FROM mytestschema.tournament WHERE name='Test' LIMIT 1"
         )

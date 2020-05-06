@@ -137,7 +137,7 @@ class TestGenerateSchema(test.SimpleTestCase):
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = Tortoise.get_connection("default").get_schema_sql(safe=False)
+        sql = Tortoise.get_db_client("default").get_schema_sql(safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -214,7 +214,7 @@ CREATE TABLE "teamevents" (
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = Tortoise.get_connection("default").get_schema_sql(safe=True)
+        sql = Tortoise.get_db_client("default").get_schema_sql(safe=True)
         self.assertEqual(
             sql.strip(),
             """
@@ -355,7 +355,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = Tortoise.get_connection("default").get_schema_sql(safe=False)
+        sql = Tortoise.get_db_client("default").get_schema_sql(safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -443,7 +443,7 @@ CREATE TABLE `teamevents` (
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = Tortoise.get_connection("default").get_schema_sql(safe=True)
+        sql = Tortoise.get_db_client("default").get_schema_sql(safe=True)
 
         self.assertEqual(
             sql.strip(),
@@ -577,7 +577,7 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = Tortoise.get_connection("default").get_schema_sql(safe=False)
+        sql = Tortoise.get_db_client("default").get_schema_sql(safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -667,7 +667,7 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = Tortoise.get_connection("default").get_schema_sql(safe=True)
+        sql = Tortoise.get_db_client("default").get_schema_sql(safe=True)
         self.assertEqual(
             sql.strip(),
             """

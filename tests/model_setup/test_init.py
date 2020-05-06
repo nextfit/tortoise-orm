@@ -34,7 +34,7 @@ class TestInitErrors(test.SimpleTestCase):
             }
         )
         self.assertIn("models", Tortoise.app_models_map)
-        self.assertIsNotNone(Tortoise.get_connection("default"))
+        self.assertIsNotNone(Tortoise.get_db_client("default"))
 
     async def test_empty_modules_init(self):
         with self.assertWarnsRegex(RuntimeWarning, 'Module "tests.model_setup" has no models'):
@@ -216,7 +216,7 @@ class TestInitErrors(test.SimpleTestCase):
             }
         )
         self.assertIn("models", Tortoise.app_models_map)
-        self.assertIsNotNone(Tortoise.get_connection("default"))
+        self.assertIsNotNone(Tortoise.get_db_client("default"))
 
     async def test_db_url_init(self):
         await Tortoise.init(
@@ -228,14 +228,14 @@ class TestInitErrors(test.SimpleTestCase):
             }
         )
         self.assertIn("models", Tortoise.app_models_map)
-        self.assertIsNotNone(Tortoise.get_connection("default"))
+        self.assertIsNotNone(Tortoise.get_db_client("default"))
 
     async def test_shorthand_init(self):
         await Tortoise.init(
             db_url=f"sqlite://{':memory:'}", modules={"models": ["tests.testmodels"]}
         )
         self.assertIn("models", Tortoise.app_models_map)
-        self.assertIsNotNone(Tortoise.get_connection("default"))
+        self.assertIsNotNone(Tortoise.get_db_client("default"))
 
     async def test_init_wrong_connection_engine(self):
         with self.assertRaisesRegex(ImportError, "tortoise.backends.test"):
@@ -323,12 +323,12 @@ class TestInitErrors(test.SimpleTestCase):
     async def test_init_json_file(self):
         await Tortoise.init(config_file=os.path.dirname(__file__) + "/init.json")
         self.assertIn("models", Tortoise.app_models_map)
-        self.assertIsNotNone(Tortoise.get_connection("default"))
+        self.assertIsNotNone(Tortoise.get_db_client("default"))
 
     async def test_init_yaml_file(self):
         await Tortoise.init(config_file=os.path.dirname(__file__) + "/init.yaml")
         self.assertIn("models", Tortoise.app_models_map)
-        self.assertIsNotNone(Tortoise.get_connection("default"))
+        self.assertIsNotNone(Tortoise.get_db_client("default"))
 
     async def test_generate_schema_without_init(self):
         with self.assertRaisesRegex(

@@ -73,8 +73,8 @@ async def run():
         }
     )
     await Tortoise.generate_schemas()
-    client = Tortoise.get_connection("first")
-    second_client = Tortoise.get_connection("second")
+    client = Tortoise.get_db_client("first")
+    second_client = Tortoise.get_db_client("second")
 
     tournament = await Tournament.create(name="Tournament")
     await Event(name="Event", tournament_id=tournament.id).save()

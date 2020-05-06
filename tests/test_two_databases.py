@@ -17,8 +17,8 @@ class TestTwoDatabases(test.SimpleTestCase):
         }
         await Tortoise.init(merged_config, _create_db=True)
         await Tortoise.generate_schemas()
-        self.db = Tortoise.get_connection("models")
-        self.second_db = Tortoise.get_connection("events")
+        self.db = Tortoise.get_db_client("models")
+        self.second_db = Tortoise.get_db_client("events")
 
     async def tearDown(self):
         await Tortoise._drop_databases()

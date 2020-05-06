@@ -27,7 +27,7 @@ class Tortoise:
     _inited: bool = False
 
     @classmethod
-    def get_connection(cls, connection_name: str) -> BaseDBAsyncClient:
+    def get_db_client(cls, connection_name: str) -> BaseDBAsyncClient:
         """
         Returns the connection by name.
 
@@ -149,7 +149,7 @@ class Tortoise:
         for app_name, app_config in apps_config.items():
             connection_name = app_config.get("default_connection", "default")
             try:
-                cls.get_connection(connection_name)
+                cls.get_db_client(connection_name)
             except KeyError:
                 raise ConfigurationError(
                     'Unknown connection "{}" for app "{}"'.format(connection_name, app_name))
