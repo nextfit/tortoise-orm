@@ -295,20 +295,12 @@ class BaseSchemaGenerator:
             "m2m_tables": m2m_tables_to_create,
         }
 
-    def _get_models_to_create(self) -> list:
+    def get_create_schema_sql(self, safe=True) -> str:
         from tortoise import Tortoise
 
-        models_to_create = []
-        for models_map in Tortoise.app_models_map.values():
-            for model in models_map.values():
-                if model._meta.db == self.client:
-                    model.check()
-                    models_to_create.append(model)
-
-        return models_to_create
-
-    def get_create_schema_sql(self, safe=True) -> str:
-        models_to_create = self._get_models_to_create()
+        models_to_create = Tortoise.get_models_for_connection(self.client.connection_name)
+        for model in models_to_create:
+            model.check()
 
         tables_to_create = [self._get_table_sql(model, safe) for model in models_to_create]
         tables_to_create_count = len(tables_to_create)

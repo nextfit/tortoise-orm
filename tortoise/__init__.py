@@ -202,6 +202,14 @@ class Tortoise:
         return config
 
     @classmethod
+    def get_models_for_connection(cls, connection_name) -> List[Type[Model]]:
+        return [model
+            for models_map in cls.app_models_map.values()
+            for model in models_map.values()
+            if model._meta.connection_name == connection_name
+        ]
+
+    @classmethod
     async def init(
         cls,
         config: Optional[dict] = None,
