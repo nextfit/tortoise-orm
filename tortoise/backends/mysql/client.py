@@ -1,6 +1,7 @@
+
 import asyncio
 from functools import wraps
-from typing import List, Optional, SupportsInt, Tuple, Union
+from typing import List, Optional, SupportsInt, Tuple
 
 import aiomysql
 import pymysql
@@ -11,7 +12,7 @@ from tortoise.backends.base.client import (
     BaseDBAsyncClient,
     Capabilities,
     ConnectionWrapper,
-    PoolConnectionWrapper,
+    PoolConnectionWrapper, LockConnectionWrapper,
 )
 
 from tortoise.backends.mysql.executor import MySQLExecutor
@@ -139,7 +140,7 @@ class MySQLClient(BaseDBAsyncClient):
             pass
         await self.close()
 
-    def acquire_connection(self) -> Union["ConnectionWrapper", "PoolConnectionWrapper"]:
+    def acquire_connection(self) -> ConnectionWrapper:
         return PoolConnectionWrapper(self._pool)
 
     def in_transaction(self) -> "TransactionContext":
@@ -206,7 +207,7 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         return NestedTransactionContext(self)
 
     def acquire_connection(self) -> ConnectionWrapper:
-        return ConnectionWrapper(self._connection, self._lock)
+        return LockConnectionWrapper(self._connection, self._lock)
 
     @translate_exceptions
     async def execute_many(self, query: str, values: list) -> None:

@@ -87,7 +87,7 @@ class Tortoise:
         return {model.full_name(): model.describe(serializable) for model in models}
 
     @classmethod
-    def _discover_client_class(cls, engine: str) -> BaseDBAsyncClient:
+    def _discover_client_class(cls, engine: str) -> Type[BaseDBAsyncClient]:
         # Let exception bubble up for transparency
         engine_module = importlib.import_module(engine)
 

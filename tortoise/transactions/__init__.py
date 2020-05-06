@@ -16,8 +16,7 @@ def _get_db_client(connection_name: Optional[str]) -> BaseDBAsyncClient:
         return current_transaction_map[connection_name].get()
 
     elif len(Tortoise._connections) == 1:
-        connection_name = list(Tortoise._connections.keys())[0]
-        return  current_transaction_map[connection_name].get()
+        return list(current_transaction_map.values())[0].get()
 
     else:
         raise ParamsError(

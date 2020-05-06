@@ -3,7 +3,7 @@
 import asyncio
 import logging
 
-from typing import Any, List, Optional, Sequence, Tuple, Type, Union
+from typing import Any, List, Optional, Sequence, Tuple, Type
 
 from pypika import Query
 
@@ -65,6 +65,44 @@ class Capabilities:
         return str(self.__dict__)
 
 
+class ConnectionWrapper:
+    async def __aenter__(self):
+        raise NotImplementedError()
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        raise NotImplementedError()
+
+
+class LockConnectionWrapper(ConnectionWrapper):
+    __slots__ = ("connection", "lock")
+
+    def __init__(self, connection, lock: asyncio.Lock) -> None:
+        self.connection = connection
+        self.lock: asyncio.Lock = lock
+
+    async def __aenter__(self):
+        await self.lock.acquire()
+        return self.connection
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.lock.release()
+
+
+class PoolConnectionWrapper(ConnectionWrapper):
+    __slots__ = ("connection", "pool")
+
+    def __init__(self, pool) -> None:
+        self.pool = pool
+        self.connection = None
+
+    async def __aenter__(self):
+        self.connection = await self.pool.acquire()
+        return self.connection
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.pool.release(self.connection)
+
+
 class BaseDBAsyncClient:
 
     query_class: Type[Query] = Query
@@ -102,7 +140,7 @@ class BaseDBAsyncClient:
     async def db_delete(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
-    def acquire_connection(self) -> Union["ConnectionWrapper", "PoolConnectionWrapper"]:
+    def acquire_connection(self) -> ConnectionWrapper:
         raise NotImplementedError()  # pragma: nocoverage
 
     def in_transaction(self) -> "TransactionContext":
@@ -121,31 +159,3 @@ class BaseDBAsyncClient:
 
     async def execute_many(self, query: str, values: List[list]) -> None:
         raise NotImplementedError()  # pragma: nocoverage
-
-
-class ConnectionWrapper:
-    __slots__ = ("connection", "lock")
-
-    def __init__(self, connection, lock: asyncio.Lock) -> None:
-        self.connection = connection
-        self.lock: asyncio.Lock = lock
-
-    async def __aenter__(self):
-        await self.lock.acquire()
-        return self.connection
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        self.lock.release()
-
-
-class PoolConnectionWrapper:
-    def __init__(self, pool) -> None:
-        self.pool = pool
-        self.connection = None
-
-    async def __aenter__(self):
-        self.connection = await self.pool.acquire()
-        return self.connection
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        await self.pool.release(self.connection)

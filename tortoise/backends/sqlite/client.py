@@ -9,7 +9,7 @@ import aiosqlite
 from tortoise.backends.base.client import (
     BaseDBAsyncClient,
     Capabilities,
-    ConnectionWrapper,
+    ConnectionWrapper, LockConnectionWrapper,
 )
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
@@ -89,7 +89,7 @@ class SqliteClient(BaseDBAsyncClient):
             pass
 
     def acquire_connection(self) -> ConnectionWrapper:
-        return ConnectionWrapper(self._connection, self._lock)
+        return LockConnectionWrapper(self._connection, self._lock)
 
     def in_transaction(self) -> "TransactionContext":
         return TransactionContext(TransactionWrapper(self))
