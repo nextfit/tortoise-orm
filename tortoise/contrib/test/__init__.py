@@ -374,7 +374,7 @@ class TestCase(TruncationTestCase):
         _restore_default()
         self.__db__ = Tortoise.get_connection("models")
         if self.__db__.capabilities.supports_transactions:
-            connection = self.__db__._in_transaction().connection
+            connection = self.__db__.in_transaction().connection
             async with TransactionTestContext(connection):
                 await super()._run_outcome(outcome, expecting_failure, testMethod)
         else:

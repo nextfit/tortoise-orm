@@ -105,7 +105,7 @@ class BaseDBAsyncClient:
     def acquire_connection(self) -> Union["ConnectionWrapper", "PoolConnectionWrapper"]:
         raise NotImplementedError()  # pragma: nocoverage
 
-    def _in_transaction(self) -> "TransactionContext":
+    def in_transaction(self) -> "TransactionContext":
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_insert(self, query: str, values: list) -> Any:
@@ -144,12 +144,8 @@ class PoolConnectionWrapper:
         self.connection = None
 
     async def __aenter__(self):
-        # get first available connection
         self.connection = await self.pool.acquire()
         return self.connection
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        # release the connection back to the pool
         await self.pool.release(self.connection)
-
-

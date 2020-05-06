@@ -9,7 +9,7 @@ from tortoise.backends.base.client import BaseDBAsyncClient
 current_transaction_map: Dict[str, ContextVar] = {}
 
 
-def _get_connection(connection_name: Optional[str]) -> BaseDBAsyncClient:
+def _get_db_client(connection_name: Optional[str]) -> BaseDBAsyncClient:
     from tortoise import Tortoise
 
     if connection_name:
@@ -36,8 +36,8 @@ def in_transaction(connection_name: Optional[str] = None) -> "TransactionContext
     :param connection_name: name of connection to run with, optional if you have only
                             one db connection
     """
-    connection = _get_connection(connection_name)
-    return connection._in_transaction()
+    db_client = _get_db_client(connection_name)
+    return db_client.in_transaction()
 
 
 def atomic(connection_name: Optional[str] = None) -> Callable:
@@ -54,8 +54,8 @@ def atomic(connection_name: Optional[str] = None) -> Callable:
     def wrapper(func):
         @wraps(func)
         async def wrapped(*args, **kwargs):
-            connection = _get_connection(connection_name)
-            async with connection._in_transaction():
+            db_client = _get_db_client(connection_name)
+            async with db_client.in_transaction():
                 return await func(*args, **kwargs)
 
         return wrapped

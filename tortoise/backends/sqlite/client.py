@@ -91,7 +91,7 @@ class SqliteClient(BaseDBAsyncClient):
     def acquire_connection(self) -> ConnectionWrapper:
         return ConnectionWrapper(self._connection, self._lock)
 
-    def _in_transaction(self) -> "TransactionContext":
+    def in_transaction(self) -> "TransactionContext":
         return TransactionContext(TransactionWrapper(self))
 
     @translate_exceptions
@@ -141,7 +141,7 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
         self._finalized = False
         self.fetch_inserted = connection.fetch_inserted
 
-    def _in_transaction(self) -> TransactionContext:
+    def in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(self)
 
     @translate_exceptions

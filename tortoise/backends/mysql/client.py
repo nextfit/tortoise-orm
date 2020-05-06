@@ -142,7 +142,7 @@ class MySQLClient(BaseDBAsyncClient):
     def acquire_connection(self) -> Union["ConnectionWrapper", "PoolConnectionWrapper"]:
         return PoolConnectionWrapper(self._pool)
 
-    def _in_transaction(self) -> "TransactionContext":
+    def in_transaction(self) -> "TransactionContext":
         return TransactionContextPooled(TransactionWrapper(self))
 
     @translate_exceptions
@@ -202,7 +202,7 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
 
-    def _in_transaction(self) -> TransactionContext:
+    def in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(self)
 
     def acquire_connection(self) -> ConnectionWrapper:

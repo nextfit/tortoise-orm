@@ -125,7 +125,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     def acquire_connection(self) -> Union["PoolConnectionWrapper", "ConnectionWrapper"]:
         return PoolConnectionWrapper(self._pool)
 
-    def _in_transaction(self) -> "TransactionContext":
+    def in_transaction(self) -> "TransactionContext":
         return TransactionContextPooled(TransactionWrapper(self))
 
     @translate_exceptions
@@ -188,7 +188,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         self._finalized = False
         self._parent = connection
 
-    def _in_transaction(self) -> TransactionContext:
+    def in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(self)
 
     def acquire_connection(self) -> "ConnectionWrapper":
