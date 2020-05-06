@@ -24,7 +24,7 @@ from tortoise.exceptions import (
     OperationalError,
     TransactionManagementError,
 )
-from tortoise.transactions import BaseTransactionWrapper
+from tortoise.transactions import AsyncDbClientTransactionMixin
 from tortoise.transactions.context import PoolTransactionContext, NestedTransactionContext, TransactionContext
 
 
@@ -192,7 +192,7 @@ class MySQLClient(BaseDBAsyncClient):
                 await cursor.execute(query)
 
 
-class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
+class TransactionWrapper(MySQLClient, AsyncDbClientTransactionMixin):
     def __init__(self, db_client) -> None:
         self.connection_name = db_client.connection_name
         self._connection: aiomysql.Connection = db_client._connection

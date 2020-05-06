@@ -22,7 +22,7 @@ from tortoise.exceptions import (
     OperationalError,
     TransactionManagementError,
 )
-from tortoise.transactions import BaseTransactionWrapper
+from tortoise.transactions import AsyncDbClientTransactionMixin
 from tortoise.transactions.context import NestedTransactionContext, TransactionContext, PoolTransactionContext
 
 
@@ -180,7 +180,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             await connection.execute(query)
 
 
-class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
+class TransactionWrapper(AsyncpgDBClient, AsyncDbClientTransactionMixin):
     def __init__(self, db_client: AsyncpgDBClient) -> None:
         self._connection: asyncpg.Connection = db_client._connection
         self._lock = asyncio.Lock()

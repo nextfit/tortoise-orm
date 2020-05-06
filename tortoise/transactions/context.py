@@ -25,9 +25,9 @@ class LockTransactionContext(TransactionContext):
         self.lock = getattr(db_client, "_trxlock", None)
 
     async def __aenter__(self):
-        await self.lock.acquire()
         current_transaction = current_transaction_map[self.connection_name]
         self.token = current_transaction.set(self.db_client)
+        await self.lock.acquire()
         await self.db_client.start()
         return self.db_client
 
@@ -39,6 +39,7 @@ class LockTransactionContext(TransactionContext):
                     await self.db_client.rollback()
             else:
                 await self.db_client.commit()
+
         current_transaction_map[self.connection_name].reset(self.token)
         self.lock.release()
 
@@ -61,6 +62,7 @@ class PoolTransactionContext(TransactionContext):
                     await self.db_client.rollback()
             else:
                 await self.db_client.commit()
+
         current_transaction_map[self.connection_name].reset(self.token)
         if self.db_client._parent._pool:
             await self.db_client._parent._pool.release(self.db_client._connection)

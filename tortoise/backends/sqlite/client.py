@@ -15,7 +15,7 @@ from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
 from tortoise.exceptions import IntegrityError, OperationalError, TransactionManagementError
 
-from tortoise.transactions import BaseTransactionWrapper
+from tortoise.transactions import AsyncDbClientTransactionMixin
 from tortoise.transactions.context import TransactionContext, NestedTransactionContext, LockTransactionContext
 
 
@@ -130,7 +130,7 @@ class SqliteClient(BaseDBAsyncClient):
             await connection.executescript(query)
 
 
-class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
+class TransactionWrapper(SqliteClient, AsyncDbClientTransactionMixin):
     def __init__(self, db_client: SqliteClient) -> None:
         self.connection_name = db_client.connection_name
         self._connection: aiosqlite.Connection = db_client._connection

@@ -62,7 +62,7 @@ def atomic(connection_name: Optional[str] = None) -> Callable:
     return wrapper
 
 
-class BaseTransactionWrapper:
+class AsyncDbClientTransactionMixin:
     async def start(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
