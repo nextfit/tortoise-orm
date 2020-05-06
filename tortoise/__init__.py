@@ -36,6 +36,10 @@ class Tortoise:
         return cls._db_client_map[connection_name]
 
     @classmethod
+    def get_connection_names(cls) -> List[str]:
+        return list(cls._db_client_map.keys())
+
+    @classmethod
     def get_model(cls, full_name: str):
         """
         Test, if app and model really exist. Throws a ConfigurationError with a hopefully
@@ -92,10 +96,9 @@ class Tortoise:
         engine_module = importlib.import_module(engine)
 
         try:
-            client_class = engine_module.client_class  # type: ignore
+            return engine_module.client_class  # type: ignore
         except AttributeError:
             raise ConfigurationError(f'Backend for engine "{engine}" does not implement db client')
-        return client_class
 
     @classmethod
     async def _init_connections(cls, connections_config: dict, create_db: bool) -> None:
