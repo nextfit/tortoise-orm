@@ -173,3 +173,6 @@ class Q:
         clauses = self._resolve(queryset, context)
         queryset.query._wheres = clauses.where_criterion
         queryset.query._havings = clauses.having_criterion
+
+        if not queryset.query._validate_table(clauses.where_criterion):
+            queryset.query._foreign_table = True
