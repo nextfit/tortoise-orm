@@ -3,7 +3,6 @@ from copy import deepcopy
 from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar
 
 from pypika import Table, Order
-from pypika.queries import QueryBuilder
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import ConfigurationError, OperationalError, FieldError

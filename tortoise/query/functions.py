@@ -10,6 +10,7 @@ from tortoise.query.context import QueryContext
 from tortoise.exceptions import FieldError, BaseORMException, ParamsError
 from tortoise.fields import ForeignKey, OneToOneField, ManyToManyField, BackwardFKField, Field
 
+
 MODEL = TypeVar("MODEL", bound="Model")
 
 
@@ -44,8 +45,8 @@ class Subquery(Annotation):
         self._queryset = queryset
 
     def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, alias: str):
-        self._queryset._make_query(context=context, alias=alias)
-        self._field = self._queryset.query
+        self._queryset._make_query(context=context)
+        self._field = self._queryset.query.as_(alias)
 
     def __str__(self):
         return f"Subquery({self._queryset})"
@@ -98,7 +99,7 @@ class OuterRef:
             raise NotImplementedError()
 
         else:
-            return outer_table[self.ref_name]
+            return outer_table[outer_field.db_column]
 
 
 class Function(Annotation):
