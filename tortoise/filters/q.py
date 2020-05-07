@@ -92,7 +92,7 @@ class Q:
             return value.get_field(context, queryset.annotations)
 
         if isinstance(value, Subquery):
-            value.resolve_into(queryset, context, "U{}".format(len(context.stack)))
+            value.resolve_into(queryset, context)
             return value.field
 
         if hasattr(value, "pk"):

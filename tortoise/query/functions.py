@@ -1,5 +1,5 @@
 
-from typing import TypeVar
+from typing import TypeVar, Optional
 
 from pypika import functions
 from pypika.terms import AggregateFunction, Field as PyPikaField
@@ -20,7 +20,7 @@ class Annotation:
     def __init__(self):
         self._field: PyPikaField
 
-    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, alias: str):
+    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, alias: Optional[str] = None):
         raise NotImplementedError()
 
     def default_name(self):
@@ -44,9 +44,12 @@ class Subquery(Annotation):
         super().__init__()
         self._queryset = queryset
 
-    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, alias: str):
-        self._queryset._make_query(context=context)
-        self._field = self._queryset.query.as_(alias)
+    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, alias: Optional[str] = None):
+        if not alias:
+            alias = "U{}".format(len(context.stack))
+
+        self._queryset._make_query(context=context, alias=alias)
+        self._field = self._queryset.query
 
     def __str__(self):
         return f"Subquery({self._queryset})"
@@ -122,7 +125,7 @@ class Function(Annotation):
     def default_name(self):
         return "{}__{}".format(self.field_name, self.database_func(None).name.lower())
 
-    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, alias: str):
+    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, alias: Optional[str] = None):
         model = context.top.model
         table = context.top.table
 

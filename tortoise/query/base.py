@@ -84,7 +84,7 @@ class AwaitableStatement(Generic[MODEL]):
 
     def __resolve_annotations(self, context: QueryContext) -> None:
         for key, annotation in self.annotations.items():
-            annotation.resolve_into(self, context=context, alias=key)
+            annotation.resolve_into(self, context=context)
 
     def is_aggregate(self):
         return any([annotation.field.is_aggregate for annotation in self.annotations.values()])

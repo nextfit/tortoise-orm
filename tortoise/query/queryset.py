@@ -209,8 +209,8 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         context.push(self.model, self.query._from[-1])
         self._add_query_details(context=context)
-        for annotation in self.annotations.values():
-            self.query._select_other(annotation.field)
+        for key, annotation in self.annotations.items():
+            self.query._select_other(annotation.field.as_(key))
         context.pop()
 
     async def _execute(self) -> List[MODEL]:
