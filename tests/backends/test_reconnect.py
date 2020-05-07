@@ -1,3 +1,4 @@
+
 from tests.testmodels import Tournament
 from tortoise import Tortoise
 from tortoise.contrib import test

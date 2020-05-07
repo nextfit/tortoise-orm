@@ -1,3 +1,4 @@
+
 from tests.testmodels import Event, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import OperationalError, TransactionManagementError

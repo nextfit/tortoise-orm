@@ -13,7 +13,7 @@ from asynctest.case import _Policy
 from tortoise import Tortoise
 from tortoise.backends.base.config_generator import generate_config as _generate_config
 from tortoise.exceptions import DBConnectionError
-from tortoise.transactions import current_transaction_map
+from tortoise.transactions.context import TransactionContext
 
 __all__ = (
     "SimpleTestCase",
@@ -32,7 +32,6 @@ __all__ = (
     "skipUnless",
 )
 
-from tortoise.transactions.context import TransactionContext
 
 _TORTOISE_TEST_DB = "sqlite://:memory:"
 # pylint: disable=W0201
@@ -80,7 +79,7 @@ async def _init_db(config: dict) -> None:
 def _restore_default() -> None:
     Tortoise._app_models_map = {}
     Tortoise._db_client_map = _CONNECTIONS.copy()
-    current_transaction_map.update(_CONN_MAP)
+    Tortoise._current_transaction_map.update(_CONN_MAP)
     Tortoise._init_apps(_CONFIG["apps"])
     Tortoise._inited = True
 
@@ -113,7 +112,7 @@ def initializer(
     _SELECTOR = loop._selector  # type: ignore
     loop.run_until_complete(_init_db(_CONFIG))
     _CONNECTIONS = Tortoise._db_client_map.copy()
-    _CONN_MAP = current_transaction_map.copy()
+    _CONN_MAP = Tortoise._current_transaction_map.copy()
     Tortoise._app_models_map = {}
     Tortoise._db_client_map = {}
     Tortoise._inited = False
@@ -347,7 +346,7 @@ class TestTransactionContext(TransactionContext):
     __slots__ = ("token", )
 
     async def __aenter__(self):
-        current_transaction = current_transaction_map[self.connection_name]
+        current_transaction = Tortoise._current_transaction_map[self.connection_name]
         self.token = current_transaction.set(self.db_client)
 
         await self.db_client.acquire()
@@ -356,7 +355,7 @@ class TestTransactionContext(TransactionContext):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self.db_client.rollback()
-        current_transaction_map[self.connection_name].reset(self.token)
+        Tortoise._current_transaction_map[self.connection_name].reset(self.token)
         await self.db_client.release()
 
 

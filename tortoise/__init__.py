@@ -10,11 +10,10 @@ from typing import Coroutine, Dict, List, Optional, Type
 
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config, obscure_password
-from tortoise.exceptions import ConfigurationError
+from tortoise.exceptions import ConfigurationError, ParamsError
 from tortoise.fields.relational import RelationField
 
 from tortoise.models import Model
-from tortoise.transactions import current_transaction_map
 from contextvars import ContextVar
 
 
@@ -22,9 +21,11 @@ logger = logging.getLogger("tortoise")
 
 
 class Tortoise:
+    _inited: bool = False
+
     _app_models_map: Dict[str, Dict[str, Type[Model]]] = {}
     _db_client_map: Dict[str, BaseDBAsyncClient] = {}
-    _inited: bool = False
+    _current_transaction_map: Dict[str, ContextVar] = {}
 
     @classmethod
     def get_db_client(cls, connection_name: str) -> BaseDBAsyncClient:
@@ -34,6 +35,20 @@ class Tortoise:
         :raises KeyError: If db_client name does not exist.
         """
         return cls._db_client_map[connection_name]
+
+    @classmethod
+    def get_transaction_db_client(cls, connection_name: Optional[str]) -> BaseDBAsyncClient:
+        if connection_name:
+            return cls._current_transaction_map[connection_name].get()
+
+        elif len(cls._current_transaction_map) == 1:
+            return list(cls._current_transaction_map.values())[0].get()
+
+        else:
+            raise ParamsError(
+                "You are running with multiple databases, so you should specify"
+                f" connection_name: {list(cls._current_transaction_map.keys())}"
+            )
 
     @classmethod
     def get_connection_names(cls) -> List[str]:
@@ -116,7 +131,7 @@ class Tortoise:
 
             await db_client.create_connection(with_db=True)
             cls._db_client_map[connection_name] = db_client
-            current_transaction_map[connection_name] = ContextVar(connection_name, default=db_client)
+            cls._current_transaction_map[connection_name] = ContextVar(connection_name, default=db_client)
 
     @classmethod
     def _discover_models(cls, models_path: str, app_label: str) -> List[Type[Model]]:
@@ -338,7 +353,7 @@ class Tortoise:
                 model._meta.connection_name = None
 
         cls._app_models_map.clear()
-        current_transaction_map.clear()
+        cls._current_transaction_map.clear()
 
     @classmethod
     async def generate_schemas(cls, safe: bool = True) -> None:

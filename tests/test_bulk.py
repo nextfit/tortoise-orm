@@ -1,3 +1,4 @@
+
 from uuid import UUID, uuid4
 
 from tests.testmodels import UniqueName, UUIDPkModel

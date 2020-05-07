@@ -9,7 +9,6 @@ from pymysql.charset import charset_by_name
 from pypika import MySQLQuery
 
 from tortoise.backends.base.client import (
-    AsyncDbClientTransactionMixin,
     BaseDBAsyncClient,
     Capabilities,
     ConnectionWrapper,
@@ -28,6 +27,7 @@ from tortoise.exceptions import (
 )
 
 from tortoise.transactions.context import NestedTransactionContext, TransactionContext, LockTransactionContext
+from tortoise.transactions.client import AsyncDbClientTransactionMixin
 
 
 def translate_exceptions(func):

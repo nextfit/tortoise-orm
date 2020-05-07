@@ -15,7 +15,6 @@ from tortoise.backends.base.client import (
     ConnectionWrapper,
     PoolConnectionWrapper,
     LockConnectionWrapper,
-    AsyncDbClientTransactionMixin,
 )
 
 from tortoise.exceptions import (
@@ -26,6 +25,7 @@ from tortoise.exceptions import (
 )
 
 from tortoise.transactions.context import NestedTransactionContext, TransactionContext, LockTransactionContext
+from tortoise.transactions.client import AsyncDbClientTransactionMixin
 
 
 def translate_exceptions(func):

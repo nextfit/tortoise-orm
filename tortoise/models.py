@@ -22,7 +22,6 @@ from tortoise.filters import FieldFilter
 from tortoise.query import QuerySet
 from tortoise.query.raw import RawQuerySet
 from tortoise.query.single import FirstQuerySet, GetQuerySet
-from tortoise.transactions import current_transaction_map
 
 MODEL = TypeVar("MODEL", bound="Model")
 
@@ -112,7 +111,8 @@ class MetaInfo:
     @property
     def db(self) -> "BaseDBAsyncClient":
         try:
-            return current_transaction_map[self.connection_name].get()
+            from tortoise import Tortoise
+            return Tortoise.get_transaction_db_client(self.connection_name)
         except KeyError:
             raise ConfigurationError("No DB associated to model")
 

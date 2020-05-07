@@ -7,7 +7,6 @@ from typing import List, Optional, Sequence, Tuple
 import aiosqlite
 
 from tortoise.backends.base.client import (
-    AsyncDbClientTransactionMixin,
     BaseDBAsyncClient,
     Capabilities,
     ConnectionWrapper, LockConnectionWrapper,
@@ -15,7 +14,8 @@ from tortoise.backends.base.client import (
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
 from tortoise.exceptions import IntegrityError, OperationalError, TransactionManagementError
-from tortoise.transactions.context import TransactionContext, NestedTransactionContext, LockTransactionContext
+from tortoise.transactions.context import NestedTransactionContext, TransactionContext, LockTransactionContext
+from tortoise.transactions.client import AsyncDbClientTransactionMixin
 
 
 def translate_exceptions(func):

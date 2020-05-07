@@ -1,6 +1,6 @@
 
+from tortoise import Tortoise
 from tortoise.exceptions import TransactionManagementError
-from tortoise.transactions import current_transaction_map
 
 
 class TransactionContext:
@@ -21,7 +21,7 @@ class LockTransactionContext(TransactionContext):
     __slots__ = ("token", )
 
     async def __aenter__(self):
-        current_transaction = current_transaction_map[self.connection_name]
+        current_transaction = Tortoise._current_transaction_map[self.connection_name]
         self.token = current_transaction.set(self.db_client)
 
         await self.db_client.acquire()
@@ -37,7 +37,7 @@ class LockTransactionContext(TransactionContext):
             else:
                 await self.db_client.commit()
 
-        current_transaction_map[self.connection_name].reset(self.token)
+        Tortoise._current_transaction_map[self.connection_name].reset(self.token)
         await self.db_client.release()
 
 
