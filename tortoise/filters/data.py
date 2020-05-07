@@ -1,6 +1,6 @@
 
 import pypika
-from pypika.terms import Term
+from pypika.terms import Term, Node
 
 from tortoise.query.context import QueryContext
 from tortoise.fields import Field
@@ -19,7 +19,7 @@ class DataFieldFilter(FieldFilter):
 
         field_object = model._meta.fields_map[self.field_name]
 
-        if isinstance(value, Term):
+        if isinstance(value, (Node, Term)):
             encoded_value = value
 
         elif self.value_encoder:
