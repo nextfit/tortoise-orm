@@ -111,8 +111,12 @@ class AwaitableStatement(Generic[MODEL]):
         else:
             return None
 
+    def query_builder(self, alias=None) -> QueryBuilder:
+        meta = self.model._meta
+        return meta.db.query_class.from_(meta.table(alias))
+
     def query_builder_select_all_fields(self, alias=None):
-        return self.model._meta.query_builder(alias).select(*self.model._meta.db_columns)
+        return self.query_builder(alias).select(*self.model._meta.db_columns)
 
     def _add_query_details(self, context: QueryContext) -> None:
         self.__resolve_annotations(context=context)

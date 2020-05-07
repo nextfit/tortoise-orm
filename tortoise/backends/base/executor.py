@@ -76,10 +76,11 @@ class BaseExecutor:
 
             table = self.model._meta.table()
             self.delete_query = str(
-                self.model._meta.query_builder().where(
-                    table[self.model._meta.pk_db_column] == self.parameter(0)
-                ).delete()
+                db.query_class.from_(table)
+                    .where(table[self.model._meta.pk_db_column] == self.parameter(0))
+                    .delete()
             )
+
             self.update_cache: Dict[str, str] = {}
 
             EXECUTOR_CACHE[key] = (

@@ -105,9 +105,6 @@ class MetaInfo:
     def table(self, alias=None) -> Table:
         return Table(self.db_table, alias=alias)
 
-    def query_builder(self, alias=None) -> QueryBuilder:
-        return self.db.query_class.from_(self.table(alias))
-
     @property
     def db(self) -> "BaseDBAsyncClient":
         try:

@@ -10,7 +10,7 @@ class Prefetch:
         self.relation = relation
         self.queryset = queryset
         if self.queryset is not None:
-            self.queryset.query = self.queryset.model._meta.query_builder()
+            self.queryset.query = self.queryset.query_builder()
 
     def resolve_for_queryset(self, queryset) -> None:
         first_level_field, _, forwarded_prefetch = self.relation.partition(LOOKUP_SEP)

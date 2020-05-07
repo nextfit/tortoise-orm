@@ -66,7 +66,7 @@ class DeleteQuery(AwaitableStatement):
         super().__init__(model, db, q_objects, annotations)
 
     def _make_query(self, context: QueryContext, alias=None) -> None:
-        self.query = self.model._meta.query_builder(alias)
+        self.query = self.query_builder(alias)
         context.push(self.model, self.query._from[-1])
         self._add_query_details(context=context)
         self.query._delete_from = True
@@ -83,7 +83,7 @@ class CountQuery(AwaitableStatement):
         super().__init__(model, db, q_objects, annotations)
 
     def _make_query(self, context: QueryContext, alias=None) -> None:
-        self.query = self.model._meta.query_builder()
+        self.query = self.query_builder()
         context.push(self.model, self.query._from[-1])
         self._add_query_details(context=context)
         self.query._select_other(Count("*"))
