@@ -10,11 +10,11 @@ from pypika.terms import Node
 from tortoise import BaseDBAsyncClient, RelationField
 from tortoise.backends.base.client import Capabilities
 from tortoise.constants import LOOKUP_SEP
-from tortoise.context import QueryContext
+from tortoise.query.context import QueryContext
 from tortoise.exceptions import FieldError, ParamsError
 from tortoise.filters.q import Q
-from tortoise.functions import Annotation
-from tortoise.ordering import QueryOrdering, QueryOrderingField, QueryOrderingNode
+from tortoise.query.functions import Annotation
+from tortoise.query.ordering import QueryOrdering, QueryOrderingField, QueryOrderingNode
 from tortoise.query.single import FirstQuerySet, GetQuerySet
 
 if TYPE_CHECKING:  # pragma: nocoverage

@@ -3,12 +3,12 @@ import operator
 from typing import Dict, Tuple, Callable, Union
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.context import QueryContext
+from tortoise.query.context import QueryContext
 from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.relational import ForeignKey, OneToOneField
 from tortoise.filters import FieldFilter
 from tortoise.filters.clause import QueryClauses
-from tortoise.functions import OuterRef, Subquery
+from tortoise.query.functions import OuterRef, Subquery
 
 
 class Q:

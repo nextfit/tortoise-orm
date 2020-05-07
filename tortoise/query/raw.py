@@ -1,7 +1,7 @@
 
 from pypika.terms import Node
 
-from tortoise.context import QueryContext
+from tortoise.query.context import QueryContext
 from tortoise.query.queryset import QuerySet
 from tortoise.query.base import MODEL
 

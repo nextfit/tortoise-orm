@@ -6,7 +6,7 @@ This is to test that behaviour doesn't change when one defined db_column paramet
 """
 from tests.testmodels import SourceFields, StraightFields
 from tortoise.contrib import test
-from tortoise.expressions import F
+from tortoise.query.expressions import F
 
 
 class StraightFieldTests(test.TestCase):

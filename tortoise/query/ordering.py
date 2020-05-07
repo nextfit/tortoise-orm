@@ -4,9 +4,9 @@ from pypika import Order
 from pypika.terms import Node, Term
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.context import QueryContext
+from tortoise.query.context import QueryContext
 from tortoise.exceptions import FieldError
-from tortoise.expressions import F
+from tortoise.query.expressions import F
 
 MODEL = TypeVar("MODEL", bound="Model")
 

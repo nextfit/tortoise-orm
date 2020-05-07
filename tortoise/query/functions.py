@@ -6,7 +6,7 @@ from pypika.terms import AggregateFunction, Field as PyPikaField
 from pypika.terms import Function as PyPikaFunction
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.context import QueryContext
+from tortoise.query.context import QueryContext
 from tortoise.exceptions import FieldError, BaseORMException, ParamsError
 from tortoise.fields import ForeignKey, OneToOneField, ManyToManyField, BackwardFKField, Field
 

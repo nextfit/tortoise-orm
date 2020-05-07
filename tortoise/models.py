@@ -19,7 +19,7 @@ from tortoise.fields.relational import (
 
 from tortoise.filters import FieldFilter
 
-from tortoise.query import QuerySet
+from tortoise.query.queryset import QuerySet
 from tortoise.query.raw import RawQuerySet
 from tortoise.query.single import FirstQuerySet, GetQuerySet
 

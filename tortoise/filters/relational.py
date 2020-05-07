@@ -2,7 +2,7 @@
 from pypika import Criterion
 from pypika.terms import Term
 
-from tortoise.context import QueryContext
+from tortoise.query.context import QueryContext
 from tortoise.fields.relational import BackwardFKField, ManyToManyField
 from tortoise.filters.base import FieldFilter
 

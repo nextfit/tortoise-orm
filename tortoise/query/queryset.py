@@ -3,9 +3,9 @@ import itertools
 from copy import copy
 from typing import List, Dict, Type, Union, Set
 
-from tortoise.context import QueryContext
+from tortoise.query.context import QueryContext
 from tortoise.exceptions import ParamsError, FieldError
-from tortoise.functions import Annotation, Function
+from tortoise.query.functions import Annotation, Function
 from tortoise.query.fieldselect import ValuesListQuery, ValuesQuery
 from tortoise.query.statements import DeleteQuery, UpdateQuery, CountQuery
 from tortoise.query.prefetch import Prefetch

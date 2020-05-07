@@ -1,6 +1,6 @@
 
 from pypika import Criterion
-from tortoise.context import QueryContext
+from tortoise.query.context import QueryContext
 
 
 class FieldFilter:

@@ -2,9 +2,9 @@
 from pypika.functions import Count
 from pypika.terms import Term
 
-from tortoise.context import QueryContext
+from tortoise.query.context import QueryContext
 from tortoise.exceptions import IntegrityError, FieldError
-from tortoise.expressions import F
+from tortoise.query.expressions import F
 from tortoise.fields import ForeignKey, OneToOneField
 from tortoise.query.base import AwaitableStatement
 

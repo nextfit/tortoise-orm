@@ -4,7 +4,7 @@ from typing import Tuple, List, Callable, Any
 from pypika import Table
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.context import QueryContext
+from tortoise.query.context import QueryContext
 from tortoise.exceptions import FieldError
 from tortoise.fields import JSONField
 from tortoise.query.base import AwaitableQuery, MODEL

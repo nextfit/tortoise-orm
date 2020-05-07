@@ -1,7 +1,7 @@
+
 from tests import testmodels
 from tortoise.contrib import test
 from tortoise.exceptions import IntegrityError, NoValuesFetched, OperationalError
-from tortoise.query import QuerySet
 from tortoise.query.single import SingleQuerySet
 
 

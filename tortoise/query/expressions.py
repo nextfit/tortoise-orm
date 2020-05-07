@@ -3,7 +3,7 @@
 from pypika import Field
 from pypika.terms import ArithmeticExpression, Term, Function
 
-from tortoise.context import QueryContext
+from tortoise.query.context import QueryContext
 from tortoise.exceptions import FieldError
 
 

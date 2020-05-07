@@ -7,7 +7,7 @@ from pypika import Table, Criterion
 from typing_extensions import Literal
 from tortoise.constants import LOOKUP_SEP
 
-from tortoise.context import QueryContext
+from tortoise.query.context import QueryContext
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
 from tortoise.fields.base import CASCADE, RESTRICT, SET_NULL, Field
 

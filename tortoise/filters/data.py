@@ -2,7 +2,7 @@
 import pypika
 from pypika.terms import Term
 
-from tortoise.context import QueryContext
+from tortoise.query.context import QueryContext
 from tortoise.fields import Field
 from tortoise.filters.base import FieldFilter
 

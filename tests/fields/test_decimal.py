@@ -4,8 +4,8 @@ from tests import testmodels
 from tortoise import fields
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError, IntegrityError
-from tortoise.expressions import F
-from tortoise.functions import Avg, Max, Sum
+from tortoise.query.expressions import F
+from tortoise.query.functions import Avg, Max, Sum
 
 
 class TestDecimalFields(test.TestCase):
