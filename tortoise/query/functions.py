@@ -20,7 +20,7 @@ class Annotation:
     def __init__(self):
         self._field: PyPikaField
 
-    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, alias: Optional[str] = None):
+    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext):
         raise NotImplementedError()
 
     def default_name(self):
@@ -44,11 +44,8 @@ class Subquery(Annotation):
         super().__init__()
         self._queryset = queryset
 
-    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, alias: Optional[str] = None):
-        if not alias:
-            alias = "U{}".format(len(context.stack))
-
-        self._queryset._make_query(context=context, alias=alias)
+    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext):
+        self._queryset._make_query(context=context, alias="U{}".format(len(context.stack)))
         self._field = self._queryset.query
 
     def __str__(self):
@@ -125,7 +122,7 @@ class Function(Annotation):
     def default_name(self):
         return "{}__{}".format(self.field_name, self.database_func(None).name.lower())
 
-    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, alias: Optional[str] = None):
+    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext):
         model = context.top.model
         table = context.top.table
 
@@ -138,7 +135,7 @@ class Function(Annotation):
 
                 context.push(relation_field.remote_model, related_table)
                 sub_function = self.__class__(field_sub, add_group_by=False, *self.default_values)
-                sub_function.resolve_into(queryset, context, alias)
+                sub_function.resolve_into(queryset, context)
                 self._field = sub_function._field
                 context.pop()
 
@@ -147,7 +144,7 @@ class Function(Annotation):
                 relation_field_meta = relation_field.remote_model._meta
                 field = related_table[relation_field_meta.pk_db_column]
 
-                self._field = self.database_func(field, *self.default_values).as_(alias)
+                self._field = self.database_func(field, *self.default_values)
 
         else:
             if field_sub:
@@ -162,7 +159,7 @@ class Function(Annotation):
             if func:
                 field = func(self.field_object, field)
 
-            self._field = self.database_func(field, *self.default_values).as_(alias)
+            self._field = self.database_func(field, *self.default_values)
 
         if self.add_group_by and self._field.is_aggregate:
             queryset.query = queryset.query.groupby(table.id)
