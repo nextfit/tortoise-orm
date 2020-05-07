@@ -4,8 +4,8 @@ from typing import List, Optional
 import asyncpg
 from pypika import Parameter
 
-from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
+from tortoise.models import Model
 
 
 class AsyncpgExecutor(BaseExecutor):

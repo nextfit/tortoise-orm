@@ -7,9 +7,9 @@ from pypika import Table, JoinType, Order
 from pypika.queries import QueryBuilder
 from pypika.terms import Node
 
-from tortoise import BaseDBAsyncClient, RelationField
-from tortoise.backends.base.client import Capabilities
+from tortoise.backends.base.client import Capabilities, BaseDBAsyncClient
 from tortoise.constants import LOOKUP_SEP
+from tortoise.fields import RelationField
 from tortoise.query.context import QueryContext
 from tortoise.exceptions import FieldError, ParamsError
 from tortoise.filters.q import Q

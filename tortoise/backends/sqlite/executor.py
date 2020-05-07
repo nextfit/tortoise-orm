@@ -4,9 +4,10 @@ from typing import Optional
 
 from pypika import Parameter
 
-from tortoise import Model, fields
+from tortoise import fields
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.fields import BigIntegerField, IntegerField, SmallIntegerField
+from tortoise.models import Model
 
 
 def to_db_bool(self, value, instance) -> Optional[int]:

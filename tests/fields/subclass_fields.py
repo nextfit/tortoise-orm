@@ -1,7 +1,7 @@
 from enum import Enum, IntEnum
 from typing import Any, Type
 
-from tortoise import ConfigurationError
+from tortoise.exceptions import ConfigurationError
 from tortoise.fields import CharField, IntegerField
 
 

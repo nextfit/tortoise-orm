@@ -149,7 +149,7 @@ class Field(metaclass=_FieldMeta):
 
         def type_name(typ: Any) -> Union[str, List[str]]:
             try:
-                from tortoise import Model
+                from tortoise.models import Model
                 if issubclass(typ, Model):
                     return typ.full_name()
             except TypeError:
