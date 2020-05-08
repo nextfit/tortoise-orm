@@ -1,7 +1,6 @@
-
+from dataclasses import dataclass, field
 from hashlib import sha256
 from typing import List, Set
-from tortoise.exceptions import ConfigurationError
 
 
 class BaseSchemaGenerator:
@@ -24,7 +23,7 @@ class BaseSchemaGenerator:
     def __init__(self, client) -> None:
         self.client = client
 
-    def _create_string(
+    def _create_column_string(
         self, db_column: str, column_type: str, nullable: str, unique: str, is_primary_key: bool, comment: str
     ) -> str:
         # children can override this function to customize their sql queries
@@ -138,7 +137,7 @@ class BaseSchemaGenerator:
             columns=", ".join([self.quote(f) for f in column_names]),
         )
 
-    def _get_table_sql(self, model, safe=True) -> dict:
+    def get_table_sql(self, model, safe=True) -> dict:
         columns_to_create = []
         columns_with_index = []
         m2m_tables_to_create = []
@@ -152,6 +151,7 @@ class BaseSchemaGenerator:
                 if field_object.description
                 else ""
             )
+
             # TODO: PK generation needs to move out of schema generator.
             if field_object.primary_key:
                 if field_object.generated:
@@ -167,7 +167,7 @@ class BaseSchemaGenerator:
             nullable = "NOT NULL" if not field_object.null else ""
             unique = "UNIQUE" if field_object.unique else ""
 
-            if getattr(field_object, "reference", None):
+            if field_object.reference:
                 comment = (
                     self._column_comment_generator(
                         table=model._meta.db_table,
@@ -178,7 +178,7 @@ class BaseSchemaGenerator:
                     else ""
                 )
 
-                field_creation_string = self._create_string(
+                field_creation_string = self._create_column_string(
                     db_column=column_name,
                     column_type=field_object.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                     nullable=nullable,
@@ -202,7 +202,7 @@ class BaseSchemaGenerator:
                 references.add(field_object.reference.remote_model._meta.db_table)
 
             else:
-                field_creation_string = self._create_string(
+                field_creation_string = self._create_column_string(
                     db_column=column_name,
                     column_type=field_object.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                     nullable=nullable,
@@ -230,7 +230,7 @@ class BaseSchemaGenerator:
 
         # Indexes.
         _indexes = [
-            self._get_index_sql(model, [field_name], safe=safe) for field_name in columns_with_index
+            self._get_index_sql(model, [column_name], safe=safe) for column_name in columns_with_index
         ]
 
         if model._meta.indexes:
@@ -294,38 +294,3 @@ class BaseSchemaGenerator:
             "references": references,
             "m2m_tables": m2m_tables_to_create,
         }
-
-    def get_create_schema_sql(self, safe=True) -> str:
-        from tortoise import Tortoise
-
-        models_to_create = Tortoise.get_models_for_connection(self.client.connection_name)
-        for model in models_to_create:
-            model.check()
-
-        tables_to_create = [self._get_table_sql(model, safe) for model in models_to_create]
-        tables_to_create_count = len(tables_to_create)
-
-        created_tables: Set[dict] = set()
-        ordered_tables_for_create: List[str] = []
-        m2m_tables_to_create: List[str] = []
-
-        while True:
-            if len(created_tables) == tables_to_create_count:
-                break
-
-            try:
-                next_table_for_create = next(
-                    t
-                    for t in tables_to_create
-                    if t["references"].issubset(created_tables | {t["db_table"]})
-                )
-            except StopIteration:
-                raise ConfigurationError("Can't create schema due to cyclic fk references")
-
-            tables_to_create.remove(next_table_for_create)
-            created_tables.add(next_table_for_create["db_table"])
-            ordered_tables_for_create.append(next_table_for_create["table_creation_string"])
-            m2m_tables_to_create += next_table_for_create["m2m_tables"]
-
-        schema_creation_string = "\n".join(ordered_tables_for_create + m2m_tables_to_create)
-        return schema_creation_string

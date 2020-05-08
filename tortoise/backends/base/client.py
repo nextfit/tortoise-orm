@@ -3,13 +3,14 @@
 import asyncio
 import logging
 
-from typing import Any, List, Optional, Sequence, Tuple, Type
+from typing import Any, List, Optional, Sequence, Tuple, Type, Set
 
 from pypika import Query
 
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.filters import BaseFilter
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
+from tortoise.exceptions import ConfigurationError
 
 
 class Capabilities:
@@ -118,17 +119,12 @@ class BaseDBAsyncClient:
     def _copy(self, base: "BaseDBAsyncClient"):
         self.connection_name = base.connection_name
 
-    def get_schema_sql(self, safe: bool) -> str:
-        generator = self.schema_generator(self)
-        return generator.get_create_schema_sql(safe)
-
     async def generate_schema(self, safe: bool) -> None:
-        generator = self.schema_generator(self)
-        schema = generator.get_create_schema_sql(safe)
+        schema = self.get_schema_sql(safe)
         self.log.debug("Creating schema: %s", schema)
 
         if schema:  # pragma: nobranch
-            await generator.client.execute_script(schema)
+            await self.execute_script(schema)
 
     async def create_connection(self, with_db: bool) -> None:
         raise NotImplementedError()  # pragma: nocoverage
@@ -161,3 +157,39 @@ class BaseDBAsyncClient:
 
     async def execute_many(self, query: str, values: List[list]) -> None:
         raise NotImplementedError()  # pragma: nocoverage
+
+    def get_schema_sql(self, safe=True) -> str:
+        from tortoise import Tortoise
+
+        models_to_create = Tortoise.get_models_for_connection(self.connection_name)
+        for model in models_to_create:
+            model.check()
+
+        schema_generator = self.schema_generator(self)
+        tables_to_create = [schema_generator.get_table_sql(model, safe) for model in models_to_create]
+        tables_to_create_count = len(tables_to_create)
+
+        created_tables: Set[dict] = set()
+        ordered_tables_for_create: List[str] = []
+        m2m_tables_to_create: List[str] = []
+
+        while True:
+            if len(created_tables) == tables_to_create_count:
+                break
+
+            try:
+                next_table_for_create = next(
+                    t
+                    for t in tables_to_create
+                    if t["references"].issubset(created_tables | {t["db_table"]})
+                )
+            except StopIteration:
+                raise ConfigurationError("Can't create schema due to cyclic fk references")
+
+            tables_to_create.remove(next_table_for_create)
+            created_tables.add(next_table_for_create["db_table"])
+            ordered_tables_for_create.append(next_table_for_create["table_creation_string"])
+            m2m_tables_to_create += next_table_for_create["m2m_tables"]
+
+        schema_creation_string = "\n".join(ordered_tables_for_create + m2m_tables_to_create)
+        return schema_creation_string
