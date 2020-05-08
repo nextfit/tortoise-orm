@@ -39,7 +39,7 @@ class Category(models.Model):
 class Product(models.Model):
     class Meta:
         db_table = "store_product"
-        ordering = ['date_modified', ]
+        ordering = ['id', ]
 
     id = fields.IntegerField(primary_key=True)
     name = fields.CharField(max_length=255)

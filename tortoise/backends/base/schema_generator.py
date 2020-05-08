@@ -1,6 +1,20 @@
-from dataclasses import dataclass, field
+
+from dataclasses import dataclass
 from hashlib import sha256
 from typing import List, Set
+
+
+@dataclass
+class TableCreationData:
+    """
+    Class per one table to be created that includes the references and
+    script on how to create it.
+    """
+
+    db_table: str
+    creation_sql: str
+    references: Set[str]
+    primary: bool
 
 
 class BaseSchemaGenerator:
@@ -137,10 +151,9 @@ class BaseSchemaGenerator:
             columns=", ".join([self.quote(f) for f in column_names]),
         )
 
-    def get_table_sql(self, model, safe=True) -> dict:
+    def get_table_sql_list(self, model, safe=True) -> List[TableCreationData]:
         columns_to_create = []
         columns_with_index = []
-        m2m_tables_to_create = []
         references = set()
 
         for field_name, column_name in model._meta.field_to_db_column_name_map.items():
@@ -265,7 +278,22 @@ class BaseSchemaGenerator:
         table_create_string = "\n".join([table_create_string, *indexes_create_strings])
         table_create_string += self._post_table_hook()
 
+        output = [
+            TableCreationData(
+                db_table=model._meta.db_table,
+                primary=True,
+                creation_sql=table_create_string,
+                references=references
+            )
+        ]
+
+        output.extend(self.__get_m2m_table_sql(model=model, safe=safe))
+        return output
+
+    def __get_m2m_table_sql(self, model, safe=True):
         from tortoise.fields import ManyToManyField
+
+        m2m_data = []
         for field in model._meta.fields_map.values():
             if isinstance(field, ManyToManyField) and not field.auto_created:
                 m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
@@ -285,12 +313,12 @@ class BaseSchemaGenerator:
                         if field.description else "",
                 )
                 m2m_create_string += self._post_table_hook()
-                m2m_tables_to_create.append(m2m_create_string)
 
-        return {
-            "db_table": model._meta.db_table,
-            "model": model,
-            "table_creation_string": table_create_string,
-            "references": references,
-            "m2m_tables": m2m_tables_to_create,
-        }
+                m2m_data.append(TableCreationData(
+                    db_table=field.through,
+                    primary=False,
+                    creation_sql=m2m_create_string,
+                    references={model._meta.db_table, field.remote_model._meta.db_table},
+                ))
+
+        return m2m_data

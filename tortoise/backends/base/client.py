@@ -1,16 +1,13 @@
 
-
 import asyncio
 import logging
 
-from typing import Any, List, Optional, Sequence, Tuple, Type, Set
-
 from pypika import Query
-
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.filters import BaseFilter
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.exceptions import ConfigurationError
+from typing import Any, List, Optional, Sequence, Tuple, Type, Set, Dict
 
 
 class Capabilities:
@@ -166,30 +163,35 @@ class BaseDBAsyncClient:
             model.check()
 
         schema_generator = self.schema_generator(self)
-        tables_to_create = [schema_generator.get_table_sql(model, safe) for model in models_to_create]
-        tables_to_create_count = len(tables_to_create)
+        tables_to_create = []
+        for model in models_to_create:
+            tables_to_create.extend(schema_generator.get_table_sql_list(model, safe))
 
-        created_tables: Set[dict] = set()
-        ordered_tables_for_create: List[str] = []
-        m2m_tables_to_create: List[str] = []
+        primary_tables = {t.db_table: t for t in tables_to_create if t.primary}
+        table_state_map: Dict[str, int] = dict()
+        table_creation_sqls: List[str] = []
 
-        while True:
-            if len(created_tables) == tables_to_create_count:
-                break
-
-            try:
-                next_table_for_create = next(
-                    t
-                    for t in tables_to_create
-                    if t["references"].issubset(created_tables | {t["db_table"]})
-                )
-            except StopIteration:
+        def dfs(table_name):
+            table_state = table_state_map.get(table_name, 0)  # 0 == NOT_VISITED
+            if table_state == 1:  # 1 == VISITING
                 raise ConfigurationError("Can't create schema due to cyclic fk references")
 
-            tables_to_create.remove(next_table_for_create)
-            created_tables.add(next_table_for_create["db_table"])
-            ordered_tables_for_create.append(next_table_for_create["table_creation_string"])
-            m2m_tables_to_create += next_table_for_create["m2m_tables"]
+            if table_state == 0:  # 0 == NOT_VISITED
+                table_state_map[table_name] = 1  # 1 == VISITING
+                table = primary_tables[table_name]
+                for ref_table in table.references:
+                    if ref_table != table_name:  # avoid self references
+                        dfs(ref_table)
+                table_creation_sqls.append(table.creation_sql)
+                table_state_map[table_name] = 2  # 2 == VISITED
 
-        schema_creation_string = "\n".join(ordered_tables_for_create + m2m_tables_to_create)
+            return []
+
+        for db_table in primary_tables.keys():
+            dfs(db_table)
+
+        m2m_creation_sqls = [t.creation_sql
+            for t in tables_to_create if not t.primary and t.db_table not in table_state_map]
+
+        schema_creation_string = "\n".join(table_creation_sqls + m2m_creation_sqls)
         return schema_creation_string
