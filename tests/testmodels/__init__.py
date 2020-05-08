@@ -19,3 +19,5 @@ from .datafields import (
     DateFields, Service, TextFields, UUIDFields, Currency)
 
 from .constraints import UniqueName, UniqueTogetherFields, UniqueTogetherFieldsWithFK
+
+from .store import ProductImage, ProductCategory, Category, Product, Brand, Image

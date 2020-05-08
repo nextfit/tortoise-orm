@@ -1,3 +1,4 @@
+
 from tests.testmodels import Event, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError
