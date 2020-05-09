@@ -155,18 +155,19 @@ class ValuesListQuery(FieldSelectQuery):
         queryset.flat = self.flat
 
     async def _execute(self) -> List[Any]:
-        _, result = await self._db.execute_query(str(self.query))
-        columns = [
-            (key, self.resolve_to_python_value(self.model, name))
-            for key, name in sorted(self.fields_for_select.items())
+        column_mappers = [
+            (alias, self.resolve_to_python_value(self.model, field_name))
+            for alias, field_name in sorted(self.fields_for_select.items())
         ]
-        if self.flat:
-            func = columns[0][1]
-            flatmap = lambda entry: func(entry["0"])  # noqa
-            return list(map(flatmap, result))
 
-        listmap = lambda entry: tuple(func(entry[column]) for column, func in columns)  # noqa
-        return list(map(listmap, result))
+        _, result = await self._db.execute_query(str(self.query))
+        if self.flat:
+            func = column_mappers[0][1]
+            mapper = lambda entry: func(entry["0"])  # noqa
+        else:
+            mapper = lambda entry: tuple(func(entry[column]) for column, func in column_mappers)  # noqa
+
+        return list(map(mapper, result))
 
 
 class ValuesQuery(FieldSelectQuery):
