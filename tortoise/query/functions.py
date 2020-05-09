@@ -1,5 +1,5 @@
 
-from typing import TypeVar, Optional
+from typing import TypeVar
 
 from pypika import functions
 from pypika.terms import AggregateFunction, Field as PyPikaField

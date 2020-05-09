@@ -75,9 +75,7 @@ class ProductImage(models.Model):
 class ProductCategory(models.Model):
     class Meta:
         db_table = "store_productcategory"
-        verbose_name_plural = 'Product categories'
         unique_together = ('product', 'category')
 
     product = fields.ForeignKey('models.Product', on_delete=fields.CASCADE)
     category = fields.ForeignKey('models.Category', on_delete=fields.CASCADE)
-
