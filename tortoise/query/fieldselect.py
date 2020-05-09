@@ -160,7 +160,7 @@ class ValuesListQuery(FieldSelectQuery):
             for alias, field_name in sorted(self.fields_for_select.items())
         ]
 
-        _, result = await self._db.execute_query(str(self.query))
+        _, result = await self._get_db_client().execute_query(str(self.query))
         if self.flat:
             func = column_mappers[0][1]
             mapper = lambda entry: func(entry["0"])  # noqa
@@ -186,7 +186,7 @@ class ValuesQuery(FieldSelectQuery):
             for alias, field_name in self.fields_for_select.items()
         ]
 
-        _, result = await self._db.execute_query(str(self.query))
+        _, result = await self._get_db_client().execute_query(str(self.query))
         result = list(map(dict, result))
         for row in result:
             for col_name, col_mapper in column_mappers:

@@ -17,14 +17,16 @@ class UpdateQuery(AwaitableStatement):
         self.update_kwargs = update_kwargs
 
     def _make_query(self, context: QueryContext, alias=None) -> None:
+
+        db_client = self._get_db_client()
         table = self.model._meta.table()
-        self.query = self._db.query_class.update(table)
+        self.query = db_client.query_class.update(table)
 
         context.push(self.model, table)
         self._add_query_details(context=context)
 
         # Need to get executor to get correct column_map
-        executor = self._db.executor_class(model=self.model, db=self._db)
+        executor = db_client.executor_class(model=self.model, db=db_client)
 
         for key, value in self.update_kwargs.items():
             field_object = self.model._meta.fields_map.get(key)
@@ -56,7 +58,7 @@ class UpdateQuery(AwaitableStatement):
         context.pop()
 
     async def _execute(self) -> int:
-        return (await self._db.execute_query(str(self.query)))[0]
+        return (await self._get_db_client().execute_query(str(self.query)))[0]
 
 
 class DeleteQuery(AwaitableStatement):
@@ -73,7 +75,7 @@ class DeleteQuery(AwaitableStatement):
         context.pop()
 
     async def _execute(self) -> int:
-        return (await self._db.execute_query(str(self.query)))[0]
+        return (await self._get_db_client().execute_query(str(self.query)))[0]
 
 
 class CountQuery(AwaitableStatement):
@@ -90,5 +92,5 @@ class CountQuery(AwaitableStatement):
         context.pop()
 
     async def _execute(self) -> int:
-        _, result = await self._db.execute_query(str(self.query))
+        _, result = await self._get_db_client().execute_query(str(self.query))
         return list(dict(result[0]).values())[0]

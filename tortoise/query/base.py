@@ -122,6 +122,9 @@ class AwaitableStatement(Generic[MODEL]):
         self.__resolve_annotations(context=context)
         self.__resolve_filters(context)
 
+    def _get_db_client(self) -> BaseDBAsyncClient:
+        return self._db or self.model._meta.db
+
     def _make_query(self, context: QueryContext, alias=None) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
@@ -129,8 +132,6 @@ class AwaitableStatement(Generic[MODEL]):
         raise NotImplementedError()  # pragma: nocoverage
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
-        if self._db is None:
-            self._db = self.model._meta.db  # type: ignore
         self._make_query(context=QueryContext())
         return self._execute().__await__()
 
@@ -158,12 +159,11 @@ class AwaitableStatement(Generic[MODEL]):
             and query optimization.
             **The output format may (and will) vary greatly depending on the database backend.**
         """
-        if self._db is None:
-            self._db = self.model._meta.db  # type: ignore
 
         self._make_query(context=QueryContext())
-        return await self._db\
-            .executor_class(model=self.model, db=self._db)\
+        db_client = self._get_db_client()
+        return await db_client\
+            .executor_class(model=self.model, db=db_client)\
             .execute_explain(self.query)
 
 

@@ -214,9 +214,10 @@ class QuerySet(AwaitableQuery[MODEL]):
         context.pop()
 
     async def _execute(self) -> List[MODEL]:
-        executor = self._db.executor_class(
+        db_client = self._get_db_client()
+        executor = db_client.executor_class(
             model=self.model,
-            db=self._db,
+            db=db_client,
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
         )
