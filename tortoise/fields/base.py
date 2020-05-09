@@ -126,9 +126,9 @@ class Field(metaclass=_FieldMeta):
                 return {
                     "": getattr(self, "SQL_TYPE"),
                     **{
-                        dialect: _db["SQL_TYPE"]
-                        for dialect, _db in self._get_dialects().items()
-                        if "SQL_TYPE" in _db
+                        dialect: dialect_options["SQL_TYPE"]
+                        for dialect, dialect_options in self._get_dialects().items()
+                        if "SQL_TYPE" in dialect_options
                     },
                 }
 
@@ -165,7 +165,7 @@ class Field(metaclass=_FieldMeta):
         desc = {
             "name": self.model_field_name,
             "field_type": self.__class__.__name__ if serializable else self.__class__,
-            "db_column": self.db_column or self.model_field_name,
+            "db_column": self.db_column,
             "db_column_types": get_db_column_types(),
             "python_type": type_name(field_type) if serializable else field_type,
             "generated": self.generated,

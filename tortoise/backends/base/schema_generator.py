@@ -235,7 +235,7 @@ class BaseSchemaGenerator:
 
                 for field_name in unique_together_list:
                     field_object = model._meta.fields_map[field_name]
-                    unique_together_to_create.append(field_object.db_column or field_name)
+                    unique_together_to_create.append(field_object.db_column)
 
                 columns_to_create.append(
                     self._get_unique_constraint_sql(model, unique_together_to_create)
@@ -249,7 +249,7 @@ class BaseSchemaGenerator:
         if model._meta.indexes:
             for indexes_list in model._meta.indexes:
                 indexes_to_create = [
-                    model._meta.fields_map[field_name].db_column or field_name for field_name in indexes_list
+                    model._meta.fields_map[field_name].db_column for field_name in indexes_list
                 ]
 
                 _indexes.append(self._get_index_sql(model, indexes_to_create, safe=safe))

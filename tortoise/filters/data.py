@@ -10,7 +10,7 @@ from tortoise.filters.base import FieldFilter
 class DataFieldFilter(FieldFilter):
     def __init__(self, field: Field, opr, value_encoder=None):
         super().__init__(field.model_field_name, opr, value_encoder)
-        self.db_column = field.db_column or field.model_field_name
+        self.db_column = field.db_column
 
     def __call__(self, context: QueryContext, value) -> pypika.Criterion:
         context_item = context.top
@@ -35,7 +35,7 @@ class DataFieldFilter(FieldFilter):
 class JSONFieldFilter(FieldFilter):
     def __init__(self, field: Field, opr, value_encoder):
         super().__init__(field.model_field_name, opr, value_encoder)
-        self.db_column = field.db_column or field.model_field_name
+        self.db_column = field.db_column
 
     def __call__(self, context: QueryContext, value) -> pypika.Criterion:
         context_item = context.top
