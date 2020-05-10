@@ -231,11 +231,8 @@ class BaseSchemaGenerator:
 
         if model._meta.unique_together:
             for unique_together_list in model._meta.unique_together:
-                unique_together_to_create = []
-
-                for field_name in unique_together_list:
-                    field_object = model._meta.fields_map[field_name]
-                    unique_together_to_create.append(field_object.db_column)
+                unique_together_to_create = [model._meta.fields_map[field_name].db_column
+                    for field_name in unique_together_list]
 
                 columns_to_create.append(
                     self._get_unique_constraint_sql(model, unique_together_to_create)
@@ -248,14 +245,12 @@ class BaseSchemaGenerator:
 
         if model._meta.indexes:
             for indexes_list in model._meta.indexes:
-                indexes_to_create = [
-                    model._meta.fields_map[field_name].db_column for field_name in indexes_list
-                ]
+                indexes_to_create = [model._meta.fields_map[field_name].db_column
+                    for field_name in indexes_list]
 
                 _indexes.append(self._get_index_sql(model, indexes_to_create, safe=safe))
 
-        indexes_create_strings = [val for val in list(dict.fromkeys(_indexes)) if val]
-
+        indexes_create_strings = [val for val in dict.fromkeys(_indexes) if val]
         columns_to_create.extend(self._get_inner_statements())
 
         table_columns_string = "\n    {}\n".format(",\n    ".join(columns_to_create))

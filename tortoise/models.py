@@ -3,7 +3,7 @@ import collections
 from copy import deepcopy
 from typing import (
     Any, Dict, Generator, List, Optional, Set, Tuple,
-    Type, TypeVar, Sequence, OrderedDict)
+    Type, TypeVar, OrderedDict)
 
 from pypika import Table, Order
 
@@ -27,14 +27,23 @@ from tortoise.query.single import FirstQuerySet, GetQuerySet
 MODEL = TypeVar("MODEL", bound="Model")
 
 
-def get_together(meta, together: str) -> Tuple[Tuple[str, ...], ...]:
-    _together = getattr(meta, together, ())
+def get_unique_together(meta) -> Tuple[Tuple[str, ...], ...]:
+    _together = getattr(meta, "unique_together", ())
 
     if isinstance(_together, (list, tuple)):
-        if _together and isinstance(_together[0], str):
+        if _together and all(isinstance(t, str) for t in _together):
             _together = (_together,)
 
-    # return without validation, validation will be done further in the code
+    return _together
+
+
+def get_indexes(meta) -> Tuple[Tuple[str, ...], ...]:
+    _together = getattr(meta, "indexes", ())
+
+    if isinstance(_together, (list, tuple)):
+        if _together and all(isinstance(t, str) for t in _together):
+            _together = [(t,) for t in _together]
+
     return _together
 
 
@@ -67,8 +76,8 @@ class MetaInfo:
         self.abstract: bool = getattr(meta, "abstract", False)
         self.ordering: List[Tuple[str, Order]] = getattr(meta, "ordering", None)
         self.app: Optional[str] = getattr(meta, "app", None)
-        self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
-        self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")
+        self.unique_together: Tuple[Tuple[str, ...], ...] = get_unique_together(meta)
+        self.indexes: Tuple[Tuple[str, ...], ...] = get_indexes(meta)
         self.table_description: str = getattr(meta, "table_description", "")
 
         self.connection_name: Optional[str] = None
