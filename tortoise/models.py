@@ -1,6 +1,9 @@
 
+import collections
 from copy import deepcopy
-from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar
+from typing import (
+    Any, Dict, Generator, List, Optional, Set, Tuple,
+    Type, TypeVar, Sequence, OrderedDict)
 
 from pypika import Table, Order
 
@@ -17,7 +20,6 @@ from tortoise.fields.relational import (
     RelationField)
 
 from tortoise.filters import FieldFilter
-
 from tortoise.query.queryset import QuerySet
 from tortoise.query.raw import RawQuerySet
 from tortoise.query.single import FirstQuerySet, GetQuerySet
@@ -39,22 +41,25 @@ def get_together(meta, together: str) -> Tuple[Tuple[str, ...], ...]:
 class MetaInfo:
     __slots__ = (
         "abstract",
-        "db_table",
-        "ordering",
-        "app",
-        "db_columns",
-        "fetch_fields",
-        "field_to_db_column_name_map",
         "_inited",
-        "db_column_to_field_name_map",
-        "fields_map",
+
+        "_model",
+        "app",
         "connection_name",
+        "db_table",
+        "table_description",
+
+        "ordering",
         "unique_together",
         "indexes",
         "pk_attr",
+
+        "fetch_fields",
+        "fields_map",
+        "field_to_db_column_name_map",
+        "db_column_to_field_name_map",
         "generated_column_names",
-        "_model",
-        "table_description",
+
         "_filter_cache",
     )
 
@@ -66,19 +71,19 @@ class MetaInfo:
         self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")
         self.table_description: str = getattr(meta, "table_description", "")
 
-        self.fetch_fields: Set[str] = set()
         self.connection_name: Optional[str] = None
         self._inited: bool = False
 
+        self._model: "Model"
         self.db_table: str
-        self.db_columns: Set[str]
-        self.fields_map: Dict[str, Field]
-        self.field_to_db_column_name_map: Dict[str, str]
-        self.db_column_to_field_name_map: Dict[str, str]
+
+        self.fields_map: OrderedDict[str, Field]
+        self.fetch_fields: Set[str] = set()
+        self.field_to_db_column_name_map: OrderedDict[str, str]
+        self.db_column_to_field_name_map: OrderedDict[str, str]
 
         self.pk_attr: str
         self.generated_column_names: List[str]
-        self._model: "Model"
 
         self._filter_cache: Dict[str, Optional[FieldFilter]] = {}
 
@@ -135,6 +140,10 @@ class MetaInfo:
         return self.fields_map[self.pk_attr]
 
     @property
+    def db_columns(self) -> OrderedDict[str, str]:
+        return self.db_column_to_field_name_map
+
+    @property
     def pk_db_column(self) -> str:
         return self.pk.db_column or self.pk_attr
 
@@ -146,10 +155,9 @@ class MetaInfo:
         self._finalize_model_data()
 
     def _finalize_model_data(self) -> None:
-        self.db_columns = set(self.field_to_db_column_name_map.values())
-        self.db_column_to_field_name_map = {
-            value: key for key, value in self.field_to_db_column_name_map.items()
-        }
+        self.db_column_to_field_name_map = collections.OrderedDict(
+            [(db_column, field_name) for field_name, db_column in self.field_to_db_column_name_map.items()]
+        )
 
         self.fetch_fields = {key for key, field in self.fields_map.items() if not field.has_db_column}
         self.generated_column_names = [field.db_column
@@ -165,8 +173,8 @@ class ModelMeta(type):
     __slots__ = ()
 
     def __new__(mcs, name: str, bases, attrs: dict, *args, **kwargs):
-        field_to_db_column_name_map: Dict[str, str] = {}
-        fields_map: Dict[str, Field] = {}
+        field_to_db_column_name_map: OrderedDict[str, str] = collections.OrderedDict()
+        fields_map: OrderedDict[str, Field] = collections.OrderedDict()
         meta_class = attrs.get("Meta", type("Meta", (), {}))
         pk_attr: str = "id"
 
