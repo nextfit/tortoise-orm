@@ -27,26 +27,6 @@ from tortoise.query.single import FirstQuerySet, GetQuerySet
 MODEL = TypeVar("MODEL", bound="Model")
 
 
-def get_unique_together(meta) -> Tuple[Tuple[str, ...], ...]:
-    _together = getattr(meta, "unique_together", ())
-
-    if isinstance(_together, (list, tuple)):
-        if _together and all(isinstance(t, str) for t in _together):
-            _together = (_together,)
-
-    return _together
-
-
-def get_indexes(meta) -> Tuple[Tuple[str, ...], ...]:
-    _together = getattr(meta, "indexes", ())
-
-    if isinstance(_together, (list, tuple)):
-        if _together and all(isinstance(t, str) for t in _together):
-            _together = [(t,) for t in _together]
-
-    return _together
-
-
 class MetaInfo:
     __slots__ = (
         "abstract",
@@ -76,8 +56,8 @@ class MetaInfo:
         self.abstract: bool = getattr(meta, "abstract", False)
         self.ordering: List[Tuple[str, Order]] = getattr(meta, "ordering", None)
         self.app: Optional[str] = getattr(meta, "app", None)
-        self.unique_together: Tuple[Tuple[str, ...], ...] = get_unique_together(meta)
-        self.indexes: Tuple[Tuple[str, ...], ...] = get_indexes(meta)
+        self.unique_together: Tuple[Tuple[str, ...], ...] = self.__get_unique_together(meta)
+        self.indexes: Tuple[Tuple[str, ...], ...] = self.__get_indexes(meta)
         self.table_description: str = getattr(meta, "table_description", "")
 
         self.connection_name: Optional[str] = None
@@ -95,6 +75,26 @@ class MetaInfo:
         self.generated_column_names: List[str]
 
         self._filter_cache: Dict[str, Optional[FieldFilter]] = {}
+
+    @staticmethod
+    def __get_unique_together(meta) -> Tuple[Tuple[str, ...], ...]:
+        _together = getattr(meta, "unique_together", ())
+
+        if isinstance(_together, (list, tuple)):
+            if _together and all(isinstance(t, str) for t in _together):
+                _together = (_together,)
+
+        return _together
+
+    @staticmethod
+    def __get_indexes(meta) -> Tuple[Tuple[str, ...], ...]:
+        _indexes = getattr(meta, "indexes", ())
+
+        if isinstance(_indexes, (list, tuple)):
+            if _indexes and all(isinstance(t, str) for t in _indexes):
+                _indexes = [(t,) for t in _indexes]
+
+        return _indexes
 
     def add_field(self, name: str, field: Field):
         if name in self.fields_map:
