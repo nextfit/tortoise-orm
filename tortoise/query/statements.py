@@ -16,10 +16,10 @@ class UpdateQuery(AwaitableStatement):
         super().__init__(model, db, q_objects, annotations)
         self.update_kwargs = update_kwargs
 
-    def _make_query(self, context: QueryContext, alias=None) -> None:
+    def _make_query(self, context: QueryContext) -> None:
 
         db_client = self._get_db_client()
-        table = self.model._meta.table()
+        table = self.model._meta.table(context.alias)
         self.query = db_client.query_class.update(table)
 
         context.push(self.model, table)
@@ -67,8 +67,8 @@ class DeleteQuery(AwaitableStatement):
     def __init__(self, model, db, q_objects, annotations) -> None:
         super().__init__(model, db, q_objects, annotations)
 
-    def _make_query(self, context: QueryContext, alias=None) -> None:
-        self.query = self.query_builder(alias)
+    def _make_query(self, context: QueryContext) -> None:
+        self.query = self.query_builder(context.alias)
         context.push(self.model, self.query._from[-1])
         self._add_query_details(context=context)
         self.query._delete_from = True
@@ -84,8 +84,8 @@ class CountQuery(AwaitableStatement):
     def __init__(self, model, db, q_objects, annotations) -> None:
         super().__init__(model, db, q_objects, annotations)
 
-    def _make_query(self, context: QueryContext, alias=None) -> None:
-        self.query = self.query_builder()
+    def _make_query(self, context: QueryContext) -> None:
+        self.query = self.query_builder(context.alias)
         context.push(self.model, self.query._from[-1])
         self._add_query_details(context=context)
         self.query._select_other(Count("*"))

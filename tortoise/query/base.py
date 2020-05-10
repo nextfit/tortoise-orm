@@ -125,7 +125,7 @@ class AwaitableStatement(Generic[MODEL]):
     def _get_db_client(self) -> BaseDBAsyncClient:
         return self._db or self.model._meta.db
 
-    def _make_query(self, context: QueryContext, alias=None) -> None:
+    def _make_query(self, context: QueryContext) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def _execute(self):

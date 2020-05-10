@@ -29,5 +29,5 @@ class RawQuerySet(QuerySet[MODEL]):
         super()._copy(queryset)
         queryset.raw_sql = self.raw_sql
 
-    def _make_query(self, context: QueryContext, alias=None) -> None:
+    def _make_query(self, context: QueryContext) -> None:
         self.query = RawQuery(self.raw_sql.format(context=context))

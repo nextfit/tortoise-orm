@@ -1,5 +1,5 @@
 
-from typing import List, Type, Dict, TypeVar
+from typing import List, Type, Dict, TypeVar, Optional
 from pypika import Table
 
 MODEL = TypeVar("MODEL", bound="Model")
@@ -26,3 +26,7 @@ class QueryContext:
     @property
     def top(self) -> QueryContextItem:
         return self.stack[-1]
+
+    @property
+    def alias(self) -> Optional[str]:
+        return "U{}".format(len(self.stack)) if self.stack else None
