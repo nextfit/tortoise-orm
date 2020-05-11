@@ -472,10 +472,7 @@ class CharEnumField(CharField):
 
         # Automatic CharField max_length
         if max_length == 0:
-            for item in enum_type:
-                item_len = len(str(item.value))
-                if item_len > max_length:
-                    max_length = item_len
+            max_length = max(map(lambda x: len(str(x.value)), enum_type))
 
         super().__init__(description=description, max_length=max_length, **kwargs)
         self.enum_type = enum_type
