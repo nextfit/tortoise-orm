@@ -164,9 +164,9 @@ class MetaInfo:
         self._finalize_model_data()
 
     def _finalize_model_data(self) -> None:
-        self.db_column_to_field_name_map = dict(
-            [(db_column, field_name) for field_name, db_column in self.field_to_db_column_name_map.items()]
-        )
+        self.db_column_to_field_name_map = {
+            db_column: field_name for field_name, db_column in self.field_to_db_column_name_map.items()
+        }
 
         self.fetch_fields = {key for key, field in self.fields_map.items() if not field.has_db_column}
         self.generated_column_names = [field.db_column
