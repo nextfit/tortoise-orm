@@ -62,8 +62,11 @@ class TestFunctions(test.TestCase):
     #     prefetch = Prefetch('products', queryset=Product.filter(id__in=Subquery(subquery)))
     #     brands = Brand.all().prefetch_related(prefetch)
     #
-    # async def list_products_limit_images():
+    # async def test_products_prefetch_limit_images():
     #     subquery = Image.filter(product_set=OuterRef('product_set')).limit(4).values_list('id', flat=True)
     #     prefetch = Prefetch('images', queryset=Image.filter(id__in=Subquery(subquery)))
     #     products = Product.all().limit(5).prefetch_related(prefetch)
-
+    #
+    #     products._make_query(context=QueryContext())
+    #     query_string = products.query.get_sql().replace('`', '"')
+    #

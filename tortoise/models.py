@@ -1,5 +1,4 @@
 
-import collections
 from copy import deepcopy
 from typing import (
     Any, Dict, Generator, List, Optional, Set, Tuple,
