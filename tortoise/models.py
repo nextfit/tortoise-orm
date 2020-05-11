@@ -3,7 +3,7 @@ import collections
 from copy import deepcopy
 from typing import (
     Any, Dict, Generator, List, Optional, Set, Tuple,
-    Type, TypeVar, OrderedDict)
+    Type, TypeVar)
 
 from pypika import Table, Order
 
@@ -66,10 +66,10 @@ class MetaInfo:
         self._model: "Model"
         self.db_table: str
 
-        self.fields_map: OrderedDict[str, Field]
+        self.fields_map: Dict[str, Field]
         self.fetch_fields: Set[str] = set()
-        self.field_to_db_column_name_map: OrderedDict[str, str]
-        self.db_column_to_field_name_map: OrderedDict[str, str]
+        self.field_to_db_column_name_map: Dict[str, str]
+        self.db_column_to_field_name_map: Dict[str, str]
 
         self.pk_attr: str
         self.generated_column_names: List[str]
@@ -149,7 +149,7 @@ class MetaInfo:
         return self.fields_map[self.pk_attr]
 
     @property
-    def db_columns(self) -> OrderedDict[str, str]:
+    def db_columns(self) -> Dict[str, str]:
         return self.db_column_to_field_name_map
 
     @property
@@ -164,7 +164,7 @@ class MetaInfo:
         self._finalize_model_data()
 
     def _finalize_model_data(self) -> None:
-        self.db_column_to_field_name_map = collections.OrderedDict(
+        self.db_column_to_field_name_map = dict(
             [(db_column, field_name) for field_name, db_column in self.field_to_db_column_name_map.items()]
         )
 
@@ -182,8 +182,8 @@ class ModelMeta(type):
     __slots__ = ()
 
     def __new__(mcs, name: str, bases, attrs: dict, *args, **kwargs):
-        field_to_db_column_name_map: OrderedDict[str, str] = collections.OrderedDict()
-        fields_map: OrderedDict[str, Field] = collections.OrderedDict()
+        field_to_db_column_name_map: Dict[str, str] = dict()
+        fields_map: Dict[str, Field] = dict()
         meta_class = attrs.get("Meta", type("Meta", (), {}))
         pk_attr: str = "id"
 
