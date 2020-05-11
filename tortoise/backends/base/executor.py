@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Ty
 from pypika import Parameter
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.exceptions import OperationalError
+from tortoise.exceptions import OperationalError, ParamsError
 from tortoise.fields.base import Field
 
 
@@ -163,7 +163,7 @@ class BaseExecutor:
         ]
         await self.db.execute_many(self.insert_query, values_lists)
 
-    def get_update_sql(self, update_fields: Optional[List[str]]) -> str:
+    def _get_update_sql(self, update_fields: Optional[List[str]]) -> str:
         """
         Generates the SQL for updating a model depending on provided update_fields.
         Result is cached for performance.
@@ -194,7 +194,24 @@ class BaseExecutor:
             if not self.model._meta.fields_map[field_name].primary_key
         ]
         values.append(self.model._meta.pk.to_db_value(instance.pk, instance))
-        return (await self.db.execute_query(self.get_update_sql(update_fields), values))[0]
+        return (await self.db.execute_query(self._get_update_sql(update_fields), values))[0]
+
+    async def execute_bulk_update(self, instances: "List[Model]", update_fields: List[str]) -> None:
+        if not update_fields:
+            raise ParamsError("Update fields must be provided for bulk update")
+
+        if any(self.model._meta.fields_map[field_name].primary_key for field_name in update_fields):
+            raise ParamsError("Cannot update primary key")
+
+        values_lists = [
+            [self.column_map[field_name](getattr(instance, field_name), instance)
+                for field_name in update_fields] +
+            [self.model._meta.pk.to_db_value(instance.pk, instance)]
+
+            for instance in instances
+        ]
+
+        await self.db.execute_many(self._get_update_sql(update_fields), values_lists)
 
     async def execute_delete(self, instance) -> int:
         return (

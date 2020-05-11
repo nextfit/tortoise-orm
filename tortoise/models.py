@@ -529,6 +529,29 @@ class Model(metaclass=ModelMeta):
         await db.executor_class(model=cls, db=db).execute_bulk_insert(objects)  # type: ignore
 
     @classmethod
+    async def bulk_update(
+        cls: Type[MODEL], objects: List[MODEL], update_fields: List[str], using_db: Optional["BaseDBAsyncClient"] = None
+    ) -> None:
+        """
+        Bulk update operation:
+
+
+        .. code-block:: python3
+
+            User.bulk_update([
+                User(name="...", email="..."),
+                User(name="...", email="...")
+            ], update_fields=["name", "email"])
+
+        :param update_fields: List of fields to be updated
+        :param using_db:
+        :param objects: List of objects to bulk update
+
+        """
+        db = using_db or cls._meta.db
+        await db.executor_class(model=cls, db=db).execute_bulk_update(objects, update_fields)  # type: ignore
+
+    @classmethod
     def first(cls: Type[MODEL]) -> FirstQuerySet[MODEL]:
         """
         Generates a QuerySet that returns the first record.
