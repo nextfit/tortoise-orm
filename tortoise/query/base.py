@@ -8,10 +8,9 @@ from pypika.queries import QueryBuilder
 from pypika.terms import Node
 
 from tortoise.backends.base.client import Capabilities, BaseDBAsyncClient
-from tortoise.constants import LOOKUP_SEP
 from tortoise.fields import RelationField
 from tortoise.query.context import QueryContext
-from tortoise.exceptions import FieldError, ParamsError
+from tortoise.exceptions import ParamsError
 from tortoise.filters.q import Q
 from tortoise.query.functions import Annotation
 from tortoise.query.ordering import QueryOrdering, QueryOrderingField, QueryOrderingNode
@@ -276,8 +275,6 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
         return FirstQuerySet(queryset)
 
     def __parse_orderings(self, *orderings: Union[str, Node]) -> None:
-        model = self.model
-
         parsed_orders: List[QueryOrdering] = []
         for ordering in orderings:
             if isinstance(ordering, Node):
@@ -290,9 +287,6 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
                 else:
                     field_name = ordering
                     order_type = Order.asc
-
-                if not (field_name.split(LOOKUP_SEP)[0] in model._meta.fields_map or field_name in self.annotations):
-                    raise FieldError(f"Unknown field {field_name} for model {model.__name__}")
 
                 parsed_orders.append(QueryOrderingField(field_name, order_type))
 
