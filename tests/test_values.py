@@ -1,7 +1,8 @@
+from pypika.functions import Trim, Length
+
 from tests.testmodels import Event, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError
-from tortoise.query.functions import Length, Trim
 
 
 class TestValues(test.TestCase):

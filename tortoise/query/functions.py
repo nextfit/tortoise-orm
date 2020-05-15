@@ -1,9 +1,12 @@
 
-from typing import TypeVar
+from typing import TypeVar, Tuple, Optional
 
-from pypika import functions
-from pypika.terms import AggregateFunction, Field as PyPikaField
-from pypika.terms import Function as PyPikaFunction
+from pypika.terms import (
+    Field as PyPikaField,
+    Term as PyPikaTerm,
+    ArithmeticExpression,
+    Function as PyPikaFunction,
+    ValueWrapper)
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.query.context import QueryContext
@@ -102,121 +105,139 @@ class OuterRef:
             return outer_table[outer_field.db_column]
 
 
-class Function(Annotation):
-    __slots__ = (
-        "field_name",
-        "field_object",
-        "default_values",
-        "add_group_by"
-    )
+def resolve_field_name_into(field_name, queryset: "AwaitableQuery[MODEL]",
+    context: QueryContext) -> Tuple[Field, PyPikaField]:
 
-    database_func = PyPikaFunction
+    model = context.top.model
+    table = context.top.table
 
-    def __init__(self, field_name, *default_values, add_group_by=True) -> None:
-        super().__init__()
-        self.field_name = field_name
-        self.field_object: Field
-        self.default_values = default_values
-        self.add_group_by = add_group_by
+    relation_field_name, _, field_sub = field_name.partition(LOOKUP_SEP)
+    if relation_field_name in model._meta.fetch_fields:
+        relation_field = model._meta.fields_map[relation_field_name]
 
-    def default_name(self):
-        return "{}__{}".format(self.field_name, self.database_func(None).name.lower())
+        if field_sub:
+            related_table = queryset.join_table_by_field(table, relation_field)
 
-    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext):
-        model = context.top.model
-        table = context.top.table
-
-        relation_field_name, _, field_sub = self.field_name.partition(LOOKUP_SEP)
-        if relation_field_name in model._meta.fetch_fields:
-            relation_field = model._meta.fields_map[relation_field_name]
-
-            if field_sub:
-                related_table = queryset.join_table_by_field(table, relation_field)
-
-                context.push(relation_field.remote_model, related_table)
-                sub_function = self.__class__(field_sub, add_group_by=False, *self.default_values)
-                sub_function.resolve_into(queryset, context)
-                self._field = sub_function._field
-                context.pop()
-
-            else:
-                related_table = queryset.join_table_by_field(table, relation_field)
-                relation_field_meta = relation_field.remote_model._meta
-                field = related_table[relation_field_meta.pk_db_column]
-
-                self._field = self.database_func(field, *self.default_values)
+            context.push(relation_field.remote_model, related_table)
+            (field_object, pypika_field) = resolve_field_name_into(field_sub, queryset, context)
+            context.pop()
+            return field_object, pypika_field
 
         else:
-            if field_sub:
-                raise FieldError(f"{relation_field_name} is not a relation for model {model.__name__}")
+            related_table = queryset.join_table_by_field(table, relation_field)
+            relation_field_meta = relation_field.remote_model._meta
+            pypika_field = related_table[relation_field_meta.pk_db_column]
+            field_object = relation_field_meta.pk
 
-            self.field_object = model._meta.fields_map.get(self.field_name)
-            if not self.field_object:
-                raise FieldError(f"Unknown field {self.field_name} for model {model.__name__}")
+            return field_object, pypika_field
 
-            field = table[self.field_object.db_column]
-            func = self.field_object.get_for_dialect(model._meta.db.capabilities.dialect, "function_cast")
-            if func:
-                field = func(self.field_object, field)
+    else:
+        if field_sub:
+            raise FieldError(f"{relation_field_name} is not a relation for model {model.__name__}")
 
-            self._field = self.database_func(field, *self.default_values)
+        field_object = model._meta.fields_map.get(field_name)
+        if not field_object:
+            raise FieldError(f"Unknown field {field_name} for model {model.__name__}")
 
-        if self.add_group_by and self._field.is_aggregate:
-            queryset.query = queryset.query.groupby(table.id)
+        pypika_field = table[field_object.db_column]
+        func = field_object.get_for_dialect(model._meta.db.capabilities.dialect, "function_cast")
+        if func:
+            pypika_field = func(field_object, pypika_field)
+
+        return field_object, pypika_field
 
 
-class Aggregate(Function):
-    database_func = AggregateFunction
+def resolve_term(term: PyPikaTerm, queryset: "AwaitableQuery[MODEL]",
+    context: QueryContext) -> Tuple[Optional[Field], PyPikaTerm]:
+
+    if isinstance(term, ArithmeticExpression):
+        field_left, term.left = resolve_term(term.left, queryset, context)
+        field_right, term.right = resolve_term(term.right, queryset, context)
+        field = field_left or field_right
+
+        return field, term
+
+    if isinstance(term, PyPikaFunction):
+        #
+        # There are two options, either resolve all function args, like below,
+        # in this case either all the string params are expected to be references
+        # to model fields, and hence something like `Coalesce("desc", "demo")`
+        # will raise FieldError if `demo` is not a model field. Now a reasonable solution
+        # might be to allow unresolvable strings as is, without raising exceptions,
+        # but that also has other undesired implication.
+        #
+        # term_new_args = []
+        # field = None
+        #
+        # for arg in term.args:
+        #     term_field, term_arg = resolve_term(arg, queryset, context)
+        #     term_new_args.append(term_arg)
+        #     field = field or term_field
+        #
+        # term.args = term_new_args
+        # return field, term
+        #
+        # Another solution is allow on the the first parameter of the function to be
+        # a field reference as we do here:
+        #
+
+        field = None
+        if len(term.args) > 0:
+            field, term.args[0] = resolve_term(term.args[0], queryset, context)
+
+        return field, term
+
+    elif isinstance(term, ValueWrapper):
+        if isinstance(term.value, str):
+            return resolve_field_name_into(term.value, queryset, context)
+
+        return None, term
+
+    raise FieldError(f"Unresolvable term: {term}")
+
+
+def term_name(term: PyPikaTerm) -> str:
+    if isinstance(term, ValueWrapper):
+        return str(term.value)
+
+    if isinstance(term, ArithmeticExpression):
+        return "{}__{}__{}".format(term_name(term.left), str(term.operator), term_name(term.right))
+
+    if isinstance(term, PyPikaFunction):
+        return "{}__{}".format("__".join(map(term_name, term.args)), term.name.lower())
+
+    raise ParamsError("Unable to find term name {}".format(term))
+
+
+class TermAnnotation(Annotation):
+    __slots__ = (
+        "_term",
+        "_field_object",
+        "_add_group_by",
+    )
+
+    def __init__(self, term: PyPikaTerm) -> None:
+        super().__init__()
+        self._term = term
+        self._add_group_by = True
+        self._field_object: Field
+
+    def default_name(self) -> str:
+        try:
+            return term_name(self._term)
+        except ParamsError as e:
+            raise ParamsError("No obvious default name exists for this annotation", e)
 
     def to_python_value(self, value):
-        return self.field_object.to_python_value(value)
+        if self._field.is_aggregate and self._field_object:
+            return self._field_object.to_python_value(value)
+        else:
+            return value
 
+    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext):
+        self._field_object, self._field = resolve_term(self._term, queryset, context)
 
-##############################################################################
-# Standard functions
-##############################################################################
-
-
-class Trim(Function):
-    database_func = functions.Trim
-
-
-class Length(Function):
-    database_func = functions.Length
-
-
-class Coalesce(Function):
-    database_func = functions.Coalesce
-
-
-class Lower(Function):
-    database_func = functions.Lower
-
-
-class Upper(Function):
-    database_func = functions.Upper
-
-
-##############################################################################
-# Aggregate functions
-##############################################################################
-
-
-class Count(Aggregate):
-    database_func = functions.Count
-
-
-class Sum(Aggregate):
-    database_func = functions.Sum
-
-
-class Max(Aggregate):
-    database_func = functions.Max
-
-
-class Min(Aggregate):
-    database_func = functions.Min
-
-
-class Avg(Aggregate):
-    database_func = functions.Avg
+        model = context.top.model
+        table = context.top.table
+        if self._add_group_by and self._field.is_aggregate:
+            queryset.query = queryset.query.groupby(table[model._meta.pk_db_column])

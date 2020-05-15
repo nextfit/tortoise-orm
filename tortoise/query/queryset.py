@@ -3,10 +3,12 @@ import itertools
 from copy import copy
 from typing import List, Dict, Type, Union, Set
 
+from pypika.terms import Term
+
 from tortoise.query.context import QueryContext
 from tortoise.exceptions import ParamsError, FieldError
-from tortoise.query.functions import Annotation, Function
 from tortoise.query.fieldselect import ValuesListQuery, ValuesQuery
+from tortoise.query.functions import TermAnnotation, Annotation
 from tortoise.query.statements import DeleteQuery, UpdateQuery, CountQuery
 from tortoise.query.prefetch import Prefetch
 from tortoise.query.base import AwaitableQuery, MODEL
@@ -55,8 +57,11 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
 
         for annotation in itertools.chain(args, kwargs.values()):
-            if not isinstance(annotation, Annotation):
-                raise TypeError("{} is expected to be Annotation instance".format(annotation))
+            if not isinstance(annotation, (Term, Annotation)):
+                raise TypeError("{} is expected to be instance of Annotation or pypika.terms.Term".format(annotation))
+
+        args = [TermAnnotation(t) if isinstance(t, Term) else t for t in args]
+        kwargs = {k: TermAnnotation(v) if isinstance(v, Term) else v for k, v in kwargs.items()}
 
         args_dict = {arg.default_name(): arg for arg in args}
         duplicate_keys = args_dict.keys() & kwargs.keys()
@@ -75,8 +80,8 @@ class QuerySet(AwaitableQuery[MODEL]):
     def aggregate(self, *args, **kwargs) -> FirstQuerySet:
         queryset = self.annotate(*args, **kwargs)
         for annotation in queryset.annotations.values():
-            if isinstance(annotation, Function):
-                annotation.add_group_by = False
+            if isinstance(annotation, TermAnnotation):
+                annotation._add_group_by = False
 
         return queryset.values(*queryset.annotations.keys()).first()
 

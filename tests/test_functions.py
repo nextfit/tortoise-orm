@@ -40,6 +40,14 @@ class TestFunctions(test.TestCase):
     # Some cases to be considered later
     #
 
+    #
+    # async def test_annotation_f(self):
+    #     products = Product.all().annotate(new_order=F('id') * 5)
+    #     products._make_query(context=QueryContext())
+    #
+    #     query_string = products.query.get_sql().replace('`', '"')
+    #     self.assertEqual(query_string, '')
+    #
     # async def test_brands_prefetch_limited_products(self):
     #     subquery = Product.filter(brand=OuterRef('brand')).limit(4).values_list('id', flat=True)
     #     prefetch = Prefetch('products', queryset=Product.filter(id__in=Subquery(subquery)))
