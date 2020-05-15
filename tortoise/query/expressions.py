@@ -1,13 +1,13 @@
 
 
 from pypika import Field
-from pypika.terms import ArithmeticExpression, Term, Function
+from pypika.terms import ArithmeticExpression, Term, Function, ValueWrapper
 
 from tortoise.query.context import QueryContext
 from tortoise.exceptions import FieldError
 
 
-class F(Field):  # type: ignore
+class F(ValueWrapper):  # type: ignore
 
     @staticmethod
     def resolve(term: Term, context: QueryContext):
@@ -18,12 +18,14 @@ class F(Field):  # type: ignore
         if isinstance(term, Function):
             term.args = [F.resolve(arg, context) for arg in term.args]
 
-        elif isinstance(term, Field):
+        elif isinstance(term, F):
             try:
-                term.name = context.top.model._meta.field_to_db_column_name_map[term.name]
-                term.table = context.top.table
+                return Field(
+                    name=context.top.model._meta.field_to_db_column_name_map[term.value],
+                    table=context.top.table
+                )
 
             except KeyError:
-                raise FieldError(f"Field {term.name} not found")
+                raise FieldError(f"Field {term.value} not found")
 
         return term

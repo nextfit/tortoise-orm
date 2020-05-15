@@ -3,6 +3,7 @@ from pypika.functions import Trim, Length
 from tests.testmodels import Event, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError
+from tortoise.query.expressions import F
 
 
 class TestValues(test.TestCase):
@@ -172,4 +173,17 @@ class TestValues(test.TestCase):
         tournaments = await Tournament.annotate(name_trim=Trim("name")).values("name", "name_trim")
         self.assertEqual(
             tournaments, [{"name": "  x", "name_trim": "x"}, {"name": " y ", "name_trim": "y"}]
+        )
+
+    async def test_values_annotations_arthmatic(self):
+        await Tournament.create(id=1, name="1")
+        await Tournament.create(id=2, name="2")
+        await Tournament.create(id=3, name="3")
+        await Tournament.create(id=4, name="4")
+        await Tournament.create(id=5, name="5")
+        await Tournament.create(id=6, name="6")
+
+        tournaments = await Tournament.annotate(new_id=F("id") * 7 + 3).values_list("new_id")
+        self.assertEqual(
+            tournaments, [(10,), (17,), (24,), (31,), (38,), (45,)]
         )

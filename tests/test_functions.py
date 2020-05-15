@@ -36,17 +36,17 @@ class TestFunctions(test.TestCase):
                 'WHERE "U1"."brand_id"="store_brand"."id" ORDER BY "U1"."id" ASC LIMIT 1) "product_name" '
             'FROM "store_brand" ORDER BY "id" ASC')
 
+    async def test_annotation_f(self):
+        products = Product.all().annotate(new_order=F('id') * 5)
+        products._make_query(context=QueryContext())
+
+        query_string = products.query.get_sql().replace('`', '"')
+        self.assertEqual(query_string,
+            'SELECT "id","name","price","brand_id","id"*5 "new_order" FROM "store_product" ORDER BY "id" ASC')
+
     #
     # Some cases to be considered later
     #
-
-    #
-    # async def test_annotation_f(self):
-    #     products = Product.all().annotate(new_order=F('id') * 5)
-    #     products._make_query(context=QueryContext())
-    #
-    #     query_string = products.query.get_sql().replace('`', '"')
-    #     self.assertEqual(query_string, '')
     #
     # async def test_brands_prefetch_limited_products(self):
     #     subquery = Product.filter(brand=OuterRef('brand')).limit(4).values_list('id', flat=True)
