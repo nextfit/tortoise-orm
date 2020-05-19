@@ -162,7 +162,7 @@ class Function(Annotation):
             self._field = self.database_func(field, *self.default_values)
 
         if self.add_group_by and self._field.is_aggregate:
-            queryset.query = queryset.query.groupby(table.id)
+            queryset.query = queryset.query.groupby(table[model._meta.pk_db_column])
 
 
 class Aggregate(Function):
