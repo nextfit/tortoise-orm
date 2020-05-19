@@ -1,4 +1,4 @@
-from pypika.functions import Min, Count, Sum
+from pypika.functions import Count, Min, Sum
 
 from tests.testmodels import Event, Team, Tournament
 from tortoise.contrib import test

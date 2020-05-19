@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from pypika.functions import Sum, Avg, Max
+from pypika.functions import Avg, Max, Sum
 
 from tests import testmodels
 from tortoise import fields

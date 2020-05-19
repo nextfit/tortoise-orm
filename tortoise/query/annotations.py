@@ -1,18 +1,16 @@
 
-from typing import TypeVar, Tuple, Optional
+from typing import Optional, Tuple, TypeVar
 
-from pypika.terms import (
-    Field as PyPikaField,
-    Term as PyPikaTerm,
-    ArithmeticExpression,
-    Function as PyPikaFunction,
-    ValueWrapper)
+from pypika.terms import ArithmeticExpression
+from pypika.terms import Field as PyPikaField
+from pypika.terms import Function as PyPikaFunction
+from pypika.terms import Term as PyPikaTerm
+from pypika.terms import ValueWrapper
 
 from tortoise.constants import LOOKUP_SEP
+from tortoise.exceptions import BaseORMException, FieldError, ParamsError
+from tortoise.fields import BackwardFKField, Field, ForeignKey, ManyToManyField, OneToOneField
 from tortoise.query.context import QueryContext
-from tortoise.exceptions import FieldError, BaseORMException, ParamsError
-from tortoise.fields import ForeignKey, OneToOneField, ManyToManyField, BackwardFKField, Field
-
 
 MODEL = TypeVar("MODEL", bound="Model")
 

@@ -1,9 +1,9 @@
 
 from pypika.terms import Node
 
+from tortoise.query.base import MODEL
 from tortoise.query.context import QueryContext
 from tortoise.query.queryset import QuerySet
-from tortoise.query.base import MODEL
 
 
 class RawQuery(Node):

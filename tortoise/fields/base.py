@@ -1,5 +1,6 @@
 
-from typing import Any, Dict, Optional, Type, Union, List
+from typing import Any, Dict, List, Optional, Type, Union
+
 from tortoise.exceptions import ConfigurationError
 from tortoise.filters import FieldFilter
 

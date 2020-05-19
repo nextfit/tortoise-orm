@@ -3,8 +3,8 @@ import operator
 from pypika import functions
 from pypika.enums import SqlTypes
 
-from tortoise.backends.base.filters import BaseFilter
 import tortoise.backends.base.filters as tf
+from tortoise.backends.base.filters import BaseFilter
 
 
 def mysql_contains(field, value):

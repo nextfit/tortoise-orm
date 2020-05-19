@@ -1,4 +1,4 @@
-from pypika.functions import Trim, Length
+from pypika.functions import Length, Trim
 
 from tests.testmodels import Event, Team, Tournament
 from tortoise.contrib import test

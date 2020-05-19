@@ -1,11 +1,12 @@
 
 from typing import TypeVar
+
 from pypika import Order
 from pypika.terms import Node, Term
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.query.context import QueryContext
 from tortoise.exceptions import FieldError
+from tortoise.query.context import QueryContext
 from tortoise.query.expressions import F
 
 MODEL = TypeVar("MODEL", bound="Model")

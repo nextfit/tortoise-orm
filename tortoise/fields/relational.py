@@ -1,19 +1,16 @@
 
 from copy import deepcopy
 from functools import partial
-from typing import Awaitable, Generic, Optional, TypeVar, Union, Dict, List, Tuple
+from typing import Awaitable, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union
 
-from pypika import Table, Criterion
+from pypika import Criterion, Table
 from typing_extensions import Literal
-from tortoise.constants import LOOKUP_SEP
 
-from tortoise.query.context import QueryContext
+from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
 from tortoise.fields.base import CASCADE, RESTRICT, SET_NULL, Field
-
-from typing import Type
-
 from tortoise.filters import FieldFilter
+from tortoise.query.context import QueryContext
 
 MODEL = TypeVar("MODEL", bound="Model")
 

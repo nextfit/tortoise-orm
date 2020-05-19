@@ -1,23 +1,48 @@
 
 
-from .uuid import (
-    UUIDFkRelatedModel, UUIDPkSourceModel, UUIDFkRelatedNullModel, UUIDFkRelatedNullSourceModel,
-    UUIDFkRelatedSourceModel, UUIDM2MRelatedModel, UUIDM2MRelatedSourceModel, UUIDPkModel
-)
-
-from .tournament import EventTwo, MinRelation, Address, Reporter, TeamTwo, Tournament, Event, Team
-
-from .relations import (
-    StraightFields, CharFkRelatedModel, CharM2MRelatedModel, ImplicitPkModel, CharPkModel,
-    DoubleFK, Employee, SourceFields, M2MOne, M2MTwo)
-
-from .base import NoID, CommentModel
-from .inheritance import MyDerivedModel, MyAbstractBaseModel, NameMixin, TimestampMixin
-from .datafields import (
-    BigIntFields, BinaryFields, BooleanFields, CharFields, FloatFields, EnumFields,
-    IntFields, JSONFields, DatetimeFields, DecimalFields, SmallIntFields, TimeDeltaFields,
-    DateFields, Service, TextFields, UUIDFields, Currency)
-
+from .base import CommentModel, NoID
 from .constraints import UniqueName, UniqueTogetherFields, UniqueTogetherFieldsWithFK
-
-from .store import ProductImage, ProductCategory, Category, Product, Brand, Image
+from .datafields import (
+    BigIntFields,
+    BinaryFields,
+    BooleanFields,
+    CharFields,
+    Currency,
+    DateFields,
+    DatetimeFields,
+    DecimalFields,
+    EnumFields,
+    FloatFields,
+    IntFields,
+    JSONFields,
+    Service,
+    SmallIntFields,
+    TextFields,
+    TimeDeltaFields,
+    UUIDFields,
+)
+from .inheritance import MyAbstractBaseModel, MyDerivedModel, NameMixin, TimestampMixin
+from .relations import (
+    CharFkRelatedModel,
+    CharM2MRelatedModel,
+    CharPkModel,
+    DoubleFK,
+    Employee,
+    ImplicitPkModel,
+    M2MOne,
+    M2MTwo,
+    SourceFields,
+    StraightFields,
+)
+from .store import Brand, Category, Image, Product, ProductCategory, ProductImage
+from .tournament import Address, Event, EventTwo, MinRelation, Reporter, Team, TeamTwo, Tournament
+from .uuid import (
+    UUIDFkRelatedModel,
+    UUIDFkRelatedNullModel,
+    UUIDFkRelatedNullSourceModel,
+    UUIDFkRelatedSourceModel,
+    UUIDM2MRelatedModel,
+    UUIDM2MRelatedSourceModel,
+    UUIDPkModel,
+    UUIDPkSourceModel,
+)

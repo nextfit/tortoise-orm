@@ -1,11 +1,11 @@
 import asyncio
 
-from tests.testmodels import Product, Brand, Image
+from tests.testmodels import Brand, Image, Product
 from tortoise.contrib import test
 from tortoise.query import Prefetch
+from tortoise.query.annotations import OuterRef, Subquery
 from tortoise.query.context import QueryContext
 from tortoise.query.expressions import F
-from tortoise.query.annotations import OuterRef, Subquery
 from tortoise.query.ordering import RandomOrdering
 
 
@@ -142,4 +142,3 @@ class TestFunctions(test.TestCase):
             {'name': 'product_4', 'images': ['image_4', 'image_5', 'image_6']},
             {'name': 'product_5', 'images': ['image_2', 'image_3']},
         ])
-

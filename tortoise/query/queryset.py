@@ -1,18 +1,18 @@
 
 import itertools
 from copy import copy
-from typing import List, Dict, Type, Union, Set
+from typing import Dict, List, Set, Type, Union
 
 from pypika.terms import Term
 
+from tortoise.exceptions import FieldError, ParamsError
+from tortoise.query.annotations import Annotation, TermAnnotation
+from tortoise.query.base import MODEL, AwaitableQuery
 from tortoise.query.context import QueryContext
-from tortoise.exceptions import ParamsError, FieldError
 from tortoise.query.fieldselect import ValuesListQuery, ValuesQuery
-from tortoise.query.annotations import TermAnnotation, Annotation
-from tortoise.query.statements import DeleteQuery, UpdateQuery, CountQuery
 from tortoise.query.prefetch import Prefetch
-from tortoise.query.base import AwaitableQuery, MODEL
 from tortoise.query.single import FirstQuerySet
+from tortoise.query.statements import CountQuery, DeleteQuery, UpdateQuery
 
 
 class QuerySet(AwaitableQuery[MODEL]):

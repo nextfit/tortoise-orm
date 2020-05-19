@@ -19,4 +19,3 @@ class CommentModel(Model):
     escaped_comment_field = fields.TextField(description="This column acts as it's own comment")
     multiline_comment = fields.TextField(description="Some \n comment")
     commented_by = fields.TextField()
-

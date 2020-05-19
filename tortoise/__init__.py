@@ -1,7 +1,8 @@
 
 import asyncio
-from tortoise.core import _Tortoise
 from typing import Coroutine
+
+from tortoise.core import _Tortoise
 
 Tortoise = _Tortoise()
 

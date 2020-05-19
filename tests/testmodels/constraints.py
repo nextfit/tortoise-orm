@@ -24,4 +24,3 @@ class UniqueTogetherFieldsWithFK(Model):
 
     class Meta:
         unique_together = ("text", "tournament")
-

@@ -1,8 +1,8 @@
 
 from pypika import Parameter
 
-from tortoise.fields import BigIntegerField, IntegerField, SmallIntegerField
 from tortoise.backends.base.executor import BaseExecutor
+from tortoise.fields import BigIntegerField, IntegerField, SmallIntegerField
 from tortoise.models import Model
 
 

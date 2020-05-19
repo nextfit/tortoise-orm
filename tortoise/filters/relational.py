@@ -2,9 +2,9 @@
 from pypika import Criterion
 from pypika.terms import Term
 
-from tortoise.query.context import QueryContext
 from tortoise.fields.relational import BackwardFKField, ManyToManyField
 from tortoise.filters.base import FieldFilter
+from tortoise.query.context import QueryContext
 
 
 class RelationFilter(FieldFilter):

@@ -2,15 +2,14 @@
 import asyncio
 import datetime
 import decimal
-
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type
+
 from pypika import Parameter
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import OperationalError, ParamsError
 from tortoise.fields.base import Field
-
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model

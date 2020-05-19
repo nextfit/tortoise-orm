@@ -1,13 +1,14 @@
 
 import asyncio
 import logging
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Type
 
 from pypika import Query
+
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.filters import BaseFilter
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.exceptions import ConfigurationError
-from typing import Any, List, Optional, Sequence, Tuple, Type, Set, Dict
 
 
 class Capabilities:

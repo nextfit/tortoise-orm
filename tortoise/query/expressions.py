@@ -1,10 +1,10 @@
 
 
 from pypika import Field
-from pypika.terms import ArithmeticExpression, Term, Function, ValueWrapper
+from pypika.terms import ArithmeticExpression, Function, Term, ValueWrapper
 
-from tortoise.query.context import QueryContext
 from tortoise.exceptions import FieldError
+from tortoise.query.context import QueryContext
 
 
 class F(ValueWrapper):  # type: ignore

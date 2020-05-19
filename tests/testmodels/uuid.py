@@ -76,4 +76,3 @@ class UUIDM2MRelatedSourceModel(Model):
 
     class Meta:
         db_table = "umrsm"
-

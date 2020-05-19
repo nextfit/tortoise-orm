@@ -1,18 +1,29 @@
 
 from copy import copy, deepcopy
-from typing import TYPE_CHECKING
-from typing import Any, AsyncIterator, Dict, Generator, Generic, List, Optional, Type, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Dict,
+    Generator,
+    Generic,
+    List,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+)
 
-from pypika import Table, JoinType, Order
+from pypika import JoinType, Order, Table
 from pypika.queries import QueryBuilder
 from pypika.terms import Node
 
-from tortoise.backends.base.client import Capabilities, BaseDBAsyncClient
-from tortoise.fields import RelationField
-from tortoise.query.context import QueryContext
+from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import ParamsError
+from tortoise.fields import RelationField
 from tortoise.filters.q import Q
 from tortoise.query.annotations import Annotation
+from tortoise.query.context import QueryContext
 from tortoise.query.ordering import QueryOrdering, QueryOrderingField, QueryOrderingNode
 from tortoise.query.single import FirstQuerySet, GetQuerySet
 

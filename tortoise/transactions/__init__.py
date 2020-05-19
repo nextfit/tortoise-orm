@@ -1,6 +1,6 @@
 
 from functools import wraps
-from typing import Optional, Callable
+from typing import Callable, Optional
 
 from tortoise import Tortoise
 
@@ -40,5 +40,3 @@ def atomic(connection_name: Optional[str] = None) -> Callable:
         return wrapped
 
     return wrapper
-
-
