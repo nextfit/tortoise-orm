@@ -4,7 +4,7 @@ from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
 
 class MySQLSchemaGenerator(BaseSchemaGenerator):
-    DIALECT = "mysql"
+
     TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}`{table_name}` ({columns}){extra}{comment};"
     INDEX_CREATE_TEMPLATE = "KEY `{index_name}` ({columns})"
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE KEY `{index_name}` ({columns})"

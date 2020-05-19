@@ -107,7 +107,7 @@ class Field(metaclass=_FieldMeta):
             for dialect in dir(self) if dialect.startswith("_db_")
         }
 
-    def get_for_dialect(self, dialect: str, key: str) -> Any:
+    def get_for_dialect(self, key: str) -> Any:
         #
         # The following two lines is the original code,
         # but is an overkill unless _get_dialects is cached.
@@ -115,6 +115,8 @@ class Field(metaclass=_FieldMeta):
         #   dialect_data = self._get_dialects().get(dialect, {})
         #   return dialect_data.get(key, getattr(self, key, None))
         #
+
+        dialect = self.model._meta.db.capabilities.dialect
         db_meta = getattr(self, f"_db_{dialect}", None)
         if db_meta and key in db_meta.__dict__:
             return db_meta.__dict__.get(key)

@@ -109,7 +109,7 @@ class BaseDBAsyncClient:
     filter_class: Type[BaseFilter] = BaseFilter
     executor_class: Type[BaseExecutor] = BaseExecutor
     schema_generator: Type[BaseSchemaGenerator] = BaseSchemaGenerator
-    capabilities: Capabilities = Capabilities("")
+    capabilities: Capabilities = Capabilities("sql")
 
     def __init__(self, connection_name: str, **kwargs) -> None:
         self.connection_name = connection_name

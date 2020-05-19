@@ -138,7 +138,7 @@ def resolve_field_name_into(field_name, queryset: "AwaitableQuery[MODEL]",
             raise FieldError(f"Unknown field {field_name} for model {model.__name__}")
 
         pypika_field = table[field_object.db_column]
-        func = field_object.get_for_dialect(model._meta.db.capabilities.dialect, "function_cast")
+        func = field_object.get_for_dialect("function_cast")
         if func:
             pypika_field = func(field_object, pypika_field)
 
