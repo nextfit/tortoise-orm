@@ -8,7 +8,7 @@ from pypika.terms import Term
 from tortoise.query.context import QueryContext
 from tortoise.exceptions import ParamsError, FieldError
 from tortoise.query.fieldselect import ValuesListQuery, ValuesQuery
-from tortoise.query.functions import TermAnnotation, Annotation
+from tortoise.query.annotations import TermAnnotation, Annotation
 from tortoise.query.statements import DeleteQuery, UpdateQuery, CountQuery
 from tortoise.query.prefetch import Prefetch
 from tortoise.query.base import AwaitableQuery, MODEL

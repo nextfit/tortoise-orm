@@ -1,6 +1,6 @@
+from pypika.functions import Count, Sum, Min, Coalesce, Trim, Length, Lower, Upper
 
 from tortoise import Tortoise, fields, run_async
-from tortoise.query.functions import Coalesce, Count, Length, Lower, Min, Sum, Trim, Upper
 from tortoise.models import Model
 
 

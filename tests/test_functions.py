@@ -5,7 +5,7 @@ from tortoise.contrib import test
 from tortoise.query import Prefetch
 from tortoise.query.context import QueryContext
 from tortoise.query.expressions import F
-from tortoise.query.functions import OuterRef, Subquery
+from tortoise.query.annotations import OuterRef, Subquery
 from tortoise.query.ordering import RandomOrdering
 
 

@@ -12,7 +12,7 @@ from tortoise.fields import RelationField
 from tortoise.query.context import QueryContext
 from tortoise.exceptions import ParamsError
 from tortoise.filters.q import Q
-from tortoise.query.functions import Annotation
+from tortoise.query.annotations import Annotation
 from tortoise.query.ordering import QueryOrdering, QueryOrderingField, QueryOrderingNode
 from tortoise.query.single import FirstQuerySet, GetQuerySet
 

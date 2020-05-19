@@ -8,7 +8,7 @@ from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.relational import ForeignKey, OneToOneField
 from tortoise.filters import FieldFilter
 from tortoise.filters.clause import QueryClauses
-from tortoise.query.functions import OuterRef, Subquery
+from tortoise.query.annotations import OuterRef, Subquery
 
 
 class Q:
