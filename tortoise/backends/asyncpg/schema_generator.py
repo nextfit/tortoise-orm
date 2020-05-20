@@ -1,10 +1,11 @@
 
 from typing import List
+
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
 
 class AsyncpgSchemaGenerator(BaseSchemaGenerator):
-    DIALECT = "postgres"
+
     TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE \"{table}\" IS '{comment}';"
     COLUMN_COMMENT_TEMPLATE = 'COMMENT ON COLUMN "{table}"."{column}" IS \'{comment}\';'
     GENERATED_PK_TEMPLATE = '"{column_name}" {generated_sql}'

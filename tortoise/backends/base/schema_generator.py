@@ -18,7 +18,7 @@ class TableCreationData:
 
 
 class BaseSchemaGenerator:
-    DIALECT = "sql"
+
     TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({columns}){extra}{comment};'
     COLUMN_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({columns});'
@@ -168,7 +168,7 @@ class BaseSchemaGenerator:
             # TODO: PK generation needs to move out of schema generator.
             if field_object.primary_key:
                 if field_object.generated:
-                    generated_sql = field_object.get_for_dialect(self.DIALECT, "GENERATED_SQL")
+                    generated_sql = field_object.get_for_dialect("GENERATED_SQL")
                     if generated_sql:  # pragma: nobranch
                         columns_to_create.append(
                             self.GENERATED_PK_TEMPLATE.format(
@@ -193,7 +193,7 @@ class BaseSchemaGenerator:
 
                 field_creation_string = self._create_column_string(
                     db_column=column_name,
-                    column_type=field_object.get_for_dialect(self.DIALECT, "SQL_TYPE"),
+                    column_type=field_object.get_for_dialect("SQL_TYPE"),
                     nullable=nullable,
                     unique=unique,
                     is_primary_key=field_object.primary_key,
@@ -217,7 +217,7 @@ class BaseSchemaGenerator:
             else:
                 field_creation_string = self._create_column_string(
                     db_column=column_name,
-                    column_type=field_object.get_for_dialect(self.DIALECT, "SQL_TYPE"),
+                    column_type=field_object.get_for_dialect("SQL_TYPE"),
                     nullable=nullable,
                     unique=unique,
                     is_primary_key=field_object.primary_key,
@@ -299,9 +299,9 @@ class BaseSchemaGenerator:
                     backward_related_column=model._meta.pk_db_column,
                     forward_related_column=field.remote_model._meta.pk_db_column,
                     backward_key=field.backward_key,
-                    backward_type=model._meta.pk.get_for_dialect(self.DIALECT, "SQL_TYPE"),
+                    backward_type=model._meta.pk.get_for_dialect("SQL_TYPE"),
                     forward_key=field.forward_key,
-                    forward_type=field.remote_model._meta.pk.get_for_dialect(self.DIALECT, "SQL_TYPE"),
+                    forward_type=field.remote_model._meta.pk.get_for_dialect("SQL_TYPE"),
                     extra=self._table_generate_extra(table=field.through),
                     comment=
                         self._table_comment_generator(table=field.through, comment=field.description)

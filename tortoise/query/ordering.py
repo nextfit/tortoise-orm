@@ -1,11 +1,12 @@
 
 from typing import TypeVar
+
 from pypika import Order
 from pypika.terms import Node, Term
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.query.context import QueryContext
 from tortoise.exceptions import FieldError
+from tortoise.query.context import QueryContext
 from tortoise.query.expressions import F
 
 MODEL = TypeVar("MODEL", bound="Model")
@@ -54,7 +55,7 @@ class QueryOrderingField(QueryOrdering):
 
             field = table[field_object.db_column]
             if not queryset.is_aggregate() or field in queryset.query._groupbys:
-                func = field_object.get_for_dialect(model._meta.db.capabilities.dialect, "function_cast")
+                func = field_object.get_for_dialect("function_cast")
                 if func:
                     field = func(field_object, field)
 

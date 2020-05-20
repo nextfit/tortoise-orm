@@ -1,13 +1,13 @@
 
-from typing import Tuple, List, Callable, Any
+from typing import Any, Callable, List, Tuple
 
 from pypika import Table
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.query.context import QueryContext
 from tortoise.exceptions import FieldError
 from tortoise.fields import JSONField
-from tortoise.query.base import AwaitableQuery, MODEL
+from tortoise.query.base import MODEL, AwaitableQuery
+from tortoise.query.context import QueryContext
 
 
 class FieldSelectQuery(AwaitableQuery[MODEL]):

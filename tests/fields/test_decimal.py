@@ -1,11 +1,12 @@
 from decimal import Decimal
 
+from pypika.functions import Avg, Max, Sum
+
 from tests import testmodels
 from tortoise import fields
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError, IntegrityError
 from tortoise.query.expressions import F
-from tortoise.query.functions import Avg, Max, Sum
 
 
 class TestDecimalFields(test.TestCase):

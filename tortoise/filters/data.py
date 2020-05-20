@@ -1,10 +1,10 @@
 
 import pypika
-from pypika.terms import Term, Node
+from pypika.terms import Node, Term
 
-from tortoise.query.context import QueryContext
 from tortoise.fields import Field
 from tortoise.filters.base import FieldFilter
+from tortoise.query.context import QueryContext
 
 
 class DataFieldFilter(FieldFilter):

@@ -1,13 +1,14 @@
 
 import asyncio
 import logging
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Type
 
 from pypika import Query
+
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.filters import BaseFilter
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.exceptions import ConfigurationError
-from typing import Any, List, Optional, Sequence, Tuple, Type, Set, Dict
 
 
 class Capabilities:
@@ -108,7 +109,7 @@ class BaseDBAsyncClient:
     filter_class: Type[BaseFilter] = BaseFilter
     executor_class: Type[BaseExecutor] = BaseExecutor
     schema_generator: Type[BaseSchemaGenerator] = BaseSchemaGenerator
-    capabilities: Capabilities = Capabilities("")
+    capabilities: Capabilities = Capabilities("sql")
 
     def __init__(self, connection_name: str, **kwargs) -> None:
         self.connection_name = connection_name

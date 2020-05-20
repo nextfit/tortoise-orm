@@ -1,6 +1,7 @@
 
-from pypika import Criterion
 from typing import Optional
+
+from pypika import Criterion
 
 
 class EmptyCriterion(Criterion):  # type: ignore

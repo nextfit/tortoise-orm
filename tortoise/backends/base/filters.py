@@ -2,11 +2,11 @@
 
 import operator
 from functools import partial
+
 from pypika import functions
 from pypika.enums import SqlTypes
 
-from tortoise.fields import Field, RelationField, BackwardFKField, ManyToManyField
-
+from tortoise.fields import BackwardFKField, Field, ManyToManyField, RelationField
 
 #
 # Encoders

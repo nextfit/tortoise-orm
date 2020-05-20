@@ -1,7 +1,7 @@
 
-from typing import Generator, Optional, Generic, TypeVar
-from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned
+from typing import Generator, Generic, Optional, TypeVar
 
+from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned
 
 MODEL = TypeVar("MODEL", bound="Model")
 

@@ -1,7 +1,9 @@
+
+from pypika.functions import Count
+
 from tests.testmodels import Address, DoubleFK, Employee, Event, Reporter, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError, NoValuesFetched
-from tortoise.query.functions import Count
 
 
 class TestRelations(test.TestCase):

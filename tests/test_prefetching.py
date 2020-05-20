@@ -1,7 +1,8 @@
+from pypika.functions import Count
+
 from tests.testmodels import Address, Event, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError
-from tortoise.query.functions import Count
 from tortoise.query import Prefetch
 
 

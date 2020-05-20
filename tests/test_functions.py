@@ -1,11 +1,11 @@
 import asyncio
 
-from tests.testmodels import Product, Brand, Image
+from tests.testmodels import Brand, Image, Product
 from tortoise.contrib import test
 from tortoise.query import Prefetch
+from tortoise.query.annotations import OuterRef, Subquery
 from tortoise.query.context import QueryContext
 from tortoise.query.expressions import F
-from tortoise.query.functions import OuterRef, Subquery
 from tortoise.query.ordering import RandomOrdering
 
 
@@ -37,6 +37,14 @@ class TestFunctions(test.TestCase):
                 'SELECT "U1"."name" "0" FROM "store_product" "U1" '
                 'WHERE "U1"."brand_id"="store_brand"."id" ORDER BY "U1"."id" ASC LIMIT 1) "product_name" '
             'FROM "store_brand" ORDER BY "id" ASC')
+
+    async def test_annotation_f(self):
+        products = Product.all().annotate(new_order=F('id') * 5)
+        products._make_query(context=QueryContext())
+
+        query_string = products.query.get_sql().replace('`', '"')
+        self.assertEqual(query_string,
+            'SELECT "id","name","price","brand_id","id"*5 "new_order" FROM "store_product" ORDER BY "id" ASC')
 
     async def create_objects(self):
         brands = [Brand(name='brand_{}'.format(num)) for num in range(1, 7)]

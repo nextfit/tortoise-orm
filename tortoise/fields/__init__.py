@@ -10,8 +10,8 @@ from tortoise.fields.data import (
     DateTimeField,
     DecimalField,
     FloatField,
-    IntEnumField,
     IntegerField,
+    IntEnumField,
     JSONField,
     SmallIntegerField,
     TextField,
@@ -19,9 +19,8 @@ from tortoise.fields.data import (
     UUIDField,
 )
 from tortoise.fields.relational import (
-    RelationField,
-    BackwardOneToOneField,
     BackwardFKField,
+    BackwardOneToOneField,
     ForeignKey,
     ForeignKeyNullableRelation,
     ForeignKeyRelation,
@@ -30,5 +29,6 @@ from tortoise.fields.relational import (
     OneToOneField,
     OneToOneNullableRelation,
     OneToOneRelation,
+    RelationField,
     ReverseRelation,
 )

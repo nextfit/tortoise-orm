@@ -1,13 +1,11 @@
 
 from copy import deepcopy
-from typing import (
-    Any, Dict, Generator, List, Optional, Set, Tuple,
-    Type, TypeVar)
+from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar
 
-from pypika import Table, Order
+from pypika import Order, Table
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.exceptions import ConfigurationError, OperationalError, FieldError
+from tortoise.exceptions import ConfigurationError, FieldError, OperationalError
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntegerField
 from tortoise.fields.relational import (
@@ -16,8 +14,8 @@ from tortoise.fields.relational import (
     ForeignKey,
     ManyToManyField,
     OneToOneField,
-    RelationField)
-
+    RelationField,
+)
 from tortoise.filters import FieldFilter
 from tortoise.query.queryset import QuerySet
 from tortoise.query.raw import RawQuerySet

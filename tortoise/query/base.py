@@ -1,18 +1,29 @@
 
-from copy import copy
-from typing import TYPE_CHECKING
-from typing import Any, AsyncIterator, Dict, Generator, Generic, List, Optional, Type, TypeVar, Union
+from copy import copy, deepcopy
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Dict,
+    Generator,
+    Generic,
+    List,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+)
 
-from pypika import Table, JoinType, Order
+from pypika import JoinType, Order, Table
 from pypika.queries import QueryBuilder
 from pypika.terms import Node
 
-from tortoise.backends.base.client import Capabilities, BaseDBAsyncClient
-from tortoise.fields import RelationField
-from tortoise.query.context import QueryContext
+from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import ParamsError
+from tortoise.fields import RelationField
 from tortoise.filters.q import Q
-from tortoise.query.functions import Annotation
+from tortoise.query.annotations import Annotation
+from tortoise.query.context import QueryContext
 from tortoise.query.ordering import QueryOrdering, QueryOrderingField, QueryOrderingNode
 from tortoise.query.single import FirstQuerySet, GetQuerySet
 
@@ -51,9 +62,9 @@ class AwaitableStatement(Generic[MODEL]):
         queryset.capabilities = self.capabilities
         queryset.model = self.model
         queryset.query = self.query
-        queryset._joined_tables = copy(self._joined_tables)
-        queryset.q_objects = copy(self.q_objects)
-        queryset.annotations = copy(self.annotations)
+        queryset._joined_tables = deepcopy(self._joined_tables)
+        queryset.q_objects = deepcopy(self.q_objects)
+        queryset.annotations = deepcopy(self.annotations)
 
     def _clone(self):
         queryset = self.__class__.__new__(self.__class__)

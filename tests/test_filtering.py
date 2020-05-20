@@ -1,7 +1,7 @@
+from pypika.functions import Coalesce, Count, Length, Lower, Trim, Upper
 
 from tests.testmodels import Event, IntFields, Reporter, Team, Tournament
 from tortoise.contrib import test
-from tortoise.query.functions import Coalesce, Count, Length, Lower, Trim, Upper
 from tortoise.filters.q import Q
 
 

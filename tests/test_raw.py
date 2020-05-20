@@ -1,5 +1,5 @@
 
-from tests.testmodels import Tournament, Event
+from tests.testmodels import Event, Tournament
 from tortoise.contrib import test
 
 

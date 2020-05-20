@@ -16,12 +16,7 @@ from tests.testmodels import (
 )
 from tortoise import Tortoise, fields
 from tortoise.contrib import test
-from tortoise.fields.relational import (
-    BackwardFKField,
-    ForeignKey,
-    ManyToManyField,
-    OneToOneField,
-)
+from tortoise.fields.relational import BackwardFKField, ForeignKey, ManyToManyField, OneToOneField
 
 
 class TestBasic(test.TestCase):

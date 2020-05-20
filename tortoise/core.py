@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import warnings
+from contextvars import ContextVar
 from inspect import isclass
 from typing import Dict, List, Optional, Type
 
@@ -11,9 +12,7 @@ from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config, obscure_password
 from tortoise.exceptions import ConfigurationError, ParamsError
 from tortoise.fields.relational import RelationField
-
 from tortoise.models import Model
-from contextvars import ContextVar
 
 
 class _Tortoise:

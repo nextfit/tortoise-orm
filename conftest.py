@@ -2,8 +2,8 @@
 import logging.config
 
 import pytest
-from tortoise.contrib.test import finalizer, env_initializer
 
+from tortoise.contrib.test import env_initializer, finalizer
 
 LOGGING = {
     'version': 1,

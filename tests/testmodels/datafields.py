@@ -1,8 +1,8 @@
-from enum import IntEnum, Enum
+import uuid
+from enum import Enum, IntEnum
 
 from tortoise import fields
 from tortoise.models import Model
-import uuid
 
 
 class IntFields(Model):
@@ -112,4 +112,3 @@ class Currency(str, Enum):
 class EnumFields(Model):
     service: Service = fields.IntEnumField(Service)
     currency: Currency = fields.CharEnumField(Currency, default=Currency.HUF)
-

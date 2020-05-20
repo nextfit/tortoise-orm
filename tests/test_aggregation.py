@@ -1,7 +1,8 @@
+from pypika.functions import Count, Min, Sum
+
 from tests.testmodels import Event, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError
-from tortoise.query.functions import Count, Min, Sum
 
 
 class TestAggregation(test.TestCase):

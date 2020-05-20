@@ -1,10 +1,10 @@
 from unittest import TestCase as _TestCase
 
 from tests.testmodels import CharFields, IntFields
-from tortoise.query.context import QueryContext
 from tortoise.contrib.test import TestCase
 from tortoise.exceptions import OperationalError
 from tortoise.filters.q import Q
+from tortoise.query.context import QueryContext
 
 
 class TestQ(_TestCase):
