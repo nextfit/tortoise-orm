@@ -307,6 +307,9 @@ class RelationField(Field):
         del desc["db_column"]
         return desc
 
+    def join_table_alias(self, table: Table):
+        return "{}{}{}".format(table.get_table_name(), LOOKUP_SEP, self.model_field_name)
+
 
 class BackwardFKField(RelationField):
 
@@ -374,9 +377,7 @@ class BackwardFKField(RelationField):
 
     def get_joins(self, table: Table, full: bool) -> List[Tuple[Table, Criterion]]:
         table_pk = self.model._meta.pk_db_column
-        related_table = self.remote_model._meta\
-            .table(alias=f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}")
-
+        related_table = self.remote_model._meta.table(alias=self.join_table_alias(table))
         return [(related_table, table[table_pk] == related_table[self.related_name])]
 
 
@@ -537,9 +538,7 @@ class ForeignKey(RelationField):
     def get_joins(self, table: Table, full: bool) -> List[Tuple[Table, Criterion]]:
         if full:
             related_table_pk = self.remote_model._meta.pk_db_column
-            related_table = self.remote_model._meta\
-                .table(alias=f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}")
-
+            related_table = self.remote_model._meta.table(alias=self.join_table_alias(table))
             return [(related_table, related_table[related_table_pk] == table[self.db_column])]
 
         else:
@@ -827,9 +826,7 @@ class ManyToManyField(RelationField):
         joins = [(through_table, table[table_pk] == through_table[self.backward_key])]
 
         if full:
-            related_table = self.remote_model._meta\
-                .table(alias=f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}")
-
+            related_table = self.remote_model._meta.table(alias=self.join_table_alias(table))
             joins.append((related_table, through_table[self.forward_key] == related_table[related_table_pk]))
 
         return joins

@@ -2,7 +2,7 @@ from pypika.functions import Count
 
 from tests.testmodels import Address, Event, Team, Tournament
 from tortoise.contrib import test
-from tortoise.exceptions import FieldError
+from tortoise.exceptions import FieldError, UnknownFieldError
 from tortoise.query import Prefetch
 
 
@@ -107,7 +107,7 @@ class TestPrefetching(test.TestCase):
     async def test_prefetch_bad_key(self):
         tournament = await Tournament.create(name="tournament")
         await Event.create(name="First", tournament=tournament)
-        with self.assertRaisesRegex(FieldError, "Relation tour1nament for models.Event not found"):
+        with self.assertRaisesRegex(UnknownFieldError, str(UnknownFieldError("tour1nament", Event))):
             await Event.all().prefetch_related("tour1nament").first()
 
     async def test_prefetch_m2m_filter(self):
