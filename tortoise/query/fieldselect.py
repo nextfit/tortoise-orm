@@ -28,21 +28,21 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
         model = context_item.model
         table = context_item.table
 
-        if field_name in model._meta.field_to_db_column_name_map and not forwarded_fields:
-            return table, model._meta.field_to_db_column_name_map[field_name]
-
-        if field_name in model._meta.field_to_db_column_name_map and forwarded_fields:
-            raise FieldError(f'Field "{field_name}" for model "{model.__name__}" is not relation')
-
-        if field_name in self.model._meta.fetch_fields and not forwarded_fields:
-            raise ValueError(
-                'Selecting relation "{}" is not possible, select concrete '
-                "field on related model".format(field_name)
-            )
-
         field_object = model._meta.fields_map.get(field_name)
         if not field_object:
             raise FieldError(f'Unknown field "{field_name}" for model "{model.__name__}"')
+
+        if field_object.has_db_column:
+            if forwarded_fields:
+                raise FieldError(f'Field "{field_name}" for model "{model.__name__}" is not relation')
+
+            return table, field_object.db_column
+
+        if not forwarded_fields:
+            raise ValueError(
+                'Selecting relation "{}" is not possible, select '
+                'a field on related model'.format(field_name)
+            )
 
         field_table = self.join_table_by_field(table, field_object)
         forwarded_base, _, forwarded_sub = forwarded_fields.partition(LOOKUP_SEP)

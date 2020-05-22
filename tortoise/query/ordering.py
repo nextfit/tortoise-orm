@@ -27,31 +27,19 @@ class QueryOrderingField(QueryOrdering):
         table = context.top.table
         model = context.top.model
 
-        relation_field_name, _, field_sub = self.field_name.partition(LOOKUP_SEP)
         if self.check_annotations and self.field_name in queryset.annotations:
             annotation = queryset.annotations[self.field_name]
             queryset.query = queryset.query.orderby(annotation.field, order=self.direction)
+            return
 
-        elif relation_field_name in model._meta.fetch_fields:
-            if not field_sub:
-                raise FieldError(
-                    "Filtering by relation is not possible. Filter by nested field of related model"
-                )
+        field_name, _, field_sub = self.field_name.partition(LOOKUP_SEP)
+        field_object = model._meta.fields_map.get(field_name)
+        if not field_object:
+            raise FieldError(f"Unknown field {self.field_name} for model {model.__name__}")
 
-            relation_field = model._meta.fields_map[relation_field_name]
-            related_table = queryset.join_table_by_field(table, relation_field)
-
-            context.push(relation_field.remote_model, related_table)
-            QueryOrderingField(field_sub, self.direction, False).resolve_into(queryset, context)
-            context.pop()
-
-        else:
+        if field_object.has_db_column:
             if field_sub:
-                raise FieldError(f"{relation_field_name} is not a relation for model {model.__name__}")
-
-            field_object = model._meta.fields_map.get(self.field_name)
-            if not field_object:
-                raise FieldError(f"Unknown field {self.field_name} for model {model.__name__}")
+                raise FieldError(f"{field_name} is not a relation for model {model.__name__}")
 
             field = table[field_object.db_column]
             if not queryset.is_aggregate() or field in queryset.query._groupbys:
@@ -61,6 +49,16 @@ class QueryOrderingField(QueryOrdering):
 
                 queryset.query = queryset.query.orderby(field, order=self.direction)
 
+        else:
+            if not field_sub:
+                raise FieldError(
+                    "Ordering by relation is not possible. Order by nested field of related model"
+                )
+
+            related_table = queryset.join_table_by_field(table, field_object)
+            context.push(field_object.remote_model, related_table)
+            QueryOrderingField(field_sub, self.direction, False).resolve_into(queryset, context)
+            context.pop()
 
 #
 # PyPika Nodes to allow custom ordering methods like RANDOM() for PostgreSQL
