@@ -1,6 +1,7 @@
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.exceptions import FieldError
+from tortoise.exceptions import UnknownFieldError, NotARelationFieldError, FieldError, BaseFieldError
+from typing import Dict, Type
 
 
 class Prefetch:
@@ -11,14 +12,15 @@ class Prefetch:
         self.queryset = queryset
 
     def resolve_for_queryset(self, queryset) -> None:
-        first_level_field, _, forwarded_prefetch = self.relation.partition(LOOKUP_SEP)
-        if first_level_field not in queryset.model._meta.fetch_fields:
-            if first_level_field in queryset.model._meta.fields_map:
-                msg = f"Field {first_level_field} on {queryset.model.full_name()} is not a relation"
-            else:
-                msg = f"Relation {first_level_field} for {queryset.model.full_name()} not found"
+        model = queryset.model
 
-            raise FieldError(msg)
+        first_level_field, _, forwarded_prefetch = self.relation.partition(LOOKUP_SEP)
+        field_object = model._meta.fields_map.get(first_level_field)
+        if not field_object:
+            raise UnknownFieldError(first_level_field, model)
+
+        if field_object.has_db_column:
+            raise NotARelationFieldError(first_level_field, model)
 
         if forwarded_prefetch:
             if first_level_field not in queryset._prefetch_map.keys():
@@ -33,3 +35,28 @@ class Prefetch:
 
         else:
             queryset._prefetch_queries[first_level_field] = self.queryset
+
+
+def parse_select_related(relation: str, model: "Type[Model]", related_dict: Dict[str, Dict]) -> None:
+    from tortoise.fields import ForeignKey, OneToOneField
+
+    model_meta = model._meta
+
+    first_level_field, _, forwarded_prefetch = relation.partition(LOOKUP_SEP)
+    field_object = model_meta.fields_map.get(first_level_field)
+    if not field_object:
+        raise UnknownFieldError(first_level_field, model)
+
+    if field_object.has_db_column:
+        raise NotARelationFieldError(first_level_field, model)
+
+    if not isinstance(field_object, (ForeignKey, OneToOneField)):
+        raise BaseFieldError(first_level_field, model,
+            "select_related only works with ForeignKey or OneToOneFields")
+
+    if first_level_field not in related_dict:
+        related_dict[first_level_field] = {}
+
+    if forwarded_prefetch:
+        field_object = model_meta.fields_map[first_level_field]
+        parse_select_related(forwarded_prefetch, field_object.remote_model, related_dict[first_level_field])

@@ -10,7 +10,7 @@ from tortoise.query.annotations import Annotation, TermAnnotation
 from tortoise.query.base import MODEL, AwaitableQuery
 from tortoise.query.context import QueryContext
 from tortoise.query.fieldselect import ValuesListQuery, ValuesQuery
-from tortoise.query.prefetch import Prefetch
+from tortoise.query.prefetch import Prefetch, parse_select_related
 from tortoise.query.single import FirstQuerySet
 from tortoise.query.statements import CountQuery, DeleteQuery, UpdateQuery
 
@@ -19,6 +19,7 @@ class QuerySet(AwaitableQuery[MODEL]):
     __slots__ = (
         "_prefetch_map",
         "_prefetch_queries",
+        "_select_related",
     )
 
     def __init__(self, model: Type[MODEL]) -> None:
@@ -26,12 +27,14 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         self._prefetch_map: Dict[str, Set[str]] = {}
         self._prefetch_queries: Dict[str, QuerySet] = {}
+        self._select_related: Dict[str, Dict] = {}
 
     def _copy(self, queryset) -> None:
         super()._copy(queryset)
 
         queryset._prefetch_map = copy(self._prefetch_map)
         queryset._prefetch_queries = copy(self._prefetch_queries)
+        queryset._select_related = copy(self._select_related)
 
     def filter(self, *args, **kwargs) -> "QuerySet[MODEL]":
         """
@@ -209,10 +212,36 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         return queryset
 
+    def select_related(self, *args: str) -> "QuerySet[MODEL]":
+        """
+        Like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
+        """
+        queryset = self._clone()
+        for relation in args:
+            parse_select_related(relation, queryset.model, queryset._select_related)
+
+        return queryset
+
+    def _resolve_select_related(self, context: QueryContext, related_dict: Dict[str, Dict]) -> None:
+        model = context.top.model
+        table = context.top.table
+
+        for field_name in related_dict:
+            field_object = model._meta.fields_map[field_name]
+            remote_table = self.join_table_by_field(table, field_object)
+
+            cols = [remote_table[col] for col in field_object.remote_model._meta.db_columns]
+            self.query = self.query.select(*cols)
+            if related_dict[field_name]:
+                context.push(field_object.remote_model, remote_table)
+                self._resolve_select_related(context, related_dict[field_name])
+                context.pop()
+
     def _make_query(self, context: QueryContext) -> None:
         self.query = self.query_builder_select_all_fields(context.alias)
 
         context.push(self.model, self.query._from[-1])
+        self._resolve_select_related(context, self._select_related)
         self._add_query_details(context=context)
         for key, annotation in self.annotations.items():
             self.query._select_other(annotation.field.as_(key))

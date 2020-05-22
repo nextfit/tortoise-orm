@@ -11,6 +11,28 @@ class FieldError(BaseORMException):
     """
 
 
+class BaseFieldError(FieldError):
+    error_pattern = "FieldError({field_name}, {model})"
+
+    def __init__(self, field_name: str, model: "Type[Model]", extra_msg=''):
+        super().__init__(self.error_pattern.format(field_name=field_name, model=model) + extra_msg)
+        self.field_name = field_name
+        self.model = model
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and \
+            self.field_name == other.field_name and \
+            self.model == other.model
+
+
+class UnknownFieldError(FieldError):
+    error_pattern = 'Unknown field "{field_name}" for model "{model}"'
+
+
+class NotARelationFieldError(FieldError):
+    error_pattern = 'Field "{field_name}" is not a relation for model "{model}"'
+
+
 class ParamsError(BaseORMException):
     """
     The ParamsError is raised when function can not be run with given parameters
