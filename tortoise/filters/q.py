@@ -3,7 +3,7 @@ import operator
 from typing import Callable, Dict, Tuple, Union
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.exceptions import FieldError, OperationalError
+from tortoise.exceptions import FieldError, OperationalError, UnknownFieldError
 from tortoise.fields.relational import ForeignKey, OneToOneField
 from tortoise.filters import FieldFilter
 from tortoise.filters.clause import QueryClauses
@@ -146,7 +146,7 @@ class Q:
 
             return modifier
 
-        raise FieldError(f'Unknown field "{key}" for model "{model}"')
+        raise UnknownFieldError(key, model)
 
     def _resolve(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext) -> QueryClauses:
         clause_collector = QueryClauses()

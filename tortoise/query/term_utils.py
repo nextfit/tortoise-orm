@@ -8,7 +8,7 @@ from pypika.terms import Term as PyPikaTerm
 from pypika.terms import ValueWrapper
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.exceptions import FieldError, ParamsError
+from tortoise.exceptions import FieldError, ParamsError, UnknownFieldError, NotARelationFieldError
 from tortoise.fields import Field
 from tortoise.query.context import QueryContext
 
@@ -47,11 +47,11 @@ def resolve_field_name_into(
 
     else:
         if field_sub:
-            raise FieldError(f"{relation_field_name} is not a relation for model {model.__name__}")
+            raise NotARelationFieldError(relation_field_name, model)
 
         field_object = model._meta.fields_map.get(field_name)
         if not field_object:
-            raise FieldError(f"Unknown field {field_name} for model {model.__name__}")
+            raise UnknownFieldError(field_name, model)
 
         pypika_field = table[field_object.db_column]
         func = field_object.get_for_dialect("function_cast")

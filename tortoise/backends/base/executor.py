@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Ty
 from pypika import Parameter
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.exceptions import ParamsError, FieldError
+from tortoise.exceptions import ParamsError, UnknownFieldError, NotARelationFieldError
 from tortoise.fields.base import Field
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -252,10 +252,10 @@ class BaseExecutor:
             first_level_field, _, forwarded_prefetch = relation.partition(LOOKUP_SEP)
             field_object = self.model._meta.fields_map.get(first_level_field)
             if not field_object:
-                raise FieldError(f'Unknown field "{first_level_field}" for model "{self.model}"')
+                raise UnknownFieldError(first_level_field, self.model)
 
             if field_object.has_db_column:
-                raise FieldError(f'"Field {first_level_field}" is not a relation in model "{self.model}"')
+                raise NotARelationFieldError(first_level_field, self.model)
 
             if first_level_field not in self.prefetch_map.keys():
                 self.prefetch_map[first_level_field] = set()

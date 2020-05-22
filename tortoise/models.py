@@ -5,7 +5,7 @@ from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeV
 from pypika import Order, Table
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.exceptions import ConfigurationError, FieldError, OperationalError
+from tortoise.exceptions import ConfigurationError, OperationalError, UnknownFieldError
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntegerField
 from tortoise.fields.relational import (
@@ -110,7 +110,7 @@ class MetaInfo:
         if name in self.fields_map:
             return self.fields_map[name]
 
-        raise FieldError(f"Field {name} does not exist")
+        raise UnknownFieldError(name, self)
 
     def table(self, alias=None) -> Table:
         return Table(self.db_table, alias=alias)

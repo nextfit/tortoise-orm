@@ -4,7 +4,7 @@ from typing import Any, Callable, List, Tuple
 from pypika import Table
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.exceptions import FieldError
+from tortoise.exceptions import FieldError, UnknownFieldError, NotARelationFieldError
 from tortoise.fields import JSONField
 from tortoise.query.base import MODEL, AwaitableQuery
 from tortoise.query.context import QueryContext
@@ -30,11 +30,11 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
 
         field_object = model._meta.fields_map.get(field_name)
         if not field_object:
-            raise FieldError(f'Unknown field "{field_name}" for model "{model.__name__}"')
+            raise UnknownFieldError(field_name, model)
 
         if field_object.has_db_column:
             if forwarded_fields:
-                raise FieldError(f'Field "{field_name}" for model "{model.__name__}" is not relation')
+                raise NotARelationFieldError(field_name, model)
 
             return table, field_object.db_column
 
@@ -69,7 +69,7 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
         base_field_name, _, sub_field = field_name.partition(LOOKUP_SEP)
         field_object = self.model._meta.fields_map.get(base_field_name)
         if not field_object:
-            raise FieldError(f'Unknown field "{base_field_name}" for model "{self.model.__name__}"')
+            raise UnknownFieldError(base_field_name, self.model)
 
         if field_object.has_db_column:
             if sub_field:
@@ -78,7 +78,7 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
                     self.query._select_other(table[field_object.db_column].get_path_json_value(path).as_(return_as))
                     return
 
-                raise FieldError(f'Field "{base_field_name}" for model "{self.model.__name__}" is not relation')
+                raise NotARelationFieldError(base_field_name, self.model)
 
             self.query._select_field(table[field_object.db_column].as_(return_as))
             return
@@ -103,14 +103,14 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
         base_field_name, _, sub_field = field_name.partition(LOOKUP_SEP)
         field_object = model._meta.fields_map.get(base_field_name)
         if not field_object:
-            raise FieldError(f'Unknown field "{base_field_name}" for model "{model}"')
+            raise UnknownFieldError(base_field_name, model)
 
         if field_object.has_db_column:
             if sub_field:
                 if isinstance(field_object, JSONField):
                     return field_object.to_python_value
 
-                raise FieldError(f'Field "{base_field_name}" for model "{self.model.__name__}" is not relation')
+                raise NotARelationFieldError(base_field_name, self.model)
 
             if (field_object.skip_to_python_if_native and
                 field_object.field_type in model._meta.db.executor_class.DB_NATIVE

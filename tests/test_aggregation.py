@@ -2,7 +2,7 @@ from pypika.functions import Count, Min, Sum
 
 from tests.testmodels import Event, Team, Tournament
 from tortoise.contrib import test
-from tortoise.exceptions import FieldError
+from tortoise.exceptions import FieldError, NotARelationFieldError
 
 
 class TestAggregation(test.TestCase):
@@ -59,5 +59,5 @@ class TestAggregation(test.TestCase):
         )
 
         ##############
-        with self.assertRaisesRegex(FieldError, "name is not a relation for model Event"):
+        with self.assertRaisesRegex(NotARelationFieldError, str(NotARelationFieldError("name", Event))):
             await Event.all().annotate(tournament_test_id=Sum("name__id")).first()

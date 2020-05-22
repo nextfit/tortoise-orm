@@ -2,7 +2,7 @@ from pypika.functions import Length, Trim
 
 from tests.testmodels import Event, Team, Tournament
 from tortoise.contrib import test
-from tortoise.exceptions import FieldError
+from tortoise.exceptions import FieldError, UnknownFieldError
 from tortoise.query.expressions import F
 
 
@@ -109,28 +109,28 @@ class TestValues(test.TestCase):
         tournament = await Tournament.create(name="New Tournament")
         await Event.create(name="Test", tournament_id=tournament.id)
 
-        with self.assertRaisesRegex(FieldError, 'Unknown field "neem" for model "Event"'):
+        with self.assertRaisesRegex(UnknownFieldError, str(UnknownFieldError("neem", Event))):
             await Event.filter(name="Test").values("name", "neem")
 
     async def test_values_list_bad_key(self):
         tournament = await Tournament.create(name="New Tournament")
         await Event.create(name="Test", tournament_id=tournament.id)
 
-        with self.assertRaisesRegex(FieldError, 'Unknown field "neem" for model "Event"'):
+        with self.assertRaisesRegex(UnknownFieldError, str(UnknownFieldError("neem", Event))):
             await Event.filter(name="Test").values_list("name", "neem")
 
     async def test_values_related_bad_key(self):
         tournament = await Tournament.create(name="New Tournament")
         await Event.create(name="Test", tournament_id=tournament.id)
 
-        with self.assertRaisesRegex(FieldError, 'Unknown field "neem" for model "Tournament"'):
+        with self.assertRaisesRegex(UnknownFieldError, str(UnknownFieldError("neem", Tournament))):
             await Event.filter(name="Test").values("name", "tournament__neem")
 
     async def test_values_list_related_bad_key(self):
         tournament = await Tournament.create(name="New Tournament")
         await Event.create(name="Test", tournament_id=tournament.id)
 
-        with self.assertRaisesRegex(FieldError, 'Unknown field "neem" for model "Tournament"'):
+        with self.assertRaisesRegex(UnknownFieldError, str(UnknownFieldError("neem", Tournament))):
             await Event.filter(name="Test").values_list("name", "tournament__neem")
 
     async def test_values_list_annotations_length(self):
