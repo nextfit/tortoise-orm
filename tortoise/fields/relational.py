@@ -62,7 +62,7 @@ class ReverseRelation(Generic[MODEL]):
 
         self._fetched = False
         self._custom_query = False
-        self.related_objects: list = []
+        self._related_objects: list = []
 
     @property
     def _query(self):
@@ -77,45 +77,45 @@ class ReverseRelation(Generic[MODEL]):
             raise NoValuesFetched(
                 "No values were fetched for this relation, first use .fetch_related()"
             )
-        return item in self.related_objects
+        return item in self._related_objects
 
     def __iter__(self):
         if not self._fetched:
             raise NoValuesFetched(
                 "No values were fetched for this relation, first use .fetch_related()"
             )
-        return self.related_objects.__iter__()
+        return self._related_objects.__iter__()
 
     def __len__(self) -> int:
         if not self._fetched:
             raise NoValuesFetched(
                 "No values were fetched for this relation, first use .fetch_related()"
             )
-        return len(self.related_objects)
+        return len(self._related_objects)
 
     def __bool__(self) -> bool:
         if not self._fetched:
             raise NoValuesFetched(
                 "No values were fetched for this relation, first use .fetch_related()"
             )
-        return bool(self.related_objects)
+        return bool(self._related_objects)
 
     def __getitem__(self, item):
         if not self._fetched:
             raise NoValuesFetched(
                 "No values were fetched for this relation, first use .fetch_related()"
             )
-        return self.related_objects[item]
+        return self._related_objects[item]
 
     def __await__(self):
         return self._query.__await__()
 
     async def __aiter__(self):
         if not self._fetched:
-            self.related_objects = await self
+            self._related_objects = await self
             self._fetched = True
 
-        for val in self.related_objects:
+        for val in self._related_objects:
             yield val
 
     def filter(self, *args, **kwargs) -> "QuerySet[MODEL]":
@@ -148,9 +148,9 @@ class ReverseRelation(Generic[MODEL]):
         """
         return self._query.offset(*args, **kwargs)
 
-    def _set_result_for_query(self, sequence) -> None:
+    def _set_objects(self, sequence) -> None:
         self._fetched = True
-        self.related_objects = sequence
+        self._related_objects = sequence
 
 
 class ManyToManyRelation(ReverseRelation[MODEL]):
@@ -368,7 +368,7 @@ class BackwardFKField(RelationField):
 
         for instance in instance_list:
             relation_container = getattr(instance, self.model_field_name)
-            relation_container._set_result_for_query(related_object_map.get(instance.pk, []))
+            relation_container._set_objects(related_object_map.get(instance.pk, []))
 
         return instance_list
 
@@ -813,7 +813,7 @@ class ManyToManyField(RelationField):
 
         for instance in instance_list:
             relation_container = getattr(instance, self.model_field_name)
-            relation_container._set_result_for_query(relation_map.get(instance.pk, []))
+            relation_container._set_objects(relation_map.get(instance.pk, []))
 
         return instance_list
 

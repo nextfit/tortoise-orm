@@ -368,16 +368,15 @@ class Model(metaclass=ModelMeta):
         self._saved_in_db = True
 
         meta = self._meta
-        for key in meta.db_columns:
-            field_name = meta.db_column_to_field_name_map[key]
+        for db_column, field_name in meta.db_column_to_field_name_map.items():
             field_object = meta.fields_map[field_name]
 
             if (field_object.skip_to_python_if_native and
                 field_object.field_type in meta.db.executor_class.DB_NATIVE):
-                setattr(self, field_name, kwargs[key])
+                setattr(self, field_name, kwargs[db_column])
 
             else:
-                setattr(self, field_name, field_object.to_python_value(kwargs[key]))
+                setattr(self, field_name, field_object.to_python_value(kwargs[db_column]))
 
         return self
 
