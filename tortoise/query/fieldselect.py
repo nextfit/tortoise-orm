@@ -97,14 +97,21 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
         self.query._select_field(related_table[related_db_column].as_(return_as))
 
     def resolve_to_python_value(self, model: "Type[Model]", field_name: str) -> Callable:
-        if field_name in model._meta.fetch_fields:
-            return lambda x: x
-
         if field_name in self.annotations:
             return self.annotations[field_name].to_python_value
 
-        if field_name in model._meta.fields_map:
-            field_object = model._meta.fields_map[field_name]
+        base_field_name, _, sub_field = field_name.partition(LOOKUP_SEP)
+        field_object = model._meta.fields_map.get(base_field_name)
+        if not field_object:
+            raise FieldError(f'Unknown field "{base_field_name}" for model "{model}"')
+
+        if field_object.has_db_column:
+            if sub_field:
+                if isinstance(field_object, JSONField):
+                    return field_object.to_python_value
+
+                raise FieldError(f'Field "{base_field_name}" for model "{self.model.__name__}" is not relation')
+
             if (field_object.skip_to_python_if_native and
                 field_object.field_type in model._meta.db.executor_class.DB_NATIVE
             ):
@@ -112,16 +119,12 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
             else:
                 return field_object.to_python_value
 
-        base_field_name, _, sub_field = field_name.partition(LOOKUP_SEP)
-        if base_field_name in model._meta.fetch_fields:
-            remote_model = model._meta.fields_map[base_field_name].remote_model  # type: ignore
-            return self.resolve_to_python_value(remote_model, sub_field)
+        else:
+            if sub_field:
+                return self.resolve_to_python_value(field_object.remote_model, sub_field)
 
-        base_field_object = model._meta.fields_map.get(base_field_name)
-        if isinstance(base_field_object, JSONField):
-            return base_field_object.to_python_value
-
-        raise FieldError(f'Unknown field "{field_name}" for model "{model}"')
+            else:
+                return lambda x: x
 
     def _make_query(self, context: QueryContext) -> None:
         self.query = self.query_builder(context.alias)
