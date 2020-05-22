@@ -1,6 +1,6 @@
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.exceptions import UnknownFieldError, NotARelationFieldError, FieldError, BaseFieldError
+from tortoise.exceptions import UnknownFieldError, NotARelationFieldError, BaseFieldError
 from typing import Dict, Type
 
 

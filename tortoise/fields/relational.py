@@ -309,7 +309,7 @@ class RelationField(Field):
 
     def join_table_alias(self, table: Table):
         # return f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}"
-        return f"{table.alias}{LOOKUP_SEP}{self.model_field_name}" if table.alias else self.model_field_name
+        return "{}{}{}".format(table.alias, LOOKUP_SEP, self.model_field_name) if table.alias else self.model_field_name
 
 
 class BackwardFKField(RelationField):

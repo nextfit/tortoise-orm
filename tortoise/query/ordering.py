@@ -5,7 +5,7 @@ from pypika import Order
 from pypika.terms import Node, Term
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.exceptions import FieldError
+from tortoise.exceptions import FieldError, UnknownFieldError, NotARelationFieldError
 from tortoise.query.context import QueryContext
 from tortoise.query.expressions import F
 
@@ -35,11 +35,11 @@ class QueryOrderingField(QueryOrdering):
         field_name, _, field_sub = self.field_name.partition(LOOKUP_SEP)
         field_object = model._meta.fields_map.get(field_name)
         if not field_object:
-            raise FieldError(f"Unknown field {self.field_name} for model {model.__name__}")
+            raise UnknownFieldError(field_name, model)
 
         if field_object.has_db_column:
             if field_sub:
-                raise FieldError(f"{field_name} is not a relation for model {model.__name__}")
+                raise NotARelationFieldError(field_name, model)
 
             field = table[field_object.db_column]
             if not queryset.is_aggregate() or field in queryset.query._groupbys:

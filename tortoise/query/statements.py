@@ -2,7 +2,7 @@
 from pypika.functions import Count
 from pypika.terms import Term
 
-from tortoise.exceptions import FieldError, IntegrityError
+from tortoise.exceptions import FieldError, IntegrityError, UnknownFieldError
 from tortoise.fields import ForeignKey, OneToOneField
 from tortoise.query.base import AwaitableStatement
 from tortoise.query.context import QueryContext
@@ -32,7 +32,7 @@ class UpdateQuery(AwaitableStatement):
             field_object = self.model._meta.fields_map.get(key)
 
             if not field_object:
-                raise FieldError(f"Unknown keyword argument {key} for model {self.model}")
+                raise UnknownFieldError(key, self.model)
 
             if field_object.primary_key:
                 raise IntegrityError(f"Field {key} is primary key and can not be updated")
