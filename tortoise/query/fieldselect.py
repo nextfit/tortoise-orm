@@ -41,7 +41,7 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
         if not forwarded_fields:
             raise ValueError(
                 'Selecting relation "{}" is not possible, select '
-                'a field on related model'.format(field_name)
+                'a field on the related model'.format(field_name)
             )
 
         field_table = self.join_table_by_field(table, field_object)
@@ -59,42 +59,42 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
     def add_field_to_select_query(self, context: QueryContext, field_name, return_as) -> None:
         table = context.top.table
 
-        if field_name == "pk":
-            field_name = self.model._meta.pk_attr
-
-        if field_name in self.model._meta.field_to_db_column_name_map:
-            db_column = self.model._meta.field_to_db_column_name_map[field_name]
-            self.query._select_field(table[db_column].as_(return_as))
-            return
-
-        if field_name in self.model._meta.fetch_fields:
-            raise ValueError(
-                'Selecting relation "{}" is not possible, select '
-                "concrete field on related model".format(field_name)
-            )
-
         if field_name in self.annotations:
             self.query._select_other(self.annotations[field_name].field.as_(return_as))
             return
 
+        if field_name == "pk":
+            field_name = self.model._meta.pk_attr
+
         base_field_name, _, sub_field = field_name.partition(LOOKUP_SEP)
-        if base_field_name in self.model._meta.fetch_fields:
-            context.push(model=self.model, table=self.model._meta.table())
-            related_table, related_db_column = self._join_table_with_forwarded_fields(
-                context=context, field_name=base_field_name, forwarded_fields=sub_field)
-            context.pop()
+        field_object = self.model._meta.fields_map.get(base_field_name)
+        if not field_object:
+            raise FieldError(f'Unknown field "{base_field_name}" for model "{self.model.__name__}"')
 
-            self.query._select_field(related_table[related_db_column].as_(return_as))
+        if field_object.has_db_column:
+            if sub_field:
+                if isinstance(field_object, JSONField):
+                    path = "{{{}}}".format(sub_field.replace(LOOKUP_SEP, ','))
+                    self.query._select_other(table[field_object.db_column].get_path_json_value(path).as_(return_as))
+                    return
+
+                raise FieldError(f'Field "{base_field_name}" for model "{self.model.__name__}" is not relation')
+
+            self.query._select_field(table[field_object.db_column].as_(return_as))
             return
 
-        base_field = self.model._meta.fields_map.get(base_field_name)
-        if isinstance(base_field, JSONField):
-            path = "{{{}}}".format(sub_field.replace(LOOKUP_SEP, ','))
-            db_column = self.model._meta.field_to_db_column_name_map[base_field_name]
-            self.query._select_other(table[db_column].get_path_json_value(path).as_(return_as))
-            return
+        if not sub_field:
+            raise ValueError(
+                'Selecting relation "{}" is not possible, select '
+                'a field on the related model'.format(field_name)
+            )
 
-        raise FieldError(f'Unknown field "{field_name}" for model "{self.model.__name__}"')
+        context.push(model=self.model, table=self.model._meta.table())
+        related_table, related_db_column = self._join_table_with_forwarded_fields(
+            context=context, field_name=base_field_name, forwarded_fields=sub_field)
+        context.pop()
+
+        self.query._select_field(related_table[related_db_column].as_(return_as))
 
     def resolve_to_python_value(self, model: "Type[Model]", field_name: str) -> Callable:
         if field_name in model._meta.fetch_fields:
