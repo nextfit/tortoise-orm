@@ -101,9 +101,9 @@ class QuerySet(AwaitableQuery[MODEL]):
             flat=flat,
             fields_for_select_list=fields_
             or [
-                field
-                for field in self.model._meta.fields_map.keys()
-                if field in self.model._meta.db_columns
+                field_name
+                for field_name, field_object in self.model._meta.fields_map.items()
+                if field_object.has_db_column
             ],
             distinct=self._distinct,
             limit=self._limit,
@@ -134,9 +134,9 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         else:
             fields_for_select = {
-                field: field
-                for field in self.model._meta.fields_map.keys()
-                if field in self.model._meta.db_columns
+                field_name: field_name
+                for field_name, field_object in self.model._meta.fields_map.items()
+                if field_object.has_db_column
             }
 
         return ValuesQuery(
