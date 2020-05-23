@@ -201,10 +201,7 @@ class MySQLClient(BaseDBAsyncClient):
             async with connection.cursor() as cursor:
                 await cursor.execute(query, values)
                 rows = await cursor.fetchall()
-                if rows:
-                    return cursor.rowcount, [f.name for f in cursor._result.fields], rows
-
-                return cursor.rowcount, [], []
+                return cursor.rowcount, [f.name for f in cursor._result.fields] if rows else [], rows
 
     @translate_exceptions
     async def execute_script(self, query: str) -> None:

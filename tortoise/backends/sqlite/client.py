@@ -134,7 +134,8 @@ class SqliteClient(BaseDBAsyncClient):
             self.log.debug("%s: %s", query, values)
             start = connection.total_changes
             rows = await connection.execute_fetchall(query, values)
-            return (connection.total_changes - start) or len(rows), list(rows[0].keys()) if len(rows) > 0 else [], rows
+            num_affected_rows = (connection.total_changes - start) or len(rows)
+            return num_affected_rows, list(rows[0].keys()) if len(rows) > 0 else [], rows
 
     @translate_exceptions
     async def execute_script(self, query: str) -> None:
