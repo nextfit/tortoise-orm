@@ -16,14 +16,14 @@ class TestFunctions(test.TestCase):
         products._make_query(context=QueryContext())
         query_string = products.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
-            'SELECT "id","name","price","brand_id" FROM "store_product" ORDER BY RANDOM() LIMIT 20')
+            'SELECT "id","name","price","brand_id","vendor_id" FROM "store_product" ORDER BY RANDOM() LIMIT 20')
 
     async def test_ordering_functions(self):
         products = Product.all().order_by((F('id') * 7) % 143).limit(20)
         products._make_query(context=QueryContext())
         query_string = products.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
-            'SELECT "id","name","price","brand_id" FROM "store_product" ORDER BY MOD("id"*7,143) LIMIT 20')
+            'SELECT "id","name","price","brand_id","vendor_id" FROM "store_product" ORDER BY MOD("id"*7,143) LIMIT 20')
 
     async def test_annotation(self):
         products = Product.filter(brand_id=OuterRef('id')).limit(1).values_list('name', flat=True)
@@ -44,7 +44,7 @@ class TestFunctions(test.TestCase):
 
         query_string = products.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
-            'SELECT "id","name","price","brand_id","id"*5 "new_order" FROM "store_product" ORDER BY "id" ASC')
+            'SELECT "id","name","price","brand_id","vendor_id","id"*5 "new_order" FROM "store_product" ORDER BY "id" ASC')
 
     async def test_brands_prefetch_limited_products(self):
         if Product._meta.db.capabilities.dialect == "mysql":

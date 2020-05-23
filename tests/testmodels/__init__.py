@@ -34,7 +34,7 @@ from .relations import (
     SourceFields,
     StraightFields,
 )
-from .store import Brand, Category, Image, Product, ProductCategory, ProductImage
+from .store import Brand, Category, Image, Product, ProductCategory, ProductImage, Vendor
 from .tournament import Address, Event, EventTwo, MinRelation, Reporter, Team, TeamTwo, Tournament
 from .uuid import (
     UUIDFkRelatedModel,

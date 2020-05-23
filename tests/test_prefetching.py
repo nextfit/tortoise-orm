@@ -132,10 +132,9 @@ class TestPrefetching(test.TestCase):
         self.assertEqual(event.tournament.id, tournament.id)
 
     async def test_store_select_related(self):
-
         await create_store_objects()
 
-        products = await Product.all().select_related('brand', 'brand__image').limit(7)
+        products = await Product.all().select_related('brand', 'brand__image', 'vendor').limit(7)
         products_distilled = [
             {
                 'name': p.name,
@@ -144,17 +143,52 @@ class TestPrefetching(test.TestCase):
                     'image': {
                         'src': p.brand.image.src
                     }
+                },
+                'vendor': {
+                    'name': p.vendor.name,
                 }
             }
             for p in products
         ]
 
         self.assertEqual(products_distilled, [
-            {'name': 'product_1', 'brand': {'name': 'brand_1', 'image': {'src': 'brand_image_1'}}},
-            {'name': 'product_2', 'brand': {'name': 'brand_2', 'image': {'src': 'brand_image_2'}}},
-            {'name': 'product_3', 'brand': {'name': 'brand_2', 'image': {'src': 'brand_image_2'}}},
-            {'name': 'product_4', 'brand': {'name': 'brand_3', 'image': {'src': 'brand_image_3'}}},
-            {'name': 'product_5', 'brand': {'name': 'brand_3', 'image': {'src': 'brand_image_3'}}},
-            {'name': 'product_6', 'brand': {'name': 'brand_3', 'image': {'src': 'brand_image_3'}}},
-            {'name': 'product_7', 'brand': {'name': 'brand_4', 'image': {'src': 'brand_image_4'}}},
+            {
+                'name': 'product_1',
+                'brand': {'name': 'brand_1', 'image': {'src': 'brand_image_1'}},
+                'vendor': {'name': 'vendor_1'},
+            },
+            {
+                'name': 'product_2',
+                'brand': {'name': 'brand_2', 'image': {'src': 'brand_image_2'}},
+                'vendor': {'name': 'vendor_2'},
+            },
+            {
+                'name': 'product_3',
+                'brand': {'name': 'brand_2', 'image': {'src': 'brand_image_2'}},
+                'vendor': {'name': 'vendor_3'},
+            },
+            {
+                'name': 'product_4',
+                'brand': {'name': 'brand_3', 'image': {'src': 'brand_image_3'}},
+                'vendor': {'name': 'vendor_1'},
+            },
+            {
+                'name': 'product_5',
+                'brand': {'name': 'brand_3', 'image': {'src': 'brand_image_3'}},
+                'vendor': {'name': 'vendor_2'},
+            },
+            {
+                'name': 'product_6',
+                'brand': {'name': 'brand_3', 'image': {'src': 'brand_image_3'}},
+                'vendor': {'name': 'vendor_3'},
+            },
+            {
+                'name': 'product_7',
+                'brand': {'name': 'brand_4', 'image': {'src': 'brand_image_4'}},
+                'vendor': {'name': 'vendor_1'},
+            },
         ])
+
+    async def test_store_select_related_m2m(self):
+        with self.assertRaisesRegex(FieldError, "select_related only works with ForeignKey or OneToOneFields"):
+            products = await Product.all().select_related('categories').limit(7)

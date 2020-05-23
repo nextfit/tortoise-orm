@@ -2,6 +2,11 @@
 from tortoise import fields, models
 
 
+class Vendor(models.Model):
+    id = fields.IntegerField(primary_key=True)
+    name = fields.CharField(max_length=64)
+
+
 class Image(models.Model):
     class Meta:
         db_table = "store_image"
@@ -60,6 +65,13 @@ class Product(models.Model):
         related_name='products'
     )
 
+    vendor = fields.ForeignKey('models.Vendor',
+        on_delete=fields.CASCADE,
+        null=True,
+        default=None,
+        related_name='products'
+    )
+
     def __str__(self):
         return self.name
 
@@ -92,7 +104,6 @@ async def create_store_objects() -> None:
     await asyncio.gather(*[b.save() for b in brands])
 
     products = [Product(name='product_{}'.format(num), price='$1') for num in range(1, 22)]
-
     brand_k, counter = 0, 0
     for p in products:
         p.brand = brands[brand_k]
@@ -100,6 +111,15 @@ async def create_store_objects() -> None:
         if counter >= brand_k + 1:
             brand_k += 1
             counter = 0
+
+    vendors = [Vendor(name='vendor_{}'.format(num)) for num in range(1, 4)]
+    await asyncio.gather(*[vendor.save() for vendor in vendors])
+
+    for i, p in enumerate(products):
+        p.vendor = vendors[i % 3]
+
+    # vendor_   1  2  3  1  2  3  1  2  3   1   2   3   1   2   3   1   2   3   1   2   3
+    # product_  1  2  3  4  5  6  7  8  9  10  11  12  13  14  15  16  17  18  19  20  21
 
     await asyncio.gather(*[p.save() for p in products])
 
@@ -116,5 +136,3 @@ async def create_store_objects() -> None:
 
     # image_    1  2  3  4  5  6  7  8  9  10  11  12  13  14  15  16  17  18  19  20  21
     # product_  6  5  5  4  4  4  3  3  3   3   2   2   2   2   2   1   1   1   1   1   1
-
-
