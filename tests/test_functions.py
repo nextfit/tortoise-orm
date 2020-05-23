@@ -1,6 +1,6 @@
-import asyncio
 
 from tests.testmodels import Brand, Image, Product
+from tests.testmodels.store import create_store_objects
 from tortoise.contrib import test
 from tortoise.query import Prefetch
 from tortoise.query.annotations import OuterRef, Subquery
@@ -33,7 +33,7 @@ class TestFunctions(test.TestCase):
         query_string = brands.query.get_sql().replace('`', '"')
 
         self.assertEqual(query_string,
-            'SELECT "id","name",('
+            'SELECT "id","name","image_id",('
                 'SELECT "U1"."name" "0" FROM "store_product" "U1" '
                 'WHERE "U1"."brand_id"="store_brand"."id" ORDER BY "U1"."id" ASC LIMIT 1) "product_name" '
             'FROM "store_brand" ORDER BY "id" ASC')
@@ -46,41 +46,11 @@ class TestFunctions(test.TestCase):
         self.assertEqual(query_string,
             'SELECT "id","name","price","brand_id","id"*5 "new_order" FROM "store_product" ORDER BY "id" ASC')
 
-    async def create_objects(self):
-        brands = [Brand(name='brand_{}'.format(num)) for num in range(1, 7)]
-        await asyncio.gather(*[b.save() for b in brands])
-
-        products = [Product(name='product_{}'.format(num), price='$1') for num in range(1, 22)]
-
-        brand_k, counter = 0, 0
-        for p in products:
-            p.brand = brands[brand_k]
-            counter += 1
-            if counter >= brand_k + 1:
-                brand_k += 1
-                counter = 0
-
-        await asyncio.gather(*[p.save() for p in products])
-
-        # brand_    1  2  2  3  3  3  4  4  4   4   5   5   5   5   5   6   6   6   6   6   6
-        # product_  1  2  3  4  5  6  7  8  9  10  11  12  13  14  15  16  17  18  19  20  21
-
-        images = [Image(src='image_{}'.format(num)) for num in range(1, 22)]
-        await asyncio.gather(*[img.save() for img in images])
-
-        index, count = 0, 1
-        for p in products[5::-1]:
-            await p.images.add(*images[index:index+count])
-            index, count = index+count, count+1
-
-        # image_    1  2  3  4  5  6  7  8  9  10  11  12  13  14  15  16  17  18  19  20  21
-        # product_  6  5  5  4  4  4  3  3  3   3   2   2   2   2   2   1   1   1   1   1   1
-
     async def test_brands_prefetch_limited_products(self):
         if Product._meta.db.capabilities.dialect == "mysql":
             raise test.SkipTest("This version of MySQL doesn't yet support 'LIMIT & IN/ALL/ANY/SOME subquery'")
 
-        await self.create_objects()
+        await create_store_objects()
 
         subquery = Product.filter(brand=OuterRef('brand')).limit(3).values_list('id', flat=True)
         prefetch = Prefetch('products', queryset=Product.filter(id__in=Subquery(subquery)))
@@ -100,7 +70,7 @@ class TestFunctions(test.TestCase):
         if Product._meta.db.capabilities.dialect == "mysql":
             raise test.SkipTest("This version of MySQL doesn't yet support 'LIMIT & IN/ALL/ANY/SOME subquery'")
 
-        await self.create_objects()
+        await create_store_objects()
 
         raw_subquery = """
             (select "U1"."id" "0"
@@ -128,7 +98,7 @@ class TestFunctions(test.TestCase):
         if Product._meta.db.capabilities.dialect == "mysql":
             raise test.SkipTest("This version of MySQL doesn't yet support 'LIMIT & IN/ALL/ANY/SOME subquery'")
 
-        await self.create_objects()
+        await create_store_objects()
 
         subquery = Image.filter(product_set=OuterRef('product_set')).limit(4).values_list('id', flat=True)
         prefetch = Prefetch('images', queryset=Image.filter(id__in=Subquery(subquery)))

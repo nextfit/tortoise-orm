@@ -1,6 +1,7 @@
 from pypika.functions import Count
 
 from tests.testmodels import Address, Event, Team, Tournament
+from tests.testmodels.store import create_store_objects, Product
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError, UnknownFieldError
 from tortoise.query import Prefetch
@@ -129,3 +130,31 @@ class TestPrefetching(test.TestCase):
 
         event = await Event.all().select_related("tournament").first()
         self.assertEqual(event.tournament.id, tournament.id)
+
+    async def test_store_select_related(self):
+
+        await create_store_objects()
+
+        products = await Product.all().select_related('brand', 'brand__image').limit(7)
+        products_distilled = [
+            {
+                'name': p.name,
+                'brand': {
+                    'name': p.brand.name,
+                    'image': {
+                        'src': p.brand.image.src
+                    }
+                }
+            }
+            for p in products
+        ]
+
+        self.assertEqual(products_distilled, [
+            {'name': 'product_1', 'brand': {'name': 'brand_1', 'image': {'src': 'brand_image_1'}}},
+            {'name': 'product_2', 'brand': {'name': 'brand_2', 'image': {'src': 'brand_image_2'}}},
+            {'name': 'product_3', 'brand': {'name': 'brand_2', 'image': {'src': 'brand_image_2'}}},
+            {'name': 'product_4', 'brand': {'name': 'brand_3', 'image': {'src': 'brand_image_3'}}},
+            {'name': 'product_5', 'brand': {'name': 'brand_3', 'image': {'src': 'brand_image_3'}}},
+            {'name': 'product_6', 'brand': {'name': 'brand_3', 'image': {'src': 'brand_image_3'}}},
+            {'name': 'product_7', 'brand': {'name': 'brand_4', 'image': {'src': 'brand_image_4'}}},
+        ])
