@@ -2,7 +2,7 @@
 from pypika.functions import Count
 from pypika.terms import Term
 
-from tortoise.exceptions import FieldError, IntegrityError, UnknownFieldError
+from tortoise.exceptions import IntegrityError, UnknownFieldError, NotADbColumnFieldError
 from tortoise.fields import ForeignKey, OneToOneField
 from tortoise.query.base import AwaitableStatement
 from tortoise.query.context import QueryContext
@@ -28,32 +28,31 @@ class UpdateQuery(AwaitableStatement):
         # Need to get executor to get correct column_map
         executor = db_client.executor_class(model=self.model, db=db_client)
 
-        for key, value in self.update_kwargs.items():
-            field_object = self.model._meta.fields_map.get(key)
+        for field_name, value in self.update_kwargs.items():
+            field_object = self.model._meta.fields_map.get(field_name)
 
             if not field_object:
-                raise UnknownFieldError(key, self.model)
+                raise UnknownFieldError(field_name, self.model)
 
             if field_object.primary_key:
-                raise IntegrityError(f"Field {key} is primary key and can not be updated")
+                raise IntegrityError(f"Field {field_name} is primary key and can not be updated")
 
             if isinstance(field_object, (ForeignKey, OneToOneField)):
                 fk_field: str = field_object.id_field_name
                 column_name = self.model._meta.fields_map[fk_field].db_column
                 value = executor.column_map[fk_field](value.pk, None)
+                self.query = self.query.set(column_name, value)
+
             else:
-                try:
-                    column_name = self.model._meta.field_to_db_column_name_map[key]
-                except KeyError:
-                    raise FieldError(f"Field {key} is virtual and can not be updated")
+                if not field_object.has_db_column:
+                    raise NotADbColumnFieldError(field_name, self.model)
 
                 if isinstance(value, Term):
                     value = F.resolve(value, context)
-
                 else:
-                    value = executor.column_map[key](value, None)  # type: ignore
+                    value = executor.column_map[field_name](value, None)  # type: ignore
 
-            self.query = self.query.set(column_name, value)
+                self.query = self.query.set(field_object.db_column, value)
 
         context.pop()
 

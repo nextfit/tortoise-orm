@@ -2,7 +2,14 @@ import sys
 
 from tests.testmodels import IntFields, MinRelation, Tournament
 from tortoise.contrib import test
-from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned, UnknownFieldError
+from tortoise.exceptions import (
+    DoesNotExist,
+    FieldError,
+    IntegrityError,
+    MultipleObjectsReturned,
+    UnknownFieldError,
+    NotADbColumnFieldError
+)
 from tortoise.query.expressions import F
 
 # TODO: Test the many exceptions in QuerySet
@@ -241,7 +248,7 @@ class TestQueryset(test.TestCase):
     async def test_update_virtual(self):
         tour = await Tournament.create(name="moo")
         obj0 = await MinRelation.create(tournament=tour)
-        with self.assertRaisesRegex(FieldError, "is virtual and can not be updated"):
+        with self.assertRaisesRegex(NotADbColumnFieldError, str(NotADbColumnFieldError("participants", MinRelation))):
             await MinRelation.filter(id=obj0.id).update(participants=[])
 
     async def test_bad_ordering(self):

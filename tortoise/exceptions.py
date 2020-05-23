@@ -33,6 +33,10 @@ class NotARelationFieldError(FieldError):
     error_pattern = 'Field "{field_name}" is not a relation for model "{model}"'
 
 
+class NotADbColumnFieldError(FieldError):
+    error_pattern = 'Field "{field_name}" does not have a db column in model "{model}"'
+
+
 class ParamsError(BaseORMException):
     """
     The ParamsError is raised when function can not be run with given parameters
