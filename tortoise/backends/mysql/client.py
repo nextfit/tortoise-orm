@@ -1,7 +1,7 @@
 
 import asyncio
 from functools import wraps
-from typing import List, Optional, SupportsInt, Tuple
+from typing import List, Optional, SupportsInt, Tuple, Sequence, Any
 
 import aiomysql
 import pymysql
@@ -194,16 +194,17 @@ class MySQLClient(BaseDBAsyncClient):
     @translate_exceptions
     async def execute_query(
         self, query: str, values: Optional[list] = None
-    ) -> Tuple[int, List[dict]]:
+    ) -> Tuple[int, List[str], Sequence[Sequence[Any]]]:
+
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             async with connection.cursor() as cursor:
                 await cursor.execute(query, values)
                 rows = await cursor.fetchall()
                 if rows:
-                    fields = [f.name for f in cursor._result.fields]
-                    return cursor.rowcount, [dict(zip(fields, row)) for row in rows]
-                return cursor.rowcount, []
+                    return cursor.rowcount, [f.name for f in cursor._result.fields], rows
+
+                return cursor.rowcount, [], []
 
     @translate_exceptions
     async def execute_script(self, query: str) -> None:

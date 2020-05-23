@@ -1,6 +1,6 @@
 import asyncio
 from functools import wraps
-from typing import List, Optional, SupportsInt, Tuple
+from typing import Optional, SupportsInt, Tuple, Sequence, Any, List
 
 import asyncpg
 from asyncpg.transaction import Transaction
@@ -169,23 +169,24 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     @translate_exceptions
     async def execute_query(
         self, query: str, values: Optional[list] = None
-    ) -> Tuple[int, List[dict]]:
+    ) -> Tuple[int, List[str], Sequence[Sequence[Any]]]:
+
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            if values:
-                params = [query, *values]
-            else:
-                params = [query]
+            params = [query, *(values or [])]
+
             if query.startswith("UPDATE") or query.startswith("DELETE"):
                 res = await connection.execute(*params)
                 try:
                     rows_affected = int(res.split(" ")[1])
                 except Exception:  # pragma: nocoverage
                     rows_affected = 0
-                return rows_affected, []
+
+                return rows_affected, [], []
+
             else:
                 rows = await connection.fetch(*params)
-                return len(rows), rows
+                return len(rows), list(rows[0].keys()) if len(rows) > 0 else [], rows
 
     @translate_exceptions
     async def execute_script(self, query: str) -> None:

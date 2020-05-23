@@ -1,7 +1,7 @@
 
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Type
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Type
 
 from pypika import Query
 
@@ -147,7 +147,17 @@ class BaseDBAsyncClient:
 
     async def execute_query(
         self, query: str, values: Optional[list] = None
-    ) -> Tuple[int, Sequence[dict]]:
+    ) -> Tuple[int, List[str], Sequence[Sequence[Any]]]:
+        """
+        Execute a query
+
+        :param query: Query string
+        :param values: Query values
+        :return: Returns a tuple with three elements:
+            (Number of rows, Column Names, Rows of Columns of Data)
+
+        """
+
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_script(self, query: str) -> None:

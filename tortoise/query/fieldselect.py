@@ -150,7 +150,7 @@ class ValuesListQuery(FieldSelectQuery):
         if flat and (len(fields_for_select_list) != 1):
             raise TypeError("You can flat value_list only if contains one field")
 
-        self.fields_for_select = {str(i): field for i, field in enumerate(fields_for_select_list)}
+        self.fields_for_select = {str(i): field_name for i, field_name in enumerate(fields_for_select_list)}
         self.flat = flat
 
     def _copy(self, queryset):
@@ -159,18 +159,18 @@ class ValuesListQuery(FieldSelectQuery):
 
     async def _execute(self) -> List[Any]:
         column_mappers = [
-            (alias, self.resolve_to_python_value(self.model, field_name))
-            for alias, field_name in sorted(self.fields_for_select.items())
+            self.resolve_to_python_value(self.model, field_name)
+            for field_name in self.fields_for_select.values()
         ]
 
-        _, result = await self._get_db_client().execute_query(str(self.query))
         if self.flat:
-            func = column_mappers[0][1]
-            mapper = lambda entry: func(entry["0"])  # noqa
+            func = column_mappers[0]
+            row_mapper = lambda row: func(row[0])  # noqa
         else:
-            mapper = lambda entry: tuple(func(entry[column]) for column, func in column_mappers)  # noqa
+            row_mapper = lambda row: tuple(map(lambda p: p[0](p[1]), zip(column_mappers, row)))  # noqa
 
-        return list(map(mapper, result))
+        _, db_columns, result = await self._get_db_client().execute_query(str(self.query))
+        return list(map(row_mapper, result))
 
 
 class ValuesQuery(FieldSelectQuery):
@@ -185,14 +185,12 @@ class ValuesQuery(FieldSelectQuery):
 
     async def _execute(self) -> List[dict]:
         column_mappers = [
-            (alias, self.resolve_to_python_value(self.model, field_name))
-            for alias, field_name in self.fields_for_select.items()
+            self.resolve_to_python_value(self.model, field_name)
+            for field_name in self.fields_for_select.values()
         ]
 
-        _, result = await self._get_db_client().execute_query(str(self.query))
-        result = list(map(dict, result))
-        for row in result:
-            for col_name, col_mapper in column_mappers:
-                row[col_name] = col_mapper(row[col_name])
-
-        return result
+        _, db_columns, result = await self._get_db_client().execute_query(str(self.query))
+        return [
+            dict(zip(db_columns, map(lambda p: p[0](p[1]), zip(column_mappers, row))))
+            for row in result
+        ]

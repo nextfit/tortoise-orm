@@ -2,6 +2,7 @@
 import asyncio
 import datetime
 import decimal
+import itertools
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type
 
@@ -31,11 +32,13 @@ class BaseExecutor:
         db: "BaseDBAsyncClient",
         prefetch_map=None,
         prefetch_queries=None,
+        select_related=None,
     ) -> None:
         self.model = model
         self.db: "BaseDBAsyncClient" = db
-        self.prefetch_map = prefetch_map or {}
+        self._prefetch_map = prefetch_map or {}
         self._prefetch_queries = prefetch_queries or {}
+        self._select_related = select_related or {}
 
         key = f"{self.db.connection_name}:{self.model._meta.db_table}"
         if key in EXECUTOR_CACHE:
@@ -94,16 +97,21 @@ class BaseExecutor:
 
     async def execute_explain(self, query) -> Any:
         sql = " ".join((self.EXPLAIN_PREFIX, str(query)))
-        return (await self.db.execute_query(sql))[1]
+        return (await self.db.execute_query(sql))[2]
 
     async def execute_select(self, query, custom_fields: Optional[list] = None) -> list:
-        _, raw_results = await self.db.execute_query(str(query))
+        _, db_columns, raw_results = await self.db.execute_query(str(query))
+
         instance_list = []
         for row in raw_results:
-            instance: "Model" = self.model._init_from_db(**row)
+            row_iter = iter(zip(db_columns, row))
+            instance = self.model._init_from_db_row(row_iter, self._select_related)
+
             if custom_fields:
                 for field_name in custom_fields:
-                    setattr(instance, field_name, row[field_name])
+                    db_column, value = next(row_iter)
+                    setattr(instance, field_name, value)
+
             instance_list.append(instance)
 
         await self._execute_prefetch_queries(instance_list)
@@ -220,7 +228,7 @@ class BaseExecutor:
         )[0]
 
     def _make_prefetch_queries(self) -> None:
-        for field_name, forwarded_prefetches in self.prefetch_map.items():
+        for field_name, forwarded_prefetches in self._prefetch_map.items():
             if field_name in self._prefetch_queries:
                 related_query = self._prefetch_queries.get(field_name)
             else:
@@ -234,7 +242,7 @@ class BaseExecutor:
             self._prefetch_queries[field_name] = related_query
 
     async def _execute_prefetch_queries(self, instance_list: list) -> list:
-        if instance_list and (self.prefetch_map or self._prefetch_queries):
+        if instance_list and (self._prefetch_map or self._prefetch_queries):
             self._make_prefetch_queries()
             fields_map = self.model._meta.fields_map
 
@@ -247,7 +255,7 @@ class BaseExecutor:
         return instance_list
 
     async def fetch_for_list(self, instance_list: list, *args) -> list:
-        self.prefetch_map = {}
+        self._prefetch_map = {}
         for relation in args:
             first_level_field, _, forwarded_prefetch = relation.partition(LOOKUP_SEP)
             field_object = self.model._meta.fields_map.get(first_level_field)
@@ -257,11 +265,11 @@ class BaseExecutor:
             if field_object.has_db_column:
                 raise NotARelationFieldError(first_level_field, self.model)
 
-            if first_level_field not in self.prefetch_map.keys():
-                self.prefetch_map[first_level_field] = set()
+            if first_level_field not in self._prefetch_map.keys():
+                self._prefetch_map[first_level_field] = set()
 
             if forwarded_prefetch:
-                self.prefetch_map[first_level_field].add(forwarded_prefetch)
+                self._prefetch_map[first_level_field].add(forwarded_prefetch)
 
         await self._execute_prefetch_queries(instance_list)
         return instance_list

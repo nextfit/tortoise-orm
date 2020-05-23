@@ -243,8 +243,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         context.push(self.model, self.query._from[-1])
         self._resolve_select_related(context, self._select_related)
         self._add_query_details(context=context)
-        for key, annotation in self.annotations.items():
-            self.query._select_other(annotation.field.as_(key))
+        for return_as, annotation in self.annotations.items():
+            self.query._select_other(annotation.field.as_(return_as))
         context.pop()
 
     async def _execute(self) -> List[MODEL]:
@@ -254,6 +254,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             db=db_client,
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
+            select_related=self._select_related
         )
 
         return await executor.execute_select(self.query, custom_fields=list(self.annotations.keys()))

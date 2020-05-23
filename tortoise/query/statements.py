@@ -91,5 +91,5 @@ class CountQuery(AwaitableStatement):
         context.pop()
 
     async def _execute(self) -> int:
-        _, result = await self._get_db_client().execute_query(str(self.query))
-        return list(dict(result[0]).values())[0]
+        _, db_columns, result = await self._get_db_client().execute_query(str(self.query))
+        return result[0][0]

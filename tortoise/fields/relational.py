@@ -188,11 +188,6 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
             .select(self.field.backward_key, self.field.forward_key)
         )
 
-        query = db.query_class.into(through_table).columns(
-            through_table[self.field.forward_key],
-            through_table[self.field.backward_key],
-        )
-
         if len(instances) == 1:
             criterion = (through_table[self.field.forward_key]
                          == related_pk_formatting_func(instances[0].pk, instances[0]))
@@ -202,29 +197,52 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
 
         select_query = select_query.where(criterion)
 
+
+        #
+        # Note that columns in the returned rows follow the same order
+        # as in selected fields. Note above that we have selected the fields
+        # in this order for select_query:
+        #       .select(self.field.backward_key, self.field.forward_key)
+        #
+        # therefore, we use r[0] for r[self.field.backward_key]
+        # and use r[1] for r[self.field.forward_key]
+        #
+        # following the requirement that rows to be accessed as arrays with
+        # db_columns as guide for the column names.
+        #
+
         # TODO: This is highly inefficient. Should use UNIQUE db_index by default.
         #  And optionally allow duplicates.
-        _, already_existing_relations_raw = await db.execute_query(str(select_query))
-        already_existing_relations = {
+
+        _, db_columns, existing_relations_raw = await db.execute_query(str(select_query))
+        existing_relations = {
             (
-                pk_formatting_func(r[self.field.backward_key], self.instance),
-                related_pk_formatting_func(r[self.field.forward_key], self.instance),
+                pk_formatting_func(r[0], self.instance),  # r[self.field.backward_key]
+                related_pk_formatting_func(r[1], self.instance),  # r[self.field.forward_key]
             )
-            for r in already_existing_relations_raw
+            for r in existing_relations_raw
         }
+
+        insert_query = db.query_class.into(through_table).columns(
+            through_table[self.field.forward_key],
+            through_table[self.field.backward_key],
+        )
 
         insert_is_required = False
         for instance_to_add in instances:
             if not instance_to_add._saved_in_db:
                 raise OperationalError(f"You should first call .save() on {instance_to_add}")
-            pk_f = related_pk_formatting_func(instance_to_add.pk, instance_to_add)
+
             pk_b = pk_formatting_func(self.instance.pk, self.instance)
-            if (pk_b, pk_f) in already_existing_relations:
+            pk_f = related_pk_formatting_func(instance_to_add.pk, instance_to_add)
+            if (pk_b, pk_f) in existing_relations:
                 continue
-            query = query.insert(pk_f, pk_b)
+
+            insert_query = insert_query.insert(pk_f, pk_b)
             insert_is_required = True
+
         if insert_is_required:
-            await db.execute_query(str(query))
+            await db.execute_query(str(insert_query))
 
     async def clear(self, using_db=None) -> None:
         """
@@ -789,14 +807,28 @@ class ManyToManyField(RelationField):
             {field_object.through: through_table.as_(subquery.alias)}
         ))
 
-        _, raw_results = await self.model._meta.db.execute_query(related_query.query.get_sql())
-        relations = [
-            (
-                self.model._meta.pk.to_python_value(e[field_object.backward_key]),
-                related_query.model._init_from_db(**e),
-            )
-            for e in raw_results
-        ]
+        #
+        # Following few lines are transformed version of these lines, when I was trying
+        # to convert row dictionary decoding to ordered (list) decoding.
+        #
+        #         relations = [
+        #             (
+        #                 self.model._meta.pk.to_python_value(e[field_object.backward_key]),
+        #                 related_query.model._init_from_db_row(iter(zip(db_columns, e))),
+        #             )
+        #             for e in raw_results
+        #         ]
+        #
+
+        _, db_columns, raw_results = await self.model._meta.db.execute_query(related_query.query.get_sql())
+        relations = []
+        for row in raw_results:
+            row_iter = iter(zip(db_columns, row))
+            related_model = related_query.model._init_from_db_row(row_iter)
+
+            db_column, value = next(row_iter)  # row[field_object.backward_key]
+            backward_key = self.model._meta.pk.to_python_value(value)
+            relations.append((backward_key, related_model))
 
         related_executor = self.model._meta.db.executor_class(
             model=related_query.model,

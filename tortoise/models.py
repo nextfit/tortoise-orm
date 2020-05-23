@@ -1,6 +1,6 @@
-
+import itertools
 from copy import deepcopy
-from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar
+from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar, Iterator
 
 from pypika import Order, Table
 
@@ -357,20 +357,29 @@ class Model(metaclass=ModelMeta):
                 setattr(self, field_name, field_object.default)
 
     @classmethod
-    def _init_from_db(cls: Type[MODEL], **kwargs) -> MODEL:
+    def _init_from_db_row(cls: Type[MODEL], row_iter: Iterator[Tuple[str, Any]],
+        related_map: Optional[Dict[str, Dict]] = None) -> MODEL:
+
         self = cls.__new__(cls)
         self._saved_in_db = True
 
         meta = self._meta
-        for db_column, field_name in meta.db_column_to_field_name_map.items():
+
+        for db_column, value in itertools.islice(row_iter, len(meta.db_columns)):
+            field_name = meta.db_column_to_field_name_map[db_column]
             field_object = meta.fields_map[field_name]
 
             if (field_object.skip_to_python_if_native and
                 field_object.field_type in meta.db.executor_class.DB_NATIVE):
-                setattr(self, field_name, kwargs[db_column])
+                setattr(self, field_name, value)
 
             else:
-                setattr(self, field_name, field_object.to_python_value(kwargs[db_column]))
+                setattr(self, field_name, field_object.to_python_value(value))
+
+        if related_map:
+            for field_name, sub_related in related_map.items():
+                field_object = meta.fields_map[field_name]
+                setattr(self, field_name, field_object.remote_model._init_from_db_row(row_iter, sub_related))
 
         return self
 

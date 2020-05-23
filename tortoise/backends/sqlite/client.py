@@ -2,7 +2,7 @@ import asyncio
 import os
 import sqlite3
 from functools import wraps
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple, Any
 
 import aiosqlite
 
@@ -129,12 +129,12 @@ class SqliteClient(BaseDBAsyncClient):
     @translate_exceptions
     async def execute_query(
         self, query: str, values: Optional[list] = None
-    ) -> Tuple[int, Sequence[dict]]:
+    ) -> Tuple[int, List[str], Sequence[Sequence[Any]]]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             start = connection.total_changes
             rows = await connection.execute_fetchall(query, values)
-            return (connection.total_changes - start) or len(rows), rows
+            return (connection.total_changes - start) or len(rows), list(rows[0].keys()) if len(rows) > 0 else [], rows
 
     @translate_exceptions
     async def execute_script(self, query: str) -> None:
