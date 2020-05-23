@@ -23,9 +23,23 @@ def resolve_field_name_into(
     table = context.top.table
 
     relation_field_name, _, field_sub = field_name.partition(LOOKUP_SEP)
-    if relation_field_name in model._meta.fetch_fields:
-        relation_field = model._meta.fields_map[relation_field_name]
+    relation_field = model._meta.fields_map.get(relation_field_name)
+    if not relation_field:
+        raise UnknownFieldError(relation_field_name, model)
 
+    if relation_field.has_db_column:
+        if field_sub:
+            raise NotARelationFieldError(relation_field_name, model)
+
+        field_object = relation_field
+        pypika_field = table[field_object.db_column]
+        func = field_object.get_for_dialect("function_cast")
+        if func:
+            pypika_field = func(field_object, pypika_field)
+
+        return field_object, pypika_field
+
+    else:
         if field_sub:
             related_table = queryset.join_table_by_field(table, relation_field)
 
@@ -44,21 +58,6 @@ def resolve_field_name_into(
 
         else:
             raise FieldError("{} is a relation. Try a nested field of the related model".format(relation_field_name))
-
-    else:
-        if field_sub:
-            raise NotARelationFieldError(relation_field_name, model)
-
-        field_object = model._meta.fields_map.get(field_name)
-        if not field_object:
-            raise UnknownFieldError(field_name, model)
-
-        pypika_field = table[field_object.db_column]
-        func = field_object.get_for_dialect("function_cast")
-        if func:
-            pypika_field = func(field_object, pypika_field)
-
-        return field_object, pypika_field
 
 
 def resolve_term(
