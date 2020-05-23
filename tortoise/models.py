@@ -125,10 +125,10 @@ class MetaInfo:
 
     def __create_filter(self, key: str) -> Optional[FieldFilter]:
         (field_name, sep, comparison) = key.partition(LOOKUP_SEP)
-        if field_name not in self.fields_map:
+        field = self.fields_map.get(field_name)
+        if not field:
             return None
 
-        field = self.fields_map[field_name]
         filter_funcs = self.db.filter_class.get_filter_func_for(field, comparison)
         return field.create_filter(*filter_funcs) if filter_funcs else None
 
