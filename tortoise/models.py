@@ -318,32 +318,26 @@ class Model(metaclass=ModelMeta):
         # Assign values and do type conversions
         passed_fields = {*kwargs.keys()} | meta.fetch_fields
 
-        for key, value in kwargs.items():
-            if key in meta.fields_map:
-                field_object = meta.fields_map[key]
+        for field_name, value in kwargs.items():
+            if field_name in meta.fields_map:
+                field_object = meta.fields_map[field_name]
 
-                if isinstance(field_object, (ForeignKey, OneToOneField)):
+                if field_object.has_db_column:
+                    if field_object.generated:
+                        self._custom_generated_pk = True
+                    if value is None and not field_object.null:
+                        raise ValueError(f"{field_name} is non nullable field, but null was passed")
+                    setattr(self, field_name, field_object.to_python_value(value))
+
+                elif isinstance(field_object, (ForeignKey, OneToOneField)):
                     if value and not value._saved_in_db:
                         raise OperationalError(
                             f"You should first call .save() on {value} before referring to it"
                         )
-                    setattr(self, key, value)
+                    setattr(self, field_name, value)
                     passed_fields.add(field_object.id_field_name)
 
-                elif key in meta.field_to_db_column_name_map:
-                    if field_object.generated:
-                        self._custom_generated_pk = True
-                    if value is None and not field_object.null:
-                        raise ValueError(f"{key} is non nullable field, but null was passed")
-                    setattr(self, key, field_object.to_python_value(value))
-
-                elif isinstance(field_object, BackwardOneToOneField):
-                    raise ConfigurationError(
-                        "You can't set backward one to one relations through init,"
-                        " change related model instead"
-                    )
-
-                elif isinstance(field_object, BackwardFKField):
+                elif isinstance(field_object, (BackwardFKField, BackwardOneToOneField)):
                     raise ConfigurationError(
                         "You can't set backward relations through init, change related model instead"
                     )
@@ -355,12 +349,12 @@ class Model(metaclass=ModelMeta):
 
         # Assign defaults for missing fields
         missing_fields = set(meta.fields_map.keys()).difference(passed_fields)
-        for key in missing_fields:
-            field_object = meta.fields_map[key]
+        for field_name in missing_fields:
+            field_object = meta.fields_map[field_name]
             if callable(field_object.default):
-                setattr(self, key, field_object.default())
+                setattr(self, field_name, field_object.default())
             else:
-                setattr(self, key, field_object.default)
+                setattr(self, field_name, field_object.default)
 
     @classmethod
     def _init_from_db(cls: Type[MODEL], **kwargs) -> MODEL:
