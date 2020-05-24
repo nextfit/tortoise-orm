@@ -222,26 +222,41 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         return queryset
 
-    def _resolve_select_related(self, context: QueryContext, related_dict: Dict[str, Dict]) -> None:
+    def _resolve_select_related(self, context: QueryContext, related_map: Dict[str, Dict]) -> None:
+        """
+        This method goes hand in hand with Model._init_from_db_row(row_iter, related_map)
+        where this method created a selections columns to be queried, and _init_from_db_row
+        follows the same path to "pickup" those columns to recreate the model object
+
+        :param context: Query Context
+        :param related_map: Map of pre-selected relations
+        :return: None
+        """
+
         model = context.top.model
         table = context.top.table
 
-        for field_name in related_dict:
+        for field_name in related_map:
             field_object = model._meta.fields_map[field_name]
             remote_table = self.join_table_by_field(table, field_object)
 
             cols = [remote_table[col] for col in field_object.remote_model._meta.db_columns]
             self.query = self.query.select(*cols)
-            if related_dict[field_name]:
+            if related_map[field_name]:
                 context.push(field_object.remote_model, remote_table)
-                self._resolve_select_related(context, related_dict[field_name])
+                self._resolve_select_related(context, related_map[field_name])
                 context.pop()
 
-    def _make_query(self, context: QueryContext) -> None:
-        self.query = self.query_builder_select_all_fields(context.alias)
-
+    def _init_query_builder(self, context) -> None:
+        self.query = self.query_builder(context.alias).select(*self.model._meta.db_columns)
         context.push(self.model, self.query._from[-1])
         self._resolve_select_related(context, self._select_related)
+        context.pop()
+
+    def _make_query(self, context: QueryContext) -> None:
+        self._init_query_builder(context)
+
+        context.push(self.model, self.query._from[-1])
         self._add_query_details(context=context)
         for return_as, annotation in self.annotations.items():
             self.query._select_other(annotation.field.as_(return_as))

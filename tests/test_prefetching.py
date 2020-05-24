@@ -1,7 +1,7 @@
 from pypika.functions import Count
 
 from tests.testmodels import Address, Event, Team, Tournament
-from tests.testmodels.store import create_store_objects, Product
+from tests.testmodels.store import create_store_objects, Product, Category
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError, UnknownFieldError
 from tortoise.query import Prefetch
@@ -192,3 +192,85 @@ class TestPrefetching(test.TestCase):
     async def test_store_select_related_m2m(self):
         with self.assertRaisesRegex(FieldError, "select_related only works with ForeignKey or OneToOneFields"):
             products = await Product.all().select_related('categories').limit(7)
+
+    async def test_store_select_related_prefetch(self):
+        await create_store_objects()
+
+        # products = await Product.all().prefetch_related('categories')
+
+        prefetch = Prefetch('categories', queryset=Category.all().select_related('image'))
+        products = await Product.all().prefetch_related(prefetch)
+
+        products_distilled = [
+            {
+                'name': p.name,
+                'categories': [
+                    {'name': c.name, 'image': {'src': c.image.src}} for c in p.categories
+                ],
+            }
+            for p in products
+        ]
+
+        self.assertEqual(products_distilled, [
+            {'name': 'product_1', 'categories': []},
+            {'name': 'product_2', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}}
+            ]},
+            {'name': 'product_3', 'categories': [
+                {'name': 'category_3', 'image': {'src': 'category_image_3'}}
+            ]},
+            {'name': 'product_4', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}}
+            ]},
+            {'name': 'product_5', 'categories': [
+                {'name': 'category_5', 'image': {'src': 'category_image_5'}}
+            ]},
+            {'name': 'product_6', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}},
+                {'name': 'category_3', 'image': {'src': 'category_image_3'}}
+            ]},
+            {'name': 'product_7', 'categories': [
+                {'name': 'category_7', 'image': {'src': 'category_image_7'}}
+            ]},
+            {'name': 'product_8', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}}
+            ]},
+            {'name': 'product_9', 'categories': [
+                {'name': 'category_3', 'image': {'src': 'category_image_3'}}
+            ]},
+            {'name': 'product_10', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}},
+                {'name': 'category_5', 'image': {'src': 'category_image_5'}}
+            ]},
+            {'name': 'product_11', 'categories': []},
+            {'name': 'product_12', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}},
+                {'name': 'category_3', 'image': {'src': 'category_image_3'}}
+            ]},
+            {'name': 'product_13', 'categories': []},
+            {'name': 'product_14', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}},
+                {'name': 'category_7', 'image': {'src': 'category_image_7'}}
+            ]},
+            {'name': 'product_15', 'categories': [
+                {'name': 'category_3', 'image': {'src': 'category_image_3'}},
+                {'name': 'category_5', 'image': {'src': 'category_image_5'}}
+            ]},
+            {'name': 'product_16', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}}
+            ]},
+            {'name': 'product_17', 'categories': []},
+            {'name': 'product_18', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}},
+                {'name': 'category_3', 'image': {'src': 'category_image_3'}}
+            ]},
+            {'name': 'product_19', 'categories': []},
+            {'name': 'product_20', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}},
+                {'name': 'category_5', 'image': {'src': 'category_image_5'}}
+            ]},
+            {'name': 'product_21', 'categories': [
+                {'name': 'category_3', 'image': {'src': 'category_image_3'}},
+                {'name': 'category_7', 'image': {'src': 'category_image_7'}}
+            ]},
+        ])

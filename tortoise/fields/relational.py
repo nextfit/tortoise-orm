@@ -792,16 +792,18 @@ class ManyToManyField(RelationField):
             .where(through_table[field_object.backward_key].isin(instance_id_set))
         )
 
+        context = QueryContext()
+
         related_query_table = related_query.model._meta.table()
         related_pk_field = related_query.model._meta.pk_db_column
-        related_query.query = related_query.query_builder_select_all_fields()
+        related_query._init_query_builder(context)
         related_query.query = (
             related_query.query.join(subquery)
             .on(getattr(subquery, field_object.forward_key) == related_query_table[related_pk_field])
             .select(getattr(subquery, field_object.backward_key))
         )
 
-        related_query._add_query_details(QueryContext().push(
+        related_query._add_query_details(context.push(
             related_query.model,
             related_query_table,
             {field_object.through: through_table.as_(subquery.alias)}
@@ -824,7 +826,7 @@ class ManyToManyField(RelationField):
         relations = []
         for row in raw_results:
             row_iter = iter(zip(db_columns, row))
-            related_model = related_query.model._init_from_db_row(row_iter)
+            related_model = related_query.model._init_from_db_row(row_iter, related_query._select_related)
 
             db_column, value = next(row_iter)  # row[field_object.backward_key]
             backward_key = self.model._meta.pk.to_python_value(value)
