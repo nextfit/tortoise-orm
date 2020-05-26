@@ -1,7 +1,7 @@
 
 from copy import deepcopy
 from functools import partial
-from typing import Awaitable, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING
+from typing import Awaitable, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING, Any
 
 from pypika import Criterion, Table
 from typing_extensions import Literal
@@ -298,18 +298,18 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         await db.execute_query(str(query))
 
 
-class RelationField(Field):
+class RelationField(Field, Generic[MODEL]):
     has_db_column = False
 
-    def __init__(self, remote_model: Type["Model"], related_name: str, *args, **kwargs) -> None:
+    def __init__(self, remote_model: Type[MODEL], related_name: str, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.remote_model: Type["Model"] = remote_model
+        self.remote_model: Type[MODEL] = remote_model
         self.related_name: str = related_name
 
     def attribute_property(self):
         raise NotImplementedError()
 
-    def create_relation(self):
+    def create_relation(self) -> None:
         raise NotImplementedError()
 
     def get_joins(self, table: Table, full: bool) -> List[Tuple[Table, Criterion]]:
@@ -332,7 +332,7 @@ class RelationField(Field):
         del desc["db_column"]
         return desc
 
-    def join_table_alias(self, table: Table):
+    def join_table_alias(self, table: Table) -> str:
         # return f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}"
         if table.alias:
             return "{}{}{}".format(table.alias, LOOKUP_SEP, self.model_field_name)
@@ -344,7 +344,7 @@ class BackwardFKField(RelationField):
 
     def __init__(
         self,
-        remote_model: Type["Model"],
+        remote_model: Type[MODEL],
         related_name: str,
         null: bool,
         description: Optional[str]
@@ -372,7 +372,7 @@ class BackwardFKField(RelationField):
             )
         )
 
-    def create_relation(self):
+    def create_relation(self) -> None:
         raise RuntimeError("This method on should not have been called on a generated relation.")
 
     def create_filter(self, opr, value_encoder) -> FieldFilter:
@@ -523,7 +523,7 @@ class ForeignKey(RelationField):
 
         return instance_list
 
-    def create_relation(self):
+    def create_relation(self) -> None:
         from tortoise import Tortoise
         remote_model = Tortoise.get_model(self.model_name)
 
@@ -736,7 +736,7 @@ class ManyToManyField(RelationField):
         from tortoise.filters.relational import ManyToManyRelationFilter
         return ManyToManyRelationFilter(self, opr, value_encoder)
 
-    def create_relation(self):
+    def create_relation(self) -> None:
         from tortoise import Tortoise
 
         backward_key = self.backward_key
@@ -833,14 +833,14 @@ class ManyToManyField(RelationField):
         #
 
         _, db_columns, raw_results = await self.model._meta.db.execute_query(related_query.query.get_sql())
-        relations = []
+        relations: List[Tuple[Any, MODEL]] = []
         for row in raw_results:
             row_iter = iter(zip(db_columns, row))
-            related_model = related_query.model._init_from_db_row(row_iter, related_query._select_related)
+            related_instance = related_query.model._init_from_db_row(row_iter, related_query._select_related)
 
             db_column, value = next(row_iter)  # row[field_object.backward_key]
             backward_key = self.model._meta.pk.to_python_value(value)
-            relations.append((backward_key, related_model))
+            relations.append((backward_key, related_instance))
 
         related_executor = self.model._meta.db.executor_class(
             model=related_query.model,
@@ -851,7 +851,7 @@ class ManyToManyField(RelationField):
 
         await related_executor._execute_prefetch_queries([item for _, item in relations])
 
-        relation_map = {}
+        relation_map: Dict[Any, List[MODEL]] = {}
         for k, item in relations:
             relation_map.setdefault(k, []).append(item)
 
