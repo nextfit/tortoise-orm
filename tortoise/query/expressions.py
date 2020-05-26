@@ -7,7 +7,7 @@ from tortoise.exceptions import FieldError
 from tortoise.query.context import QueryContext
 
 
-class F(ValueWrapper):  # type: ignore
+class F(ValueWrapper):
 
     @staticmethod
     def resolve(term: Term, context: QueryContext):

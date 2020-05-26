@@ -4,7 +4,7 @@ from typing import Optional
 from pypika import Criterion
 
 
-class EmptyCriterion(Criterion):  # type: ignore
+class EmptyCriterion(Criterion):
     def __or__(self, other):
         return other
 

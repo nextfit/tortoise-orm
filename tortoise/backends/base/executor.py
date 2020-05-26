@@ -14,6 +14,8 @@ from tortoise.fields.base import Field
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
     from tortoise.backends.base.client import BaseDBAsyncClient
+    from tortoise.query.queryset import QuerySet
+
 
 EXECUTOR_CACHE: Dict[
     str, Tuple[list, str, list, str, Dict[str, Callable], str, Dict[str, str]]
@@ -29,15 +31,19 @@ class BaseExecutor:
         self,
         model: Type["Model"],
         db: "BaseDBAsyncClient",
-        prefetch_map=None,
-        prefetch_queries=None,
-        select_related=None,
+        prefetch_map: Optional[Dict[str, Set[str]]] = None,
+        prefetch_queries: Optional[Dict[str, 'QuerySet']] = None,
+        select_related: Optional[Dict[str, Dict]] = None,
     ) -> None:
         self.model = model
         self.db: "BaseDBAsyncClient" = db
         self._prefetch_map = prefetch_map or {}
         self._prefetch_queries = prefetch_queries or {}
         self._select_related = select_related or {}
+
+        self._prefetch_map: Dict[str, Set[str]] = prefetch_map or {}
+        self._prefetch_queries: Dict[str, 'QuerySet'] = prefetch_queries or {}
+        self._select_related: Dict[str, Dict] = select_related or {}
 
         key = f"{self.db.connection_name}:{self.model._meta.db_table}"
         if key in EXECUTOR_CACHE:

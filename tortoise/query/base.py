@@ -48,7 +48,7 @@ class AwaitableStatement(Generic[MODEL]):
 
     def __init__(self, model: Type[MODEL], db=None, q_objects=None, annotations=None) -> None:
         self._joined_tables: List[Table] = []
-        self._db: BaseDBAsyncClient = db  # type: ignore
+        self._db: BaseDBAsyncClient = db
 
         self.model: Type[MODEL] = model
         self.query: QueryBuilder = QUERY

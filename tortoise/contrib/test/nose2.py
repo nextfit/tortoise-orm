@@ -7,7 +7,7 @@ from tortoise.contrib.test import finalizer, initializer
 log = logging.getLogger("nose2.plugins.tortoise")
 
 
-class TortoisePlugin(Plugin):  # type: ignore
+class TortoisePlugin(Plugin):
     # pylint: disable=E1101
     configSection = "tortoise"
     alwaysOn = True

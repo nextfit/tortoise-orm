@@ -144,7 +144,7 @@ def env_initializer() -> None:  # pragma: nocoverage
     initializer(modules, db_url=db_url)
 
 
-class SimpleTestCase(_TestCase):  # type: ignore
+class SimpleTestCase(_TestCase):
     """
     The Tortoise base test class.
 
