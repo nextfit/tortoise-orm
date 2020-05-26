@@ -6,6 +6,7 @@ from pypika.terms import Node, Term
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import FieldError, UnknownFieldError, NotARelationFieldError
+from tortoise.fields import RelationField
 from tortoise.query.context import QueryContext
 from tortoise.query.expressions import F
 
@@ -42,7 +43,18 @@ class QueryOrderingField(QueryOrdering):
         if not field_object:
             raise UnknownFieldError(field_name, model)
 
-        if field_object.has_db_column:
+        if isinstance(field_object, RelationField):
+            if not field_sub:
+                raise FieldError(
+                    "Ordering by relation is not possible. Order by nested field of related model"
+                )
+
+            related_table = queryset.join_table_by_field(table, field_object)
+            context.push(field_object.remote_model, related_table)
+            QueryOrderingField(field_sub, self.direction, False).resolve_into(queryset, context)
+            context.pop()
+
+        else:
             if field_sub:
                 raise NotARelationFieldError(field_name, model)
 
@@ -53,17 +65,6 @@ class QueryOrderingField(QueryOrdering):
                     field = func(field_object, field)
 
                 queryset.query = queryset.query.orderby(field, order=self.direction)
-
-        else:
-            if not field_sub:
-                raise FieldError(
-                    "Ordering by relation is not possible. Order by nested field of related model"
-                )
-
-            related_table = queryset.join_table_by_field(table, field_object)
-            context.push(field_object.remote_model, related_table)
-            QueryOrderingField(field_sub, self.direction, False).resolve_into(queryset, context)
-            context.pop()
 
 #
 # PyPika Nodes to allow custom ordering methods like RANDOM() for PostgreSQL

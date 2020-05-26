@@ -5,7 +5,7 @@ from pypika import Table
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import UnknownFieldError, NotARelationFieldError
-from tortoise.fields import JSONField
+from tortoise.fields import JSONField, RelationField
 from tortoise.query.base import MODEL, AwaitableQuery
 from tortoise.query.context import QueryContext
 
@@ -35,7 +35,7 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
         if not field_object:
             raise UnknownFieldError(field_name, model)
 
-        if field_object.has_db_column:
+        if not isinstance(field_object, RelationField):
             if forwarded_fields:
                 raise NotARelationFieldError(field_name, model)
 
