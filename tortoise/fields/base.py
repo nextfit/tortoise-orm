@@ -1,8 +1,12 @@
 
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union, TYPE_CHECKING
 
 from tortoise.exceptions import ConfigurationError
 from tortoise.filters import FieldFilter
+
+if TYPE_CHECKING:
+    from tortoise.models import Model
+
 
 CASCADE = "CASCADE"
 RESTRICT = "RESTRICT"
@@ -72,9 +76,9 @@ class Field(metaclass=_FieldMeta):
         self.description = description
         self.auto_created = False
 
-        self.model_field_name = None
-        self.model = None
-        self.reference = None
+        self.model_field_name: str
+        self.model: Type["Model"]
+        self.reference: Optional['Field'] = None
 
     def __str__(self):
         return f"{self.model_field_name} ({self.db_column})"

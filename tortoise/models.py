@@ -64,7 +64,7 @@ class MetaInfo:
         self.connection_name: Optional[str] = None
         self._inited: bool = False
 
-        self._model: "Model"
+        self._model: Type["Model"]
         self.db_table: str
 
         self.fields_map: Dict[str, Field]
