@@ -7,17 +7,17 @@ if TYPE_CHECKING:
 
 
 class QueryContextItem:
-    def __init__(self, model: Type["Model"], table: Table, through_tables: Optional[Dict[str, Table]] = None):
+    def __init__(self, model: Type["Model"], table: Table, through_tables: Optional[Dict[str, Table]] = None) -> None:
         self.model = model
         self.table = table
         self.through_tables = through_tables or {}
 
 
 class QueryContext:
-    def __init__(self):
+    def __init__(self) -> None:
         self.stack: List[QueryContextItem] = []
 
-    def push(self, model, table, through_tables: Optional[Dict[str, Table]] = None):
+    def push(self, model, table, through_tables: Optional[Dict[str, Table]] = None) -> "QueryContext":
         self.stack.append(QueryContextItem(model, table, through_tables))
         return self
 

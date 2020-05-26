@@ -142,7 +142,7 @@ class AwaitableStatement(Generic[MODEL]):
         self._make_query(context=QueryContext())
         return self._execute().__await__()
 
-    def using_db(self, _db: BaseDBAsyncClient) -> "QuerySet[MODEL]":
+    def using_db(self, _db: BaseDBAsyncClient) -> "AwaitableStatement[MODEL]":
         """
         Executes query in provided db client.
         Useful for transactions workaround.

@@ -1,5 +1,5 @@
 
-from typing import TypeVar, TYPE_CHECKING
+from typing import TypeVar, TYPE_CHECKING, Optional
 
 from pypika.terms import Field as PyPikaField
 from pypika.terms import Term as PyPikaTerm
@@ -116,7 +116,7 @@ class TermAnnotation(Annotation):
         super().__init__()
         self._term = term
         self._add_group_by = True
-        self._field_object: Field
+        self._field_object: Optional[Field]
 
     def default_name(self) -> str:
         try:

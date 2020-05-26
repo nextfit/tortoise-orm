@@ -13,7 +13,7 @@ from tortoise.query.context import QueryContext
 
 if TYPE_CHECKING:
     from tortoise.models import Model, MODEL
-    from tortoise.query.base import AwaitableQuery
+    from tortoise.query.base import AwaitableStatement
 
 
 class Q:
@@ -74,7 +74,7 @@ class Q:
     def negate(self) -> None:
         self._is_negated = not self._is_negated
 
-    def _get_actual_key(self, queryset: "AwaitableQuery[MODEL]", model: Type["Model"], key: str) -> str:
+    def _get_actual_key(self, queryset: "AwaitableStatement[MODEL]", model: Type["Model"], key: str) -> str:
         if key in model._meta.fields_map:
             field = model._meta.fields_map[key]
             if isinstance(field, (ForeignKey, OneToOneField)):
@@ -92,7 +92,7 @@ class Q:
         allowed = sorted(list(model._meta.fields_map.keys() | queryset.annotations.keys()))
         raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
 
-    def _get_actual_value(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, value):
+    def _get_actual_value(self, queryset: "AwaitableStatement[MODEL]", context: QueryContext, value):
         if isinstance(value, OuterRef):
             return value.get_field(context, queryset.annotations)
 
@@ -105,7 +105,7 @@ class Q:
 
         return value
 
-    def _resolve_filter(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext, key, value) -> QueryClauses:
+    def _resolve_filter(self, queryset: "AwaitableStatement[MODEL]", context: QueryContext, key, value) -> QueryClauses:
         context_item = context.top
         model = context_item.model
         table = context_item.table
@@ -156,7 +156,7 @@ class Q:
 
         raise BaseFieldError(key, model)
 
-    def _resolve(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext) -> QueryClauses:
+    def _resolve(self, queryset: "AwaitableStatement[MODEL]", context: QueryContext) -> QueryClauses:
         clause_collector = QueryClauses()
         model = context.top.model
 
@@ -177,7 +177,7 @@ class Q:
             clause_collector = ~clause_collector
         return clause_collector
 
-    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext):
+    def resolve_into(self, queryset: "AwaitableStatement[MODEL]", context: QueryContext):
         clauses = self._resolve(queryset, context)
         queryset.query._wheres = clauses.where_criterion
         queryset.query._havings = clauses.having_criterion
