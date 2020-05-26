@@ -45,7 +45,6 @@ class MetaInfo:
         "indexes",
         "pk_attr",
 
-        "fetch_fields",
         "fields_map",
         "field_to_db_column_name_map",
         "db_column_to_field_name_map",
@@ -69,7 +68,6 @@ class MetaInfo:
         self.db_table: str
 
         self.fields_map: Dict[str, Field]
-        self.fetch_fields: Set[str] = set()
         self.field_to_db_column_name_map: Dict[str, str]
         self.db_column_to_field_name_map: Dict[str, str]
 
@@ -170,7 +168,6 @@ class MetaInfo:
             db_column: field_name for field_name, db_column in self.field_to_db_column_name_map.items()
         }
 
-        self.fetch_fields = {key for key, field in self.fields_map.items() if not field.has_db_column}
         self.generated_column_names = [field.db_column
             for field in self.fields_map.values() if field.generated]
 
