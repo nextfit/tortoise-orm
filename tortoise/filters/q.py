@@ -3,8 +3,8 @@ import operator
 from typing import Callable, Dict, Tuple, Union, TYPE_CHECKING, Type
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.exceptions import FieldError, OperationalError, UnknownFieldError
-from tortoise.fields.relational import ForeignKey, OneToOneField
+from tortoise.exceptions import FieldError, OperationalError, UnknownFieldError, BaseFieldError
+from tortoise.fields.relational import ForeignKey, OneToOneField, RelationField
 from tortoise.filters import FieldFilter
 from tortoise.filters.clause import QueryClauses
 from tortoise.query.annotations import OuterRef, Subquery
@@ -123,13 +123,16 @@ class Q:
             else:
                 return QueryClauses(where_criterion=filter_operator(annotation.field, value))
 
+        field_object = model._meta.fields_map.get(relation_field_name)
+        if not field_object:
+            raise UnknownFieldError(relation_field_name, model)
+
         key_filter = model._meta.get_filter(key)
         if key_filter:
-            if relation_field_name in model._meta.fetch_fields:
-                relation_field = model._meta.fields_map[relation_field_name]
-                related_table = queryset.join_table_by_field(table, relation_field, full=False)
+            if isinstance(field_object, RelationField):
+                related_table = queryset.join_table_by_field(table, field_object, full=False)
                 if related_table:
-                    context.push(relation_field.remote_model, related_table)
+                    context.push(field_object.remote_model, related_table)
                     clauses = QueryClauses(where_criterion=key_filter(context, value))
                     context.pop()
                 else:
@@ -137,12 +140,12 @@ class Q:
 
                 return clauses
 
-            return QueryClauses(where_criterion=key_filter(context, value))
+            else:
+                return QueryClauses(where_criterion=key_filter(context, value))
 
-        if relation_field_name in model._meta.fetch_fields:
-            relation_field = model._meta.fields_map[relation_field_name]
-            related_table = queryset.join_table_by_field(table, relation_field)
-            context.push(relation_field.remote_model, related_table)
+        if isinstance(field_object, RelationField):
+            related_table = queryset.join_table_by_field(table, field_object)
+            context.push(field_object.remote_model, related_table)
 
             q = Q(**{field_sub: value})
             q._check_annotations = False
@@ -151,7 +154,7 @@ class Q:
 
             return modifier
 
-        raise UnknownFieldError(key, model)
+        raise BaseFieldError(key, model)
 
     def _resolve(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext) -> QueryClauses:
         clause_collector = QueryClauses()
