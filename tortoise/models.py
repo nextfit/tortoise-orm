@@ -314,18 +314,19 @@ class Model(metaclass=ModelMeta):
     _meta = MetaInfo(None)
 
     def __init__(self, **kwargs) -> None:
-        # self._meta is a very common attribute lookup, lets cache it.
-        meta = self._meta
+
+        meta = self._meta  # self._meta is a very common lookup, cache it.
         self._saved_in_db = False
         self._custom_generated_pk = False
 
-        # Assign values and do type conversions
-        passed_fields = {*kwargs.keys()} | meta.fetch_fields
+        ignore_fields: Set[str] = set()
 
-        for field_name, value in kwargs.items():
-            if field_name in meta.fields_map:
-                field_object = meta.fields_map[field_name]
+        for field_name, field_object in meta.fields_map.items():
+            if field_name in ignore_fields:
+                continue
 
+            if field_name in kwargs:
+                value = kwargs[field_name]
                 if field_object.has_db_column:
                     if field_object.generated:
                         self._custom_generated_pk = True
@@ -339,7 +340,7 @@ class Model(metaclass=ModelMeta):
                             f"You should first call .save() on {value} before referring to it"
                         )
                     setattr(self, field_name, value)
-                    passed_fields.add(field_object.id_field_name)
+                    ignore_fields.add(field_object.id_field_name)
 
                 elif isinstance(field_object, (BackwardFKField, BackwardOneToOneField)):
                     raise ConfigurationError(
@@ -351,14 +352,12 @@ class Model(metaclass=ModelMeta):
                         "You can't set m2m relations through init, use m2m_manager instead"
                     )
 
-        # Assign defaults for missing fields
-        missing_fields = set(meta.fields_map.keys()).difference(passed_fields)
-        for field_name in missing_fields:
-            field_object = meta.fields_map[field_name]
-            if callable(field_object.default):
-                setattr(self, field_name, field_object.default())
-            else:
-                setattr(self, field_name, field_object.default)
+            elif field_object.has_db_column:
+                value = field_object.default
+                if callable(value):
+                    value = value()
+
+                setattr(self, field_name, value)
 
     @classmethod
     def _init_from_db_row(cls: Type[MODEL], row_iter: Iterator[Tuple[str, Any]],
