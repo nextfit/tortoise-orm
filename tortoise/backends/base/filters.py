@@ -2,6 +2,7 @@
 
 import operator
 from functools import partial
+from typing import Callable, Tuple, Optional
 
 from pypika import functions
 from pypika.enums import SqlTypes
@@ -141,7 +142,7 @@ class BaseFilter:
     }
 
     @classmethod
-    def get_filter_func_for(cls, field, comparison):
+    def get_filter_func_for(cls, field: Field, comparison: str) -> Optional[Tuple[Callable, Callable]]:
         if isinstance(field, (BackwardFKField, ManyToManyField)):
             if comparison not in cls.RELATED_FILTER_FUNC_MAP:
                 return None
