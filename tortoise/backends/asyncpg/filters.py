@@ -1,15 +1,15 @@
 
-from pypika.enums import SqlTypes
+from pypika.enums import SqlTypes, SqlType
 from pypika.functions import Cast
 
 from tortoise.backends.base.filters import BaseFilter
 from tortoise.constants import LOOKUP_SEP
 from tortoise.fields import JSONField, Field
-from typing import Callable, Tuple, Optional
+from typing import Callable, Tuple, Optional, Union, Type, Dict, Any
 
 
 class AsyncpgFilter(BaseFilter):
-    TYPE_MAP = {
+    TYPE_MAP: Dict[Type[Any], Union[str, SqlType]] = {
         int: SqlTypes.INTEGER,
     }
 
