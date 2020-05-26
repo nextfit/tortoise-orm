@@ -50,7 +50,7 @@ class AwaitableStatement(Generic[MODEL]):
         self._joined_tables: List[Table] = []
         self._db: BaseDBAsyncClient = db  # type: ignore
 
-        self.model: "Type[Model]" = model
+        self.model: Type[MODEL] = model
         self.query: QueryBuilder = QUERY
         self.capabilities: Capabilities = model._meta.db.capabilities
 

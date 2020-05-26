@@ -1,7 +1,10 @@
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import UnknownFieldError, NotARelationFieldError, BaseFieldError
-from typing import Dict, Type
+from typing import Dict, Type, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from tortoise.models import Model
 
 
 class Prefetch:
@@ -37,7 +40,7 @@ class Prefetch:
             queryset._prefetch_queries[first_level_field] = self.queryset
 
 
-def parse_select_related(relation: str, model: "Type[Model]", related_dict: Dict[str, Dict]) -> None:
+def parse_select_related(relation: str, model: Type["Model"], related_dict: Dict[str, Dict]) -> None:
     from tortoise.fields import ForeignKey, OneToOneField
 
     model_meta = model._meta

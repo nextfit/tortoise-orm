@@ -1,6 +1,6 @@
 
 import operator
-from typing import Callable, Dict, Tuple, Union
+from typing import Callable, Dict, Tuple, Union, TYPE_CHECKING, Type
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import FieldError, OperationalError, UnknownFieldError
@@ -9,6 +9,11 @@ from tortoise.filters import FieldFilter
 from tortoise.filters.clause import QueryClauses
 from tortoise.query.annotations import OuterRef, Subquery
 from tortoise.query.context import QueryContext
+
+
+if TYPE_CHECKING:
+    from tortoise.models import Model, MODEL
+    from tortoise.query.base import AwaitableQuery
 
 
 class Q:
@@ -46,7 +51,7 @@ class Q:
         if join_type not in {self.AND, self.OR}:
             raise OperationalError("join_type must be AND or OR")
 
-        self.join_type = join_type
+        self.join_type: Callable = join_type
         self._is_negated = False
 
         self._check_annotations = True
@@ -69,7 +74,7 @@ class Q:
     def negate(self) -> None:
         self._is_negated = not self._is_negated
 
-    def _get_actual_key(self, queryset: "AwaitableQuery[MODEL]", model: "Model", key: str) -> str:
+    def _get_actual_key(self, queryset: "AwaitableQuery[MODEL]", model: Type["Model"], key: str) -> str:
         if key in model._meta.fields_map:
             field = model._meta.fields_map[key]
             if isinstance(field, (ForeignKey, OneToOneField)):

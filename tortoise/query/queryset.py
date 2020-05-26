@@ -1,7 +1,7 @@
 
 import itertools
 from copy import copy
-from typing import Dict, List, Set, Type, Union
+from typing import Dict, List, Set, Type, Union, TYPE_CHECKING
 
 from pypika.terms import Term
 
@@ -13,6 +13,10 @@ from tortoise.query.fieldselect import ValuesListQuery, ValuesQuery
 from tortoise.query.prefetch import Prefetch, parse_select_related
 from tortoise.query.single import FirstQuerySet
 from tortoise.query.statements import CountQuery, DeleteQuery, UpdateQuery
+
+
+if TYPE_CHECKING:
+    from tortoise.query.raw import RawQuerySet
 
 
 class QuerySet(AwaitableQuery[MODEL]):

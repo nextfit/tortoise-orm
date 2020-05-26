@@ -1,4 +1,10 @@
 
+from typing import Type, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from tortoise.models import Model
+
+
 class BaseORMException(Exception):
     """
     Base ORM Exception.
@@ -14,7 +20,7 @@ class FieldError(BaseORMException):
 class BaseFieldError(FieldError):
     error_pattern = "FieldError({field_name}, {model})"
 
-    def __init__(self, field_name: str, model: "Type[Model]", extra_msg=''):
+    def __init__(self, field_name: str, model: Type["Model"], extra_msg=''):
         super().__init__(self.error_pattern.format(field_name=field_name, model=model) + extra_msg)
         self.field_name = field_name
         self.model = model

@@ -130,7 +130,7 @@ def generate_config(
     }
 
 
-def obscure_password(data):
+def obscure_password(data: Any) -> Any:
     if isinstance(data, dict):
         output = {}
         for key, value in data.items():

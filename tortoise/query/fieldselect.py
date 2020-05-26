@@ -1,13 +1,16 @@
 
-from typing import Any, Callable, List, Tuple
+from typing import Any, Callable, List, Tuple, Type, TYPE_CHECKING
 
 from pypika import Table
 
 from tortoise.constants import LOOKUP_SEP
-from tortoise.exceptions import FieldError, UnknownFieldError, NotARelationFieldError
+from tortoise.exceptions import UnknownFieldError, NotARelationFieldError
 from tortoise.fields import JSONField
 from tortoise.query.base import MODEL, AwaitableQuery
 from tortoise.query.context import QueryContext
+
+if TYPE_CHECKING:
+    from tortoise.models import Model
 
 
 class FieldSelectQuery(AwaitableQuery[MODEL]):
@@ -96,7 +99,7 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
 
         self.query._select_field(related_table[related_db_column].as_(return_as))
 
-    def resolve_to_python_value(self, model: "Type[Model]", field_name: str) -> Callable:
+    def resolve_to_python_value(self, model: Type["Model"], field_name: str) -> Callable:
         if field_name in self.annotations:
             return self.annotations[field_name].to_python_value
 

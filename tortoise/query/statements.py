@@ -50,7 +50,7 @@ class UpdateQuery(AwaitableStatement):
                 if isinstance(value, Term):
                     value = F.resolve(value, context)
                 else:
-                    value = executor.column_map[field_name](value, None)  # type: ignore
+                    value = executor.column_map[field_name](value, None)
 
                 self.query = self.query.set(field_object.db_column, value)
 

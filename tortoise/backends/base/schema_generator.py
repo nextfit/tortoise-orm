@@ -285,7 +285,7 @@ class BaseSchemaGenerator:
         output.extend(self.__get_m2m_table_sql(model=model, safe=safe))
         return output
 
-    def __get_m2m_table_sql(self, model, safe=True):
+    def __get_m2m_table_sql(self, model, safe=True) -> List[TableCreationData]:
         from tortoise.fields import ManyToManyField
 
         m2m_data = []

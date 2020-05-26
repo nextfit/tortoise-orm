@@ -109,7 +109,7 @@ class SmallIntegerField(Field, int):
         GENERATED_SQL = "SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT"
 
 
-class CharField(Field, str):  # type: ignore
+class CharField(Field, str):
     """
     Character field.
 
@@ -130,7 +130,7 @@ class CharField(Field, str):  # type: ignore
         return f"VARCHAR({self.max_length})"
 
 
-class TextField(Field, str):  # type: ignore
+class TextField(Field, str):
     """
     Large Text field.
     """
@@ -374,7 +374,7 @@ class UUIDField(Field, UUID):
         return UUID(value)
 
 
-class BinaryField(Field, bytes):  # type: ignore
+class BinaryField(Field, bytes):
     """
     Binary field.
 

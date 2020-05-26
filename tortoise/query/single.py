@@ -1,7 +1,11 @@
 
-from typing import Generator, Generic, Optional, TypeVar
-
+from typing import Generator, Generic, Optional, TypeVar, TYPE_CHECKING
 from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned
+
+if TYPE_CHECKING:
+    from tortoise.query.base import AwaitableQuery
+    from tortoise.models import Model
+
 
 MODEL = TypeVar("MODEL", bound="Model")
 

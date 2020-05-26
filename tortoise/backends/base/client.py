@@ -1,7 +1,7 @@
 
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Type
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Type, TYPE_CHECKING
 
 from pypika import Query
 
@@ -9,6 +9,9 @@ from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.filters import BaseFilter
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.exceptions import ConfigurationError
+
+if TYPE_CHECKING:
+    from tortoise.transactions.context import TransactionContext
 
 
 class Capabilities:
@@ -182,7 +185,7 @@ class BaseDBAsyncClient:
         table_state_map: Dict[str, int] = dict()
         table_creation_sqls: List[str] = []
 
-        def dfs(table_name):
+        def dfs(table_name: str) -> None:
             table_state = table_state_map.get(table_name, 0)  # 0 == NOT_VISITED
             if table_state == 1:  # 1 == VISITING
                 raise ConfigurationError("Can't create schema due to cyclic fk references")
@@ -195,8 +198,6 @@ class BaseDBAsyncClient:
                         dfs(ref_table)
                 table_creation_sqls.append(table.creation_sql)
                 table_state_map[table_name] = 2  # 2 == VISITED
-
-            return []
 
         for db_table in primary_tables.keys():
             dfs(db_table)

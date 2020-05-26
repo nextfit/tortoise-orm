@@ -1,8 +1,10 @@
 
 from functools import wraps
-from typing import Callable, Optional
-
+from typing import Callable, Optional, TYPE_CHECKING
 from tortoise import Tortoise
+
+if TYPE_CHECKING:
+    from tortoise.transactions.context import TransactionContext
 
 
 def in_transaction(connection_name: Optional[str] = None) -> "TransactionContext":

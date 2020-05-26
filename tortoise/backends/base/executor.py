@@ -2,9 +2,8 @@
 import asyncio
 import datetime
 import decimal
-import itertools
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type, Set
 
 from pypika import Parameter
 
@@ -28,7 +27,7 @@ class BaseExecutor:
 
     def __init__(
         self,
-        model: "Type[Model]",
+        model: Type["Model"],
         db: "BaseDBAsyncClient",
         prefetch_map=None,
         prefetch_queries=None,
@@ -233,7 +232,7 @@ class BaseExecutor:
                 related_query = self._prefetch_queries.get(field_name)
             else:
                 relation_field = self.model._meta.fields_map[field_name]
-                remote_model: "Type[Model]" = relation_field.remote_model  # type: ignore
+                remote_model = relation_field.remote_model
                 related_query = remote_model.all().using_db(self.db)
 
             if forwarded_prefetches:

@@ -6,7 +6,7 @@ import os
 import warnings
 from contextvars import ContextVar
 from inspect import isclass
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Optional, Type, Any
 
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config, obscure_password
@@ -115,7 +115,7 @@ class _Tortoise:
             client_class = self._discover_client_class(conn_config.get("engine"))
             db_params = conn_config["credentials"].copy()
             db_params.update({"connection_name": connection_name})
-            db_client = client_class(**db_params)  # type: ignore
+            db_client = client_class(**db_params)
 
             if create_db:
                 await db_client.db_create()
@@ -212,7 +212,7 @@ class _Tortoise:
 
     async def init(
         self,
-        config: Optional[dict] = None,
+        config: Optional[Dict[str, Any]] = None,
         config_file: Optional[str] = None,
         _create_db: bool = False,
         db_url: Optional[str] = None,

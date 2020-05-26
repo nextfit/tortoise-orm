@@ -1,7 +1,7 @@
 
 from copy import deepcopy
 from functools import partial
-from typing import Awaitable, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Awaitable, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING
 
 from pypika import Criterion, Table
 from typing_extensions import Literal
@@ -12,7 +12,14 @@ from tortoise.fields.base import CASCADE, RESTRICT, SET_NULL, Field
 from tortoise.filters import FieldFilter
 from tortoise.query.context import QueryContext
 
+
+if TYPE_CHECKING:
+    from tortoise.models import Model
+    from tortoise.query.queryset import QuerySet
+
+
 MODEL = TypeVar("MODEL", bound="Model")
+
 
 OneToOneNullableRelation = Union[Awaitable[Optional[MODEL]], Optional[MODEL]]
 """
@@ -55,7 +62,7 @@ class ReverseRelation(Generic[MODEL]):
     Relation container for :func:`.ForeignKey`.
     """
 
-    def __init__(self, remote_model: "Type[MODEL]", related_name: str, instance) -> None:
+    def __init__(self, remote_model: Type[MODEL], related_name: str, instance) -> None:
         self.remote_model = remote_model
         self.related_name = related_name
         self.instance = instance
@@ -294,9 +301,9 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
 class RelationField(Field):
     has_db_column = False
 
-    def __init__(self, remote_model: "Type[Model]", related_name: str, *args, **kwargs) -> None:
+    def __init__(self, remote_model: Type["Model"], related_name: str, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.remote_model: "Type[Model]" = remote_model
+        self.remote_model: Type["Model"] = remote_model
         self.related_name: str = related_name
 
     def attribute_property(self):
@@ -334,7 +341,7 @@ class BackwardFKField(RelationField):
 
     def __init__(
         self,
-        remote_model: "Type[Model]",
+        remote_model: Type["Model"],
         related_name: str,
         null: bool,
         description: Optional[str]

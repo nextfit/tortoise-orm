@@ -1,5 +1,5 @@
 
-from typing import TypeVar
+from typing import TypeVar, TYPE_CHECKING
 
 from pypika import Order
 from pypika.terms import Node, Term
@@ -8,6 +8,11 @@ from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import FieldError, UnknownFieldError, NotARelationFieldError
 from tortoise.query.context import QueryContext
 from tortoise.query.expressions import F
+
+if TYPE_CHECKING:
+    from tortoise.query.base import AwaitableQuery
+    from tortoise.models import Model
+
 
 MODEL = TypeVar("MODEL", bound="Model")
 
@@ -74,7 +79,7 @@ class OrderingNode(Node):
     def __hash__(self):
         return hash(self.get_sql(with_alias=True))
 
-    def get_sql(self, **kwargs):
+    def get_sql(self, **kwargs) -> str:
         raise NotImplementedError()
 
 

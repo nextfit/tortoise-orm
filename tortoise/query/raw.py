@@ -7,16 +7,16 @@ from tortoise.query.queryset import QuerySet
 
 
 class RawQuery(Node):
-    def __init__(self, raw_sql):
+    def __init__(self, raw_sql: str):
         self.raw_sql = raw_sql
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.get_sql()
 
     def __hash__(self):
         return hash(self.get_sql())
 
-    def get_sql(self, **kwargs):
+    def get_sql(self, **kwargs) -> str:
         return self.raw_sql
 
 

@@ -1,5 +1,5 @@
 
-from typing import TypeVar
+from typing import TypeVar, TYPE_CHECKING
 
 from pypika.terms import Field as PyPikaField
 from pypika.terms import Term as PyPikaTerm
@@ -8,6 +8,11 @@ from tortoise.exceptions import BaseORMException, FieldError, ParamsError
 from tortoise.fields import BackwardFKField, Field, ForeignKey, ManyToManyField, OneToOneField
 from tortoise.query.context import QueryContext
 from tortoise.query.term_utils import term_name, resolve_term
+
+if TYPE_CHECKING:
+    from tortoise.query.base import AwaitableStatement
+    from tortoise.models import Model
+
 
 MODEL = TypeVar("MODEL", bound="Model")
 
@@ -18,7 +23,7 @@ class Annotation:
     def __init__(self):
         self._field: PyPikaField
 
-    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext):
+    def resolve_into(self, queryset: "AwaitableStatement[MODEL]", context: QueryContext):
         raise NotImplementedError()
 
     def default_name(self):
@@ -42,7 +47,7 @@ class Subquery(Annotation):
         super().__init__()
         self._queryset = queryset
 
-    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext):
+    def resolve_into(self, queryset: "AwaitableStatement[MODEL]", context: QueryContext):
         self._queryset._make_query(context=context)
         self._field = self._queryset.query
 
@@ -125,7 +130,7 @@ class TermAnnotation(Annotation):
         else:
             return value
 
-    def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext):
+    def resolve_into(self, queryset: "AwaitableStatement[MODEL]", context: QueryContext):
         self._field_object, self._field = resolve_term(self._term, queryset, context, accept_relation=True)
 
         model = context.top.model

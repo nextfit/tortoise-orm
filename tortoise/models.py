@@ -1,6 +1,7 @@
+
 import itertools
 from copy import deepcopy
-from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar, Iterator
+from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar, Iterator, TYPE_CHECKING
 
 from pypika import Order, Table
 
@@ -20,6 +21,10 @@ from tortoise.filters import FieldFilter
 from tortoise.query.queryset import QuerySet
 from tortoise.query.raw import RawQuerySet
 from tortoise.query.single import FirstQuerySet, GetQuerySet
+
+if TYPE_CHECKING:
+    from tortoise.backends.base.client import BaseDBAsyncClient
+
 
 MODEL = TypeVar("MODEL", bound="Model")
 
@@ -278,8 +283,7 @@ class ModelMeta(type):
         if not fields_map:
             meta.abstract = True
 
-        new_class: "Model" = super().__new__(mcs, name, bases, attrs)  # type: ignore
-
+        new_class = super().__new__(mcs, name, bases, attrs)
         meta.db_table = getattr(meta_class, "db_table", new_class.__name__.lower())
         for field in meta.fields_map.values():
             field.model = new_class

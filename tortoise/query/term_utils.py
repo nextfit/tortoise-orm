@@ -1,5 +1,5 @@
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, TYPE_CHECKING
 
 from pypika.terms import ArithmeticExpression
 from pypika.terms import Field as PyPikaField
@@ -12,10 +12,14 @@ from tortoise.exceptions import FieldError, ParamsError, UnknownFieldError, NotA
 from tortoise.fields import Field
 from tortoise.query.context import QueryContext
 
+if TYPE_CHECKING:
+    from tortoise.models import MODEL
+    from tortoise.query.base import AwaitableStatement
+
 
 def resolve_field_name_into(
     field_name,
-    queryset: "AwaitableQuery[MODEL]",
+    queryset: "AwaitableStatement[MODEL]",
     context: QueryContext,
     accept_relation: bool) -> Tuple[Field, PyPikaField]:
 
@@ -62,7 +66,7 @@ def resolve_field_name_into(
 
 def resolve_term(
     term: PyPikaTerm,
-    queryset: "AwaitableQuery[MODEL]",
+    queryset: "AwaitableStatement[MODEL]",
     context: QueryContext,
     accept_relation: bool) -> Tuple[Optional[Field], PyPikaTerm]:
 
