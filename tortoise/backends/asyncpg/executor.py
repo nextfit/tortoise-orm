@@ -15,16 +15,14 @@ class AsyncpgExecutor(BaseExecutor):
     def parameter(self, pos: int) -> Parameter:
         return Parameter("$%d" % (pos + 1,))
 
-    def _prepare_insert_statement(self, columns: List[str], has_generated: bool = True) -> str:
+    def _prepare_insert_statement(self, columns: List[str]) -> str:
         query = (
             self.db.query_class.into(self.model._meta.table())
             .columns(*columns)
             .insert(*[self.parameter(i) for i in range(len(columns))])
         )
-        if has_generated:
-            generated_column_names = self.model._meta.generated_column_names
-            if generated_column_names:
-                query = query.returning(*generated_column_names)
+
+        query = query.returning(*self.model._meta.generated_column_names)
 
         return str(query)
 
