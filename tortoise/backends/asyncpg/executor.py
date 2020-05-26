@@ -28,7 +28,6 @@ class AsyncpgExecutor(BaseExecutor):
 
     async def _process_insert_result(self, instance: Model, results: Optional[asyncpg.Record]):
         if results:
-            generated_column_names = self.model._meta.generated_column_names
             col_to_field_name = instance._meta.db_column_to_field_name_map
-            for column_name, val in zip(generated_column_names, results):
+            for column_name, val in zip(self.model._meta.generated_column_names, results):
                 setattr(instance, col_to_field_name[column_name], val)
