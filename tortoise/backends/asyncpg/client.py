@@ -10,6 +10,7 @@ from tortoise.backends.asyncpg.executor import AsyncpgExecutor
 from tortoise.backends.asyncpg.filters import AsyncpgFilter
 from tortoise.backends.asyncpg.schema_generator import AsyncpgSchemaGenerator
 from tortoise.backends.base.client import (
+    AsyncDbClientTransactionMixin,
     BaseDBAsyncClient,
     Capabilities,
     ConnectionWrapper,
@@ -22,7 +23,6 @@ from tortoise.exceptions import (
     OperationalError,
     TransactionManagementError,
 )
-from tortoise.transactions.client import AsyncDbClientTransactionMixin
 from tortoise.transactions.context import (
     LockTransactionContext,
     NestedTransactionContext,
@@ -202,7 +202,7 @@ class TransactionWrapper(AsyncpgDBClient, AsyncDbClientTransactionMixin):
 
         self._connection: Optional[asyncpg.Connection] = None
         self._transaction: Optional[Transaction] = None
-        self.transaction_finalized = False
+        self._transaction_finalized = False
 
     def in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(self)
@@ -228,16 +228,19 @@ class TransactionWrapper(AsyncpgDBClient, AsyncDbClientTransactionMixin):
     async def start(self) -> None:
         self._transaction = self._connection.transaction()
         await self._transaction.start()
-        self.transaction_finalized = False
+        self._transaction_finalized = False
 
     async def commit(self) -> None:
-        if self.transaction_finalized:
+        if self._transaction_finalized:
             raise TransactionManagementError("Transaction already finalized")
         await self._transaction.commit()
-        self.transaction_finalized = True
+        self._transaction_finalized = True
 
     async def rollback(self) -> None:
-        if self.transaction_finalized:
+        if self._transaction_finalized:
             raise TransactionManagementError("Transaction already finalized")
         await self._transaction.rollback()
-        self.transaction_finalized = True
+        self._transaction_finalized = True
+
+    def in_progress(self) -> bool:
+        return not self._transaction_finalized

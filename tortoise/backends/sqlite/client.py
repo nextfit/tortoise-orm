@@ -7,6 +7,7 @@ from typing import List, Optional, Sequence, Tuple, Any
 import aiosqlite
 
 from tortoise.backends.base.client import (
+    AsyncDbClientTransactionMixin,
     BaseDBAsyncClient,
     Capabilities,
     ConnectionWrapper,
@@ -15,7 +16,6 @@ from tortoise.backends.base.client import (
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
 from tortoise.exceptions import IntegrityError, OperationalError, TransactionManagementError
-from tortoise.transactions.client import AsyncDbClientTransactionMixin
 from tortoise.transactions.context import (
     LockTransactionContext,
     NestedTransactionContext,
@@ -149,7 +149,7 @@ class TransactionWrapper(SqliteClient, AsyncDbClientTransactionMixin):
         super()._copy(db_client)
         self._trxlock = self._lock
         self._lock = asyncio.Lock()
-        self.transaction_finalized = False
+        self._transaction_finalized = False
 
     def in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(self)
@@ -173,16 +173,19 @@ class TransactionWrapper(SqliteClient, AsyncDbClientTransactionMixin):
             await self._connection.execute("BEGIN")
         except sqlite3.OperationalError as exc:  # pragma: nocoverage
             raise TransactionManagementError(exc)
-        self.transaction_finalized = False
+        self._transaction_finalized = False
 
     async def rollback(self) -> None:
-        if self.transaction_finalized:
+        if self._transaction_finalized:
             raise TransactionManagementError("Transaction already finalized")
         await self._connection.rollback()
-        self.transaction_finalized = True
+        self._transaction_finalized = True
 
     async def commit(self) -> None:
-        if self.transaction_finalized:
+        if self._transaction_finalized:
             raise TransactionManagementError("Transaction already finalized")
         await self._connection.commit()
-        self.transaction_finalized = True
+        self._transaction_finalized = True
+
+    def in_progress(self) -> bool:
+        return not self._transaction_finalized
