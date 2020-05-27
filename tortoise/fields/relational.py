@@ -306,7 +306,7 @@ class RelationField(Field, Generic[MODEL]):
         self.remote_model: Type[MODEL] = remote_model
         self.related_name: str = related_name
 
-    def attribute_property(self):
+    def attribute_property(self) -> property:
         raise NotImplementedError()
 
     def create_relation(self) -> None:
@@ -361,7 +361,7 @@ class BackwardFKField(RelationField):
             setattr(self, _key, val)
         return val
 
-    def attribute_property(self):
+    def attribute_property(self) -> property:
         _key = f"_{self.model_field_name}"
         return property(
             partial(
@@ -493,7 +493,7 @@ class ForeignKey(RelationField):
                 return ftype.filter(pk=_pk).first()
             return NoneAwaitable
 
-    def attribute_property(self):
+    def attribute_property(self) -> property:
         _key = f"_{self.model_field_name}"
         return property(
             partial(
@@ -590,7 +590,7 @@ class BackwardOneToOneField(BackwardFKField):
         setattr(self, _key, val)
         return val
 
-    def attribute_property(self):
+    def attribute_property(self) -> property:
         _key = f"_{self.model_field_name}"
         return property(
             partial(
@@ -728,7 +728,7 @@ class ManyToManyField(RelationField):
             setattr(self, _key, val)
         return val
 
-    def attribute_property(self):
+    def attribute_property(self) -> property:
         _key = f"_{self.model_field_name}"
         return property(partial(ManyToManyField._m2m_getter, _key=_key, field_object=self))
 
