@@ -149,7 +149,7 @@ class TransactionWrapper(SqliteClient, AsyncDbClientTransactionMixin):
         super()._copy(db_client)
         self._trxlock = self._lock
         self._lock = asyncio.Lock()
-        self._transaction_finalized = False
+        self._in_progress = False
 
     def in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(self)
@@ -173,19 +173,22 @@ class TransactionWrapper(SqliteClient, AsyncDbClientTransactionMixin):
             await self._connection.execute("BEGIN")
         except sqlite3.OperationalError as exc:  # pragma: nocoverage
             raise TransactionManagementError(exc)
-        self._transaction_finalized = False
+
+        self._in_progress = True
 
     async def rollback(self) -> None:
-        if self._transaction_finalized:
-            raise TransactionManagementError("Transaction already finalized")
-        await self._connection.rollback()
-        self._transaction_finalized = True
+        if self._in_progress:
+            await self._connection.rollback()
+            self._in_progress = False
+        else:
+            raise TransactionManagementError("No transaction is in progress. You need to call start() first.")
 
     async def commit(self) -> None:
-        if self._transaction_finalized:
-            raise TransactionManagementError("Transaction already finalized")
-        await self._connection.commit()
-        self._transaction_finalized = True
+        if self._in_progress:
+            await self._connection.commit()
+            self._in_progress = False
+        else:
+            raise TransactionManagementError("No transaction is in progress. You need to call start() first.")
 
     def in_progress(self) -> bool:
-        return not self._transaction_finalized
+        return self._in_progress

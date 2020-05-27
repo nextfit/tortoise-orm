@@ -217,7 +217,7 @@ class TransactionWrapper(MySQLClient, AsyncDbClientTransactionMixin):
         self._lock = asyncio.Lock()
 
         self._connection: Optional[aiomysql.Connection] = None
-        self._transaction_finalized = False
+        self._in_progress = False
 
     def in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(self)
@@ -233,28 +233,37 @@ class TransactionWrapper(MySQLClient, AsyncDbClientTransactionMixin):
                 await cursor.executemany(query, values)
 
     async def acquire(self) -> None:
-        self._connection = await self._pool.acquire()
+        if self._pool:
+            self._connection = await self._pool.acquire()
+        else:
+            raise TransactionManagementError("You need to call create_connection() first.")
 
     async def release(self) -> None:
-        if self._pool:
+        if self._connection:
             await self._pool.release(self._connection)
+            self._connection = None
 
     @translate_exceptions
     async def start(self) -> None:
-        await self._connection.begin()
-        self._transaction_finalized = False
+        if self._connection:
+            await self._connection.begin()
+            self._in_progress = True
+        else:
+            raise TransactionManagementError("No connection is established. You need to call acquire() first")
 
     async def commit(self) -> None:
-        if self._transaction_finalized:
-            raise TransactionManagementError("Transaction already finalized")
-        await self._connection.commit()
-        self._transaction_finalized = True
+        if self._in_progress:
+            await self._connection.commit()
+            self._in_progress = False
+        else:
+            raise TransactionManagementError("No transaction is in progress. You need to call start() first.")
 
     async def rollback(self) -> None:
-        if self._transaction_finalized:
-            raise TransactionManagementError("Transaction already finalized")
-        await self._connection.rollback()
-        self._transaction_finalized = True
+        if self._in_progress:
+            await self._connection.rollback()
+            self._in_progress = False
+        else:
+            raise TransactionManagementError("No transaction is in progress. You need to call start() first.")
 
     def in_progress(self) -> bool:
-        return not self._transaction_finalized
+        return self._in_progress
