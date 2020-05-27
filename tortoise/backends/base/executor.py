@@ -37,9 +37,6 @@ class BaseExecutor:
     ) -> None:
         self.model = model
         self.db: "BaseDBAsyncClient" = db
-        self._prefetch_map = prefetch_map or {}
-        self._prefetch_queries = prefetch_queries or {}
-        self._select_related = select_related or {}
 
         self._prefetch_map: Dict[str, Set[str]] = prefetch_map or {}
         self._prefetch_queries: Dict[str, 'QuerySet'] = prefetch_queries or {}
@@ -71,7 +68,7 @@ class BaseExecutor:
                 self.all_field_names = self.field_names
                 self.insert_query_all = self.insert_query
 
-            self.column_map: Dict[str, Callable[[Any, Any], Any]] = {}
+            self.column_map = {}
             for field_name in self.all_field_names:
                 field_object = self.model._meta.fields_map[field_name]
                 if field_object.__class__ in self.TO_DB_OVERRIDE:
@@ -88,7 +85,7 @@ class BaseExecutor:
                     .delete()
             )
 
-            self.update_cache: Dict[str, str] = {}
+            self.update_cache = {}
 
             EXECUTOR_CACHE[key] = (
                 self.field_names,
