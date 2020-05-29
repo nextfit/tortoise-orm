@@ -3,7 +3,7 @@ from pypika.functions import Count
 from pypika.terms import Term
 
 from tortoise.exceptions import IntegrityError, UnknownFieldError, NotADbColumnFieldError
-from tortoise.fields import ForeignKey, OneToOneField
+from tortoise.fields import ForeignKey, OneToOneField, RelationField
 from tortoise.query.base import AwaitableStatement
 from tortoise.query.context import QueryContext
 from tortoise.query.expressions import F
@@ -37,16 +37,17 @@ class UpdateQuery(AwaitableStatement):
             if field_object.primary_key:
                 raise IntegrityError(f"Field {field_name} is primary key and can not be updated")
 
-            if isinstance(field_object, (ForeignKey, OneToOneField)):
-                fk_field: str = field_object.id_field_name
-                column_name = self.model._meta.fields_map[fk_field].db_column
-                value = executor.column_map[fk_field](value.pk, None)
-                self.query = self.query.set(column_name, value)
+            if isinstance(field_object, RelationField):
+                if isinstance(field_object, (ForeignKey, OneToOneField)):
+                    fk_field: str = field_object.id_field_name
+                    column_name = self.model._meta.fields_map[fk_field].db_column
+                    value = executor.column_map[fk_field](value.pk, None)
+                    self.query = self.query.set(column_name, value)
 
-            else:
-                if not field_object.has_db_column:
+                else:
                     raise NotADbColumnFieldError(field_name, self.model)
 
+            else:
                 if isinstance(value, Term):
                     value = F.resolve(value, context)
                 else:
