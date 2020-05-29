@@ -74,7 +74,21 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
         if not field_object:
             raise UnknownFieldError(base_field_name, self.model)
 
-        if field_object.has_db_column:
+        if isinstance(field_object, RelationField):
+            if not sub_field:
+                raise ValueError(
+                    'Selecting relation "{}" is not possible, select '
+                    'a field on the related model'.format(field_name)
+                )
+
+            context.push(model=self.model, table=self.model._meta.table())
+            related_table, related_db_column = self._join_table_with_forwarded_fields(
+                context=context, field_name=base_field_name, forwarded_fields=sub_field)
+            context.pop()
+
+            self.query._select_field(related_table[related_db_column].as_(return_as))
+
+        else:
             if sub_field:
                 if isinstance(field_object, JSONField):
                     path = "{{{}}}".format(sub_field.replace(LOOKUP_SEP, ','))
@@ -84,20 +98,6 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
                 raise NotARelationFieldError(base_field_name, self.model)
 
             self.query._select_field(table[field_object.db_column].as_(return_as))
-            return
-
-        if not sub_field:
-            raise ValueError(
-                'Selecting relation "{}" is not possible, select '
-                'a field on the related model'.format(field_name)
-            )
-
-        context.push(model=self.model, table=self.model._meta.table())
-        related_table, related_db_column = self._join_table_with_forwarded_fields(
-            context=context, field_name=base_field_name, forwarded_fields=sub_field)
-        context.pop()
-
-        self.query._select_field(related_table[related_db_column].as_(return_as))
 
     def resolve_to_python_value(self, model: Type["Model"], field_name: str) -> Callable:
         if field_name in self.annotations:
@@ -108,7 +108,14 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
         if not field_object:
             raise UnknownFieldError(base_field_name, model)
 
-        if field_object.has_db_column:
+        if isinstance(field_object, RelationField):
+            if sub_field:
+                return self.resolve_to_python_value(field_object.remote_model, sub_field)
+
+            else:
+                return lambda x: x
+
+        else:
             if sub_field:
                 if isinstance(field_object, JSONField):
                     return field_object.to_python_value
@@ -121,13 +128,6 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
                 return lambda x: x
             else:
                 return field_object.to_python_value
-
-        else:
-            if sub_field:
-                return self.resolve_to_python_value(field_object.remote_model, sub_field)
-
-            else:
-                return lambda x: x
 
     def _make_query(self, context: QueryContext) -> None:
         self.query = self.query_builder(context.alias)
