@@ -136,7 +136,7 @@ class AwaitableStatement(Generic[MODEL]):
     def _make_query(self, context: QueryContext) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def _execute(self):
+    async def _execute(self) -> Any:
         raise NotImplementedError()  # pragma: nocoverage
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:

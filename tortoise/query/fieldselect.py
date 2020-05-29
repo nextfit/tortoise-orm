@@ -187,7 +187,7 @@ class ValuesQuery(FieldSelectQuery):
         super().__init__(model, db, q_objects, annotations, orderings, distinct, limit, offset)
         self.fields_for_select = fields_for_select
 
-    async def _execute(self) -> List[dict]:
+    async def _execute(self) -> List[Dict[str, Any]]:
         column_mappers = [
             self.resolve_to_python_value(self.model, field_name)
             for field_name in self.fields_for_select.values()
