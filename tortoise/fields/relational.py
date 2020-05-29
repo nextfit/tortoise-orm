@@ -718,7 +718,7 @@ class ManyToManyField(RelationField):
         self.model_name: str = model_name
         self.forward_key: str = forward_key or f"{model_name.split('.')[1].lower()}_id"
         self.backward_key: str = backward_key
-        self.through: Optional[str] = through
+        self.through: str = through
 
     @staticmethod
     def _m2m_getter(self, _key, field_object):

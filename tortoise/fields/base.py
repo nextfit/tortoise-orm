@@ -66,7 +66,7 @@ class Field(metaclass=_FieldMeta):
             unique = True
 
         self.db_index = db_index
-        self.db_column = db_column
+        self.db_column: str = db_column
         self.unique = unique
 
         self.generated = generated

@@ -50,9 +50,6 @@ def parse_select_related(relation: str, model: Type["Model"], related_dict: Dict
     if not field_object:
         raise UnknownFieldError(first_level_field, model)
 
-    if field_object.has_db_column:
-        raise NotARelationFieldError(first_level_field, model)
-
     if not isinstance(field_object, (ForeignKey, OneToOneField)):
         raise BaseFieldError(first_level_field, model,
             "select_related only works with ForeignKey or OneToOneFields")

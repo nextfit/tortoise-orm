@@ -1,5 +1,5 @@
 
-from typing import Generator, Generic, Optional, TypeVar, TYPE_CHECKING
+from typing import Generator, Generic, Optional, TypeVar, TYPE_CHECKING, Union
 from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned
 
 if TYPE_CHECKING:
@@ -16,7 +16,7 @@ class SingleQuerySet(Generic[MODEL]):
     def __init__(self, queryset: "AwaitableQuery[MODEL]") -> None:
         self.queryset = queryset
 
-    async def _execute(self):
+    async def _execute(self) -> Union[MODEL, None]:
         raise NotImplementedError()
 
     def __await__(self) -> Generator:
