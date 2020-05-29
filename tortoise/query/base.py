@@ -97,7 +97,7 @@ class AwaitableStatement(Generic[MODEL]):
         for key, annotation in self.annotations.items():
             annotation.resolve_into(self, context=context)
 
-    def is_aggregate(self):
+    def is_aggregate(self) -> bool:
         return any([annotation.field.is_aggregate for annotation in self.annotations.values()])
 
     def join_table_by_field(self, table, relation_field: RelationField, full=True) -> Optional[Table]:

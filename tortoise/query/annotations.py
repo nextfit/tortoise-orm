@@ -11,6 +11,7 @@ from tortoise.query.term_utils import term_name, resolve_term
 
 if TYPE_CHECKING:
     from tortoise.query.base import AwaitableStatement
+    from tortoise.query.queryset import QuerySet
     from tortoise.models import Model
 
 
@@ -20,7 +21,7 @@ MODEL = TypeVar("MODEL", bound="Model")
 class Annotation:
     __slots__ = ("_field", )
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._field: PyPikaField
 
     def resolve_into(self, queryset: "AwaitableStatement[MODEL]", context: QueryContext):
@@ -43,7 +44,7 @@ class Annotation:
 class Subquery(Annotation):
     __slots__ = ("_queryset", )
 
-    def __init__(self, queryset):
+    def __init__(self, queryset: 'QuerySet') -> None:
         super().__init__()
         self._queryset = queryset
 
@@ -58,7 +59,7 @@ class Subquery(Annotation):
 class OuterRef:
     __slots__ = ("ref_name", )
 
-    def __init__(self, ref_name):
+    def __init__(self, ref_name: str) -> None:
         super().__init__()
         self.ref_name = ref_name
 

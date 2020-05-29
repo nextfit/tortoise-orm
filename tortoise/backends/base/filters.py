@@ -2,7 +2,7 @@
 
 import operator
 from functools import partial
-from typing import Callable, Tuple, Optional
+from typing import Callable, Tuple, Optional, Dict
 
 from pypika import functions
 from pypika.enums import SqlTypes
@@ -112,7 +112,7 @@ def insensitive_ends_with(field, value):
 
 
 class BaseFilter:
-    FILTER_FUNC_MAP = {
+    FILTER_FUNC_MAP: Dict[str, Tuple[Callable, Optional[Callable]]] = {
         "": (operator.eq, None),
         "exact": (operator.eq, None),
         "not": (not_equal, None),
@@ -133,7 +133,7 @@ class BaseFilter:
         "iendswith": (insensitive_ends_with, string_encoder),
     }
 
-    RELATED_FILTER_FUNC_MAP = {
+    RELATED_FILTER_FUNC_MAP: Dict[str, Tuple[Callable, Callable]] = {
         "": (operator.eq, related_to_db_value_func),
         "exact": (operator.eq, related_to_db_value_func),
         "not": (not_equal, related_to_db_value_func),
@@ -142,7 +142,7 @@ class BaseFilter:
     }
 
     @classmethod
-    def get_filter_func_for(cls, field: Field, comparison: str) -> Optional[Tuple[Callable, Callable]]:
+    def get_filter_func_for(cls, field: Field, comparison: str) -> Optional[Tuple[Callable, Optional[Callable]]]:
         if isinstance(field, (BackwardFKField, ManyToManyField)):
             if comparison not in cls.RELATED_FILTER_FUNC_MAP:
                 return None

@@ -28,7 +28,7 @@ class AsyncpgFilter(BaseFilter):
         return inside_operation
 
     @classmethod
-    def get_filter_func_for(cls, field: Field, comparison: str) -> Optional[Tuple[Callable, Callable]]:
+    def get_filter_func_for(cls, field: Field, comparison: str) -> Optional[Tuple[Callable, Optional[Callable]]]:
         if isinstance(field, JSONField):
             if comparison not in BaseFilter.FILTER_FUNC_MAP:
                 (json_selector, sep, inside_comparison) = comparison.rpartition(LOOKUP_SEP)
