@@ -1,5 +1,5 @@
 
-from typing import Any, Callable, List, Tuple, Type, TYPE_CHECKING
+from typing import Any, Callable, List, Tuple, Type, TYPE_CHECKING, Dict
 
 from pypika import Table
 
@@ -14,12 +14,13 @@ if TYPE_CHECKING:
 
 
 class FieldSelectQuery(AwaitableQuery[MODEL]):
-    # pylint: disable=W0223
     __slots__ = (
         "fields_for_select",
     )
 
-    def _copy(self, queryset):
+    fields_for_select: Dict[str, str]
+
+    def _copy(self, queryset) -> None:
         super()._copy(queryset)
         queryset.fields_for_select = self.fields_for_select
 
@@ -156,7 +157,7 @@ class ValuesListQuery(FieldSelectQuery):
         self.fields_for_select = {str(i): field_name for i, field_name in enumerate(fields_for_select_list)}
         self.flat = flat
 
-    def _copy(self, queryset):
+    def _copy(self, queryset) -> None:
         super()._copy(queryset)
         queryset.flat = self.flat
 

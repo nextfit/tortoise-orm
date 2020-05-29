@@ -1,7 +1,7 @@
 
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Type, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Type, TYPE_CHECKING, TypeVar
 
 from pypika import Query
 
@@ -12,6 +12,8 @@ from tortoise.exceptions import ConfigurationError
 
 if TYPE_CHECKING:
     from tortoise.transactions.context import TransactionContext
+
+DBCLIENT = TypeVar('DBCLIENT', bound='BaseDBAsyncClient')
 
 
 class Capabilities:
@@ -117,7 +119,7 @@ class BaseDBAsyncClient:
     def __init__(self, connection_name: str, **kwargs) -> None:
         self.connection_name = connection_name
 
-    def _copy(self, base: "BaseDBAsyncClient"):
+    def _copy(self: DBCLIENT, base: DBCLIENT) -> None:
         self.connection_name = base.connection_name
 
     async def generate_schema(self, safe: bool) -> None:

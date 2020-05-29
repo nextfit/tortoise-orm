@@ -81,7 +81,7 @@ class MySQLClient(BaseDBAsyncClient):
 
         self._pool: Optional[aiomysql.Pool] = None
 
-    def _copy(self, base: "MySQLClient"):
+    def _copy(self, base) -> None:
         super()._copy(base)
 
         self.user = base.user

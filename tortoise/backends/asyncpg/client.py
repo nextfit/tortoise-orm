@@ -74,7 +74,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
         self._pool: Optional[asyncpg.pool] = None
 
-    def _copy(self, base: "AsyncpgDBClient"):
+    def _copy(self, base) -> None:
         super()._copy(base)
 
         self.user = base.user

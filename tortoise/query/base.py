@@ -33,6 +33,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 MODEL = TypeVar("MODEL", bound="Model")
 QUERY: QueryBuilder = QueryBuilder()
+STATEMENT = TypeVar('STATEMENT', bound='AwaitableStatement')
 
 
 class AwaitableStatement(Generic[MODEL]):
@@ -66,7 +67,7 @@ class AwaitableStatement(Generic[MODEL]):
         queryset.q_objects = deepcopy(self.q_objects)
         queryset.annotations = deepcopy(self.annotations)
 
-    def _clone(self):
+    def _clone(self: STATEMENT) -> STATEMENT:
         queryset = self.__class__.__new__(self.__class__)
         self._copy(queryset)
         return queryset

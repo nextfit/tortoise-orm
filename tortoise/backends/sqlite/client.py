@@ -54,7 +54,7 @@ class SqliteClient(BaseDBAsyncClient):
         self._connection: Optional[aiosqlite.Connection] = None
         self._lock = asyncio.Lock()
 
-    def _copy(self, base: "SqliteClient"):
+    def _copy(self, base) -> None:
         super()._copy(base)
         self.filename = base.filename
         self.pragmas = base.pragmas
