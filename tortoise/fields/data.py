@@ -149,10 +149,10 @@ class TextField(Field, str):
             )
         if unique:
             raise ConfigurationError(
-                f"TextField doesn't support unique indexes, consider CharField or another strategy"
+                "TextField doesn't support unique indexes, consider CharField or another strategy"
             )
         if db_index:
-            raise ConfigurationError(f"TextField can't be indexed, consider CharField")
+            raise ConfigurationError("TextField can't be indexed, consider CharField")
 
         super().__init__(primary_key=primary_key, **kwargs)
 
