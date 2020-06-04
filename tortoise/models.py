@@ -368,13 +368,7 @@ class Model(metaclass=ModelMeta):
         for db_column, value in itertools.islice(row_iter, len(meta.db_columns)):
             field_name = meta.db_column_to_field_name_map[db_column]
             field_object = meta.fields_map[field_name]
-
-            if (field_object.skip_to_python_if_native and
-                field_object.field_type in meta.db.executor_class.DB_NATIVE):
-                setattr(self, field_name, value)
-
-            else:
-                setattr(self, field_name, field_object.to_python_value(value))
+            setattr(self, field_name, field_object.to_python_value(value))
 
         if related_map:
             for field_name, sub_related in related_map.items():

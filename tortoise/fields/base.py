@@ -37,7 +37,6 @@ class Field(metaclass=_FieldMeta):
     field_type: Type[Any] = None  # type: ignore
     indexable: bool = True
     has_db_column = True
-    skip_to_python_if_native = False
     allows_generated = False
     function_cast = None
 

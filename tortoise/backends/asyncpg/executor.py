@@ -1,4 +1,4 @@
-import uuid
+
 from typing import List, Optional
 
 import asyncpg
@@ -10,7 +10,6 @@ from tortoise.models import Model
 
 class AsyncpgExecutor(BaseExecutor):
     EXPLAIN_PREFIX = "EXPLAIN (FORMAT JSON, VERBOSE)"
-    DB_NATIVE = BaseExecutor.DB_NATIVE | {uuid.UUID}
 
     def parameter(self, pos: int) -> Parameter:
         return Parameter("$%d" % (pos + 1,))

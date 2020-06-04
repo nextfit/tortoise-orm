@@ -118,17 +118,10 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
 
         else:
             if sub_field:
-                if isinstance(field_object, JSONField):
-                    return field_object.to_python_value
+                if not isinstance(field_object, JSONField):
+                    raise NotARelationFieldError(base_field_name, self.model)
 
-                raise NotARelationFieldError(base_field_name, self.model)
-
-            if (field_object.skip_to_python_if_native and
-                field_object.field_type in model._meta.db.executor_class.DB_NATIVE
-            ):
-                return lambda x: x
-            else:
-                return field_object.to_python_value
+            return field_object.to_python_value
 
     def _make_query(self, context: QueryContext) -> None:
         self.query = self.query_builder(context.alias)

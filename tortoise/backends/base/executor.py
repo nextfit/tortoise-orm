@@ -1,7 +1,5 @@
 
 import asyncio
-import datetime
-import decimal
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type, Set
 
@@ -25,7 +23,6 @@ EXECUTOR_CACHE: Dict[
 class BaseExecutor:
     TO_DB_OVERRIDE: Dict[Type[Field], Callable] = {}
     EXPLAIN_PREFIX: str = "EXPLAIN"
-    DB_NATIVE = {bytes, str, int, bool, float, decimal.Decimal, datetime.datetime, datetime.date}
 
     def __init__(
         self,

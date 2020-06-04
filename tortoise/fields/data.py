@@ -4,7 +4,7 @@ import functools
 import warnings
 from decimal import Decimal
 from enum import Enum, IntEnum
-from typing import Any, Optional, Type, TypeVar, Union
+from typing import Any, Optional, Type, Union
 from uuid import UUID, uuid4
 
 import ciso8601
@@ -185,8 +185,6 @@ class DecimalField(Field, Decimal):
         How many of those signifigant digits is after the decimal point.
     """
 
-    skip_to_python_if_native = True
-
     def __init__(self, max_digits: int, decimal_places: int, **kwargs) -> None:
         if int(max_digits) < 1:
             raise ConfigurationError("'max_digits' must be >= 1")
@@ -198,8 +196,8 @@ class DecimalField(Field, Decimal):
         self.quant = Decimal("1" if decimal_places == 0 else f"1.{('0' * decimal_places)}")
 
     def to_python_value(self, value: Any) -> Optional[Decimal]:
-        if value is None:
-            return None
+        if value is None or isinstance(value, Decimal):
+            return value
         return Decimal(value).quantize(self.quant).normalize()
 
     @property
@@ -226,7 +224,6 @@ class DateTimeField(Field, datetime.datetime):
         Set to ``datetime.utcnow()`` on first save only.
     """
 
-    skip_to_python_if_native = True
     SQL_TYPE = "TIMESTAMP"
 
     class _db_mysql:
@@ -263,7 +260,6 @@ class DateField(Field, datetime.date):
     Date field.
     """
 
-    skip_to_python_if_native = True
     SQL_TYPE = "DATE"
 
     def to_python_value(self, value: Any) -> Optional[datetime.date]:
@@ -435,9 +431,6 @@ class IntEnumField(SmallIntegerField):
         return int(value.value) if value is not None else None
 
 
-IntEnumType = TypeVar("IntEnumType", bound=IntEnum)
-
-
 class CharEnumField(CharField):
     """
     Char Enum Field
@@ -483,5 +476,3 @@ class CharEnumField(CharField):
     def to_db_value(self, value: Union[Enum, None], instance) -> Union[str, None]:
         return str(value.value) if value is not None else None
 
-
-CharEnumType = TypeVar("CharEnumType", bound=Enum)
