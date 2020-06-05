@@ -2,9 +2,7 @@
     "connections": {
         "default": {
             "engine": "tortoise.backends.sqlite",
-            "credentials": {
-                "file_path": "/tmp/tester.sqlite"
-            }
+            "file_path": "/tmp/tester.sqlite"
         }
     },
     "apps": {

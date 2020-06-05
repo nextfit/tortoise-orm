@@ -19,13 +19,11 @@ async def run():
             "connections": {
                 "default": {
                     "engine": "tortoise.backends.asyncpg",
-                    "credentials": {
-                        "host": "localhost",
-                        "port": "5432",
-                        "user": "tortoise",
-                        "password": "qwerty123",
-                        "database": "test",
-                    },
+                    "host": "localhost",
+                    "port": "5432",
+                    "user": "tortoise",
+                    "password": "qwerty123",
+                    "database": "test",
                 }
             },
             "apps": {"models": {"models": ["__main__"], "default_connection": "default"}},

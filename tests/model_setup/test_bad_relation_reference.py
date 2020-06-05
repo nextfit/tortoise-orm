@@ -24,7 +24,7 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {
@@ -45,7 +45,7 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {
@@ -66,7 +66,7 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {
@@ -87,7 +87,7 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {
@@ -108,7 +108,7 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {

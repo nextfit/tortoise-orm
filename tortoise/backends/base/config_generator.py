@@ -111,7 +111,8 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
             None if (not url.password and db_backend == "postgres") else str(url.password or "")
         )
 
-    return {"engine": db["engine"], "credentials": params}
+    params["engine"] = db["engine"]
+    return params
 
 
 def generate_config(

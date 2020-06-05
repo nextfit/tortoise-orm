@@ -11,15 +11,13 @@ class TestConnectionParams(test.TestCase):
                 {
                     "models": {
                         "engine": "tortoise.backends.mysql",
-                        "credentials": {
-                            "database": "test",
-                            "host": "127.0.0.1",
-                            "password": "foomip",
-                            "port": 3306,
-                            "user": "root",
-                            "connect_timeout": 1.5,
-                            "charset": "utf8mb4",
-                        },
+                        "database": "test",
+                        "host": "127.0.0.1",
+                        "password": "foomip",
+                        "port": 3306,
+                        "user": "root",
+                        "connect_timeout": 1.5,
+                        "charset": "utf8mb4",
                     }
                 },
                 False,
@@ -46,15 +44,13 @@ class TestConnectionParams(test.TestCase):
                     {
                         "models": {
                             "engine": "tortoise.backends.asyncpg",
-                            "credentials": {
-                                "database": "test",
-                                "host": "127.0.0.1",
-                                "password": "foomip",
-                                "port": 5432,
-                                "user": "root",
-                                "timeout": 30,
-                                "ssl": True,
-                            },
+                            "database": "test",
+                            "host": "127.0.0.1",
+                            "password": "foomip",
+                            "port": 5432,
+                            "user": "root",
+                            "timeout": 30,
+                            "ssl": True,
                         }
                     },
                     False,

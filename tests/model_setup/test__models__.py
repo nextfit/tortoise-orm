@@ -41,7 +41,7 @@ class TestGenerateSchema(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {"models": {"models": [module], "default_connection": "default"}},

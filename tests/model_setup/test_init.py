@@ -25,7 +25,7 @@ class TestInitErrors(test.SimpleTestCase):
                 "connections": {
                     "default": {
                         "engine": "tortoise.backends.sqlite",
-                        "credentials": {"file_path": ":memory:"},
+                        "file_path": ":memory:",
                     }
                 },
                 "apps": {
@@ -43,7 +43,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {
@@ -61,7 +61,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {
@@ -82,7 +82,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {
@@ -103,7 +103,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {
@@ -124,7 +124,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {
@@ -146,7 +146,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {
@@ -169,7 +169,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {
@@ -188,7 +188,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {
@@ -209,7 +209,7 @@ class TestInitErrors(test.SimpleTestCase):
                 "connections": {
                     "default": {
                         "engine": "tortoise.backends.sqlite",
-                        "credentials": {"file_path": ":memory:"},
+                        "file_path": ":memory:",
                     }
                 },
                 "apps": {"models": {"models": ["tests.testmodels"]}},
@@ -244,7 +244,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.test",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {
@@ -263,7 +263,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {
@@ -289,7 +289,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     }
                 }
@@ -304,7 +304,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {
@@ -349,7 +349,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {

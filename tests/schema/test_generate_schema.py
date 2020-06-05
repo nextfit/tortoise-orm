@@ -36,7 +36,7 @@ class TestGenerateSchema(test.SimpleTestCase):
                     "connections": {
                         "default": {
                             "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
+                            "file_path": ":memory:",
                         }
                     },
                     "apps": {"models": {"models": [module], "default_connection": "default"}},
@@ -298,15 +298,13 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
                         "connections": {
                             "default": {
                                 "engine": "tortoise.backends.mysql",
-                                "credentials": {
-                                    "database": "test",
-                                    "host": "127.0.0.1",
-                                    "password": "foomip",
-                                    "port": 3306,
-                                    "user": "root",
-                                    "connect_timeout": 1.5,
-                                    "charset": "utf8mb4",
-                                },
+                                "database": "test",
+                                "host": "127.0.0.1",
+                                "password": "foomip",
+                                "port": 3306,
+                                "user": "root",
+                                "connect_timeout": 1.5,
+                                "charset": "utf8mb4",
                             }
                         },
                         "apps": {"models": {"models": [module], "default_connection": "default"}},
@@ -539,13 +537,11 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
                         "connections": {
                             "default": {
                                 "engine": "tortoise.backends.asyncpg",
-                                "credentials": {
-                                    "database": "test",
-                                    "host": "127.0.0.1",
-                                    "password": "foomip",
-                                    "port": 3306,
-                                    "user": "root",
-                                },
+                                "database": "test",
+                                "host": "127.0.0.1",
+                                "password": "foomip",
+                                "port": 3306,
+                                "user": "root",
                             }
                         },
                         "apps": {"models": {"models": [module], "default_connection": "default"}},

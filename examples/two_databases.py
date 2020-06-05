@@ -59,11 +59,11 @@ async def run():
             "connections": {
                 "first": {
                     "engine": "tortoise.backends.sqlite",
-                    "credentials": {"file_path": "example.sqlite3"},
+                    "file_path": "example.sqlite3",
                 },
                 "second": {
                     "engine": "tortoise.backends.sqlite",
-                    "credentials": {"file_path": "example1.sqlite3"},
+                    "file_path": "example1.sqlite3",
                 },
             },
             "apps": {

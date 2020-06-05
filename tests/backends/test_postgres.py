@@ -24,7 +24,7 @@ class TestPostgreSQL(test.SimpleTestCase):
     async def test_schema(self):
         from asyncpg.exceptions import InvalidSchemaNameError
 
-        self.db_config["connections"]["models"]["credentials"]["schema"] = "mytestschema"
+        self.db_config["connections"]["models"]["schema"] = "mytestschema"
         await Tortoise.init(self.db_config, _create_db=True)
 
         with self.assertRaises(InvalidSchemaNameError):
@@ -37,7 +37,7 @@ class TestPostgreSQL(test.SimpleTestCase):
         tournament = await Tournament.create(name="Test")
         await Tortoise.close_connections()
 
-        del self.db_config["connections"]["models"]["credentials"]["schema"]
+        del self.db_config["connections"]["models"]["schema"]
         await Tortoise.init(self.db_config)
 
         with self.assertRaises(OperationalError):
@@ -53,7 +53,7 @@ class TestPostgreSQL(test.SimpleTestCase):
         self.assertEqual(tournament.name, res[0][1])
 
     async def test_ssl_true(self):
-        self.db_config["connections"]["models"]["credentials"]["ssl"] = True
+        self.db_config["connections"]["models"]["ssl"] = True
         try:
             await Tortoise.init(self.db_config)
         except (ConnectionError, ssl.SSLError):
@@ -67,7 +67,7 @@ class TestPostgreSQL(test.SimpleTestCase):
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
 
-        self.db_config["connections"]["models"]["credentials"]["ssl"] = ctx
+        self.db_config["connections"]["models"]["ssl"] = ctx
         try:
             await Tortoise.init(self.db_config, _create_db=True)
         except ConnectionError:

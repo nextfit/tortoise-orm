@@ -38,13 +38,11 @@ def register_tortoise(
                     # Dict format for connection
                     'default': {
                         'engine': 'tortoise.backends.asyncpg',
-                        'credentials': {
-                            'host': 'localhost',
-                            'port': '5432',
-                            'user': 'tortoise',
-                            'password': 'qwerty123',
-                            'database': 'test',
-                        }
+                        'host': 'localhost',
+                        'port': '5432',
+                        'user': 'tortoise',
+                        'password': 'qwerty123',
+                        'database': 'test',
                     },
                     # Using a DB_URL string
                     'default': 'postgres://postgres:qwerty123@localhost:5432/events'

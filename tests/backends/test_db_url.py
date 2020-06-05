@@ -14,11 +14,9 @@ class TestConfigGenerator(test.SimpleTestCase):
             res,
             {
                 "engine": "tortoise.backends.sqlite",
-                "credentials": {
-                    "file_path": "/some/test.sqlite",
-                    "journal_mode": "WAL",
-                    "journal_size_limit": 16384,
-                },
+                "file_path": "/some/test.sqlite",
+                "journal_mode": "WAL",
+                "journal_size_limit": 16384,
             },
         )
 
@@ -32,11 +30,9 @@ class TestConfigGenerator(test.SimpleTestCase):
             res,
             {
                 "engine": "tortoise.backends.sqlite",
-                "credentials": {
-                    "file_path": "test.sqlite",
-                    "journal_mode": "WAL",
-                    "journal_size_limit": 16384,
-                },
+                "file_path": "test.sqlite",
+                "journal_mode": "WAL",
+                "journal_size_limit": 16384,
             },
         )
 
@@ -46,17 +42,15 @@ class TestConfigGenerator(test.SimpleTestCase):
             res,
             {
                 "engine": "tortoise.backends.sqlite",
-                "credentials": {
-                    "file_path": "data/db.sqlite",
-                    "journal_mode": "WAL",
-                    "journal_size_limit": 16384,
-                },
+                "file_path": "data/db.sqlite",
+                "journal_mode": "WAL",
+                "journal_size_limit": 16384,
             },
         )
 
     def test_sqlite_testing(self):
         res = expand_db_url(db_url="sqlite:///some/test-{}.sqlite", testing=True)
-        file_path = res["credentials"]["file_path"]
+        file_path = res["file_path"]
         self.assertIn("/some/test-", file_path)
         self.assertIn(".sqlite", file_path)
         self.assertNotEqual("sqlite:///some/test-{}.sqlite", file_path)
@@ -64,11 +58,9 @@ class TestConfigGenerator(test.SimpleTestCase):
             res,
             {
                 "engine": "tortoise.backends.sqlite",
-                "credentials": {
-                    "file_path": file_path,
-                    "journal_mode": "WAL",
-                    "journal_size_limit": 16384,
-                },
+                "file_path": file_path,
+                "journal_mode": "WAL",
+                "journal_size_limit": 16384,
             },
         )
 
@@ -78,13 +70,11 @@ class TestConfigGenerator(test.SimpleTestCase):
             res,
             {
                 "engine": "tortoise.backends.sqlite",
-                "credentials": {
-                    "file_path": "/some/test.sqlite",
-                    "AHA": "5",
-                    "moo": "yes",
-                    "journal_mode": "TRUNCATE",
-                    "journal_size_limit": 16384,
-                },
+                "file_path": "/some/test.sqlite",
+                "AHA": "5",
+                "moo": "yes",
+                "journal_mode": "TRUNCATE",
+                "journal_size_limit": 16384,
             },
         )
 
@@ -98,13 +88,11 @@ class TestConfigGenerator(test.SimpleTestCase):
             res,
             {
                 "engine": "tortoise.backends.asyncpg",
-                "credentials": {
-                    "database": "test",
-                    "host": "127.0.0.1",
-                    "password": "moo",
-                    "port": 54321,
-                    "user": "postgres",
-                },
+                "database": "test",
+                "host": "127.0.0.1",
+                "password": "moo",
+                "port": 54321,
+                "user": "postgres",
             },
         )
 
@@ -114,13 +102,11 @@ class TestConfigGenerator(test.SimpleTestCase):
             res,
             {
                 "engine": "tortoise.backends.asyncpg",
-                "credentials": {
-                    "database": None,
-                    "host": "127.0.0.1",
-                    "password": "moo",
-                    "port": 54321,
-                    "user": "postgres",
-                },
+                "database": None,
+                "host": "127.0.0.1",
+                "password": "moo",
+                "port": 54321,
+                "user": "postgres",
             },
         )
 
@@ -130,13 +116,11 @@ class TestConfigGenerator(test.SimpleTestCase):
             res,
             {
                 "engine": "tortoise.backends.asyncpg",
-                "credentials": {
-                    "database": "test",
-                    "host": "127.0.0.1",
-                    "password": None,
-                    "port": 5432,
-                    "user": "postgres",
-                },
+                "database": "test",
+                "host": "127.0.0.1",
+                "password": None,
+                "port": 5432,
+                "user": "postgres",
             },
         )
 
@@ -146,20 +130,18 @@ class TestConfigGenerator(test.SimpleTestCase):
 
     def test_postgres_testing(self):
         res = expand_db_url(db_url=r"postgres://postgres:@127.0.0.1:5432/test_\{\}", testing=True)
-        database = res["credentials"]["database"]
+        database = res["database"]
         self.assertIn("test_", database)
         self.assertNotEqual("test_{}", database)
         self.assertDictEqual(
             res,
             {
                 "engine": "tortoise.backends.asyncpg",
-                "credentials": {
-                    "database": database,
-                    "host": "127.0.0.1",
-                    "password": None,
-                    "port": 5432,
-                    "user": "postgres",
-                },
+                "database": database,
+                "host": "127.0.0.1",
+                "password": None,
+                "port": 5432,
+                "user": "postgres",
             },
         )
 
@@ -169,15 +151,13 @@ class TestConfigGenerator(test.SimpleTestCase):
             res,
             {
                 "engine": "tortoise.backends.asyncpg",
-                "credentials": {
-                    "database": "test",
-                    "host": "127.0.0.1",
-                    "password": None,
-                    "port": 5432,
-                    "user": "postgres",
-                    "AHA": "5",
-                    "moo": "yes",
-                },
+                "database": "test",
+                "host": "127.0.0.1",
+                "password": None,
+                "port": 5432,
+                "user": "postgres",
+                "AHA": "5",
+                "moo": "yes",
             },
         )
 
@@ -187,15 +167,13 @@ class TestConfigGenerator(test.SimpleTestCase):
             res,
             {
                 "engine": "tortoise.backends.mysql",
-                "credentials": {
-                    "database": "test",
-                    "host": "127.0.0.1",
-                    "password": "",
-                    "port": 33060,
-                    "user": "root",
-                    "charset": "utf8mb4",
-                    "sql_mode": "STRICT_TRANS_TABLES",
-                },
+                "database": "test",
+                "host": "127.0.0.1",
+                "password": "",
+                "port": 33060,
+                "user": "root",
+                "charset": "utf8mb4",
+                "sql_mode": "STRICT_TRANS_TABLES",
             },
         )
 
@@ -205,15 +183,13 @@ class TestConfigGenerator(test.SimpleTestCase):
             res,
             {
                 "engine": "tortoise.backends.mysql",
-                "credentials": {
-                    "database": None,
-                    "host": "127.0.0.1",
-                    "password": "",
-                    "port": 33060,
-                    "user": "root",
-                    "charset": "utf8mb4",
-                    "sql_mode": "STRICT_TRANS_TABLES",
-                },
+                "database": None,
+                "host": "127.0.0.1",
+                "password": "",
+                "port": 33060,
+                "user": "root",
+                "charset": "utf8mb4",
+                "sql_mode": "STRICT_TRANS_TABLES",
             },
         )
 
@@ -223,15 +199,13 @@ class TestConfigGenerator(test.SimpleTestCase):
             res,
             {
                 "engine": "tortoise.backends.mysql",
-                "credentials": {
-                    "database": "test",
-                    "host": "127.0.0.1",
-                    "password": "",
-                    "port": 3306,
-                    "user": "root",
-                    "charset": "utf8mb4",
-                    "sql_mode": "STRICT_TRANS_TABLES",
-                },
+                "database": "test",
+                "host": "127.0.0.1",
+                "password": "",
+                "port": 3306,
+                "user": "root",
+                "charset": "utf8mb4",
+                "sql_mode": "STRICT_TRANS_TABLES",
             },
         )
 
@@ -241,21 +215,19 @@ class TestConfigGenerator(test.SimpleTestCase):
 
     def test_mysql_testing(self):
         res = expand_db_url(r"mysql://root:@127.0.0.1:3306/test_\{\}", testing=True)
-        self.assertIn("test_", res["credentials"]["database"])
-        self.assertNotEqual("test_{}", res["credentials"]["database"])
+        self.assertIn("test_", res["database"])
+        self.assertNotEqual("test_{}", res["database"])
         self.assertEqual(
             res,
             {
                 "engine": "tortoise.backends.mysql",
-                "credentials": {
-                    "database": res["credentials"]["database"],
-                    "host": "127.0.0.1",
-                    "password": "",
-                    "port": 3306,
-                    "user": "root",
-                    "charset": "utf8mb4",
-                    "sql_mode": "STRICT_TRANS_TABLES",
-                },
+                "database": res["database"],
+                "host": "127.0.0.1",
+                "password": "",
+                "port": 3306,
+                "user": "root",
+                "charset": "utf8mb4",
+                "sql_mode": "STRICT_TRANS_TABLES",
             },
         )
 
@@ -268,21 +240,19 @@ class TestConfigGenerator(test.SimpleTestCase):
             res,
             {
                 "engine": "tortoise.backends.mysql",
-                "credentials": {
-                    "database": "test",
-                    "host": "127.0.0.1",
-                    "password": "",
-                    "port": 3306,
-                    "user": "root",
-                    "AHA": "5",
-                    "moo": "yes",
-                    "minsize": 5,
-                    "maxsize": 20,
-                    "connect_timeout": 1.5,
-                    "echo": True,
-                    "charset": "utf8mb4",
-                    "sql_mode": "STRICT_TRANS_TABLES",
-                },
+                "database": "test",
+                "host": "127.0.0.1",
+                "password": "",
+                "port": 3306,
+                "user": "root",
+                "AHA": "5",
+                "moo": "yes",
+                "minsize": 5,
+                "maxsize": 20,
+                "connect_timeout": 1.5,
+                "echo": True,
+                "charset": "utf8mb4",
+                "sql_mode": "STRICT_TRANS_TABLES",
             },
         )
 
@@ -296,12 +266,10 @@ class TestConfigGenerator(test.SimpleTestCase):
             {
                 "connections": {
                     "default": {
-                        "credentials": {
-                            "file_path": "/some/test.sqlite",
-                            "journal_mode": "WAL",
-                            "journal_size_limit": 16384,
-                        },
                         "engine": "tortoise.backends.sqlite",
+                        "file_path": "/some/test.sqlite",
+                        "journal_mode": "WAL",
+                        "journal_size_limit": 16384,
                     }
                 },
                 "apps": {
@@ -325,12 +293,10 @@ class TestConfigGenerator(test.SimpleTestCase):
             {
                 "connections": {
                     "models": {
-                        "credentials": {
-                            "file_path": "/some/test.sqlite",
-                            "journal_mode": "WAL",
-                            "journal_size_limit": 16384,
-                        },
                         "engine": "tortoise.backends.sqlite",
+                        "file_path": "/some/test.sqlite",
+                        "journal_mode": "WAL",
+                        "journal_size_limit": 16384,
                     }
                 },
                 "apps": {
@@ -352,12 +318,10 @@ class TestConfigGenerator(test.SimpleTestCase):
             {
                 "connections": {
                     "default": {
-                        "credentials": {
-                            "file_path": "/some/test.sqlite",
-                            "journal_mode": "WAL",
-                            "journal_size_limit": 16384,
-                        },
                         "engine": "tortoise.backends.sqlite",
+                        "file_path": "/some/test.sqlite",
+                        "journal_mode": "WAL",
+                        "journal_size_limit": 16384,
                     }
                 },
                 "apps": {

@@ -113,7 +113,8 @@ class _Tortoise:
                 conn_config = expand_db_url(conn_config)
 
             client_class = self._discover_client_class(conn_config.get("engine"))
-            db_params = conn_config["credentials"].copy()
+            db_params = conn_config.copy()
+            db_params.pop("engine", None)
             db_params.update({"connection_name": connection_name})
             db_client = client_class(**db_params)
 
@@ -239,13 +240,11 @@ class _Tortoise:
                         # Dict format for connection
                         'default': {
                             'engine': 'tortoise.backends.asyncpg',
-                            'credentials': {
-                                'host': 'localhost',
-                                'port': '5432',
-                                'user': 'tortoise',
-                                'password': 'qwerty123',
-                                'database': 'test',
-                            }
+                            'host': 'localhost',
+                            'port': '5432',
+                            'user': 'tortoise',
+                            'password': 'qwerty123',
+                            'database': 'test',
                         },
                         # Using a DB_URL string
                         'default': 'postgres://postgres:qwerty123@localhost:5432/events'
