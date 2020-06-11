@@ -26,9 +26,6 @@ class UpdateQuery(AwaitableStatement):
         context.push(self.model, table)
         self._add_query_details(context=context)
 
-        # Need to get executor to get correct column_map
-        executor = db_client.executor_class(model=self.model, db=db_client)
-
         for field_name, value in self.update_kwargs.items():
             field_object = self.model._meta.fields_map.get(field_name)
 
@@ -40,10 +37,10 @@ class UpdateQuery(AwaitableStatement):
 
             if isinstance(field_object, RelationField):
                 if isinstance(field_object, (ForeignKey, OneToOneField)):
-                    fk_field: str = field_object.id_field_name
-                    column_name = self.model._meta.fields_map[fk_field].db_column
-                    value = executor.column_map[fk_field](value.pk, None)
-                    self.query = self.query.set(column_name, value)
+                    fk_field_name: str = field_object.id_field_name
+                    fk_field_object = self.model._meta.fields_map[fk_field_name]
+                    value = db_client.executor_class._field_to_db(fk_field_object, value.pk, None)
+                    self.query = self.query.set(fk_field_object.db_column, value)
 
                 else:
                     raise NotADbColumnFieldError(field_name, self.model)
@@ -57,7 +54,7 @@ class UpdateQuery(AwaitableStatement):
                     value = value.field
 
                 else:
-                    value = executor.column_map[field_name](value, None)
+                    value = db_client.executor_class._field_to_db(field_object, value, None)
 
                 self.query = self.query.set(field_object.db_column, value)
 
