@@ -6,6 +6,7 @@ from pypika import Parameter
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import ParamsError, UnknownFieldError, NotARelationFieldError
+from tortoise.fields import Field
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -39,26 +40,26 @@ class BaseExecutor:
         key = f"{self.db.connection_name}:{self.model._meta.db_table}"
         if key in EXECUTOR_CACHE:
             (
-                self.field_names,
+                self.insert_fields,
                 self.insert_query,
-                self.all_field_names,
+                self.all_insert_fields,
                 self.insert_query_all,
                 self.delete_query,
                 self.update_cache,
             ) = EXECUTOR_CACHE[key]
 
         else:
-            self.field_names, column_names = self._prepare_insert_columns()
+            self.insert_fields, column_names = self._get_insert_fields_columns()
             self.insert_query = self._prepare_insert_statement(column_names)
 
             if self.model._meta.generated_column_names:
-                self.all_field_names, all_column_names = \
-                    self._prepare_insert_columns(include_generated=True)
+                self.all_insert_fields, all_column_names = \
+                    self._get_insert_fields_columns(include_generated=True)
                 self.insert_query_all = \
                     self._prepare_insert_statement(all_column_names)
 
             else:
-                self.all_field_names = self.field_names
+                self.all_insert_fields = self.insert_fields
                 self.insert_query_all = self.insert_query
 
             table = self.model._meta.table()
@@ -71,9 +72,9 @@ class BaseExecutor:
             self.update_cache = {}
 
             EXECUTOR_CACHE[key] = (
-                self.field_names,
+                self.insert_fields,
                 self.insert_query,
-                self.all_field_names,
+                self.all_insert_fields,
                 self.insert_query_all,
                 self.delete_query,
                 self.update_cache,
@@ -101,14 +102,14 @@ class BaseExecutor:
         await self._execute_prefetch_queries(instance_list)
         return instance_list
 
-    def _prepare_insert_columns(self, include_generated=False) -> Tuple[List[str], List[str]]:
-        field_column_name = [(field_name, field.db_column)
-            for field_name, field in self.model._meta.fields_map.items()
+    def _get_insert_fields_columns(self, include_generated=False) -> Tuple[List[Field], List[str]]:
+        fields_columns = [(field, field.db_column)
+            for field in self.model._meta.fields_map.values()
             if field.has_db_column and (include_generated or not field.generated)
         ]
 
-        # return fields_names, column_names
-        return tuple(zip(*field_column_name))
+        # return fields, column_names
+        return tuple(zip(*fields_columns))
 
     def _prepare_insert_statement(self, columns: List[str]) -> str:
         return self.db.query_class.into(self.model._meta.table())\
@@ -123,28 +124,26 @@ class BaseExecutor:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_insert(self, instance: "Model") -> None:
-        fields_map = self.model._meta.fields_map
         if instance._custom_generated_pk:
             values = [
-                fields_map[field_name].db_value(getattr(instance, field_name), instance)
-                for field_name in self.all_field_names
+                field_object.db_value(getattr(instance, field_object.model_field_name), instance)
+                for field_object in self.all_insert_fields
             ]
             await self.db.execute_insert(self.insert_query_all, values)
 
         else:
             values = [
-                fields_map[field_name].db_value(getattr(instance, field_name), instance)
-                for field_name in self.field_names
+                field_object.db_value(getattr(instance, field_object.model_field_name), instance)
+                for field_object in self.insert_fields
             ]
             insert_result = await self.db.execute_insert(self.insert_query, values)
             await self._process_insert_result(instance, insert_result)
 
     async def execute_bulk_insert(self, instances: "List[Model]") -> None:
-        fields_map = self.model._meta.fields_map
         values_lists = [
             [
-                fields_map[field_name].db_value(getattr(instance, field_name), instance)
-                for field_name in self.field_names
+                field_object.db_value(getattr(instance, field_object.model_field_name), instance)
+                for field_object in self.insert_fields
             ]
             for instance in instances
         ]
