@@ -42,7 +42,7 @@ class BaseExecutor:
             (
                 self.insert_fields,
                 self.insert_query,
-                self.all_insert_fields,
+                self.insert_fields_all,
                 self.insert_query_all,
                 self.delete_query,
                 self.update_cache,
@@ -53,13 +53,13 @@ class BaseExecutor:
             self.insert_query = self._prepare_insert_statement(column_names)
 
             if self.model._meta.generated_column_names:
-                self.all_insert_fields, all_column_names = \
+                self.insert_fields_all, all_column_names = \
                     self._get_insert_fields_columns(include_generated=True)
                 self.insert_query_all = \
                     self._prepare_insert_statement(all_column_names)
 
             else:
-                self.all_insert_fields = self.insert_fields
+                self.insert_fields_all = self.insert_fields
                 self.insert_query_all = self.insert_query
 
             table = self.model._meta.table()
@@ -74,7 +74,7 @@ class BaseExecutor:
             EXECUTOR_CACHE[key] = (
                 self.insert_fields,
                 self.insert_query,
-                self.all_insert_fields,
+                self.insert_fields_all,
                 self.insert_query_all,
                 self.delete_query,
                 self.update_cache,
@@ -127,7 +127,7 @@ class BaseExecutor:
         if instance._custom_generated_pk:
             values = [
                 field_object.db_value(getattr(instance, field_object.model_field_name), instance)
-                for field_object in self.all_insert_fields
+                for field_object in self.insert_fields_all
             ]
             await self.db.execute_insert(self.insert_query_all, values)
 
