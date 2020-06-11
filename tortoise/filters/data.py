@@ -26,7 +26,7 @@ class DataFieldFilter(FieldFilter):
             encoded_value = self.value_encoder(value, model, field_object)
 
         else:
-            encoded_value = model._meta.db.executor_class._field_to_db(field_object, value, model)
+            encoded_value = field_object.db_value(value, model)
 
         encoded_key = table[self.db_column]
         return self.opr(encoded_key, encoded_value)

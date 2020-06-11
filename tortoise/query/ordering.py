@@ -62,7 +62,7 @@ class QueryOrderingField(QueryOrdering):
             if not queryset.is_aggregate() or field in queryset.query._groupbys:
                 func = field_object.get_for_dialect("function_cast")
                 if func:
-                    field = func(field_object, field)
+                    field = func(field)
 
                 queryset.query = queryset.query.orderby(field, order=self.direction)
 

@@ -172,6 +172,11 @@ class BooleanField(Field):
     class _db_sqlite:
         SQL_TYPE = "INT"
 
+        def to_db_value(self, value, instance) -> Optional[int]:
+            if value is None:
+                return None
+            return int(bool(value))
+
 
 class DecimalField(Field, Decimal):
     """
@@ -210,6 +215,11 @@ class DecimalField(Field, Decimal):
         def function_cast(self, term: Term) -> Term:
             return functions.Cast(term, SqlTypes.NUMERIC)
 
+        def to_db_value(self, value, instance) -> Optional[str]:
+            if value is None:
+                return None
+            return str(Decimal(value).quantize(self.quant).normalize())
+
 
 class DateTimeField(Field, datetime.datetime):
     """
@@ -228,6 +238,20 @@ class DateTimeField(Field, datetime.datetime):
 
     class _db_mysql:
         SQL_TYPE = "DATETIME(6)"
+
+    class _db_sqlite:
+        def to_db_value(self, value: Optional[datetime.datetime], instance) -> Optional[str]:
+            if hasattr(instance, "_saved_in_db"):
+                # Only do this if it is a Model instance, not class. Test for guaranteed instance var
+                if self.auto_now or (
+                    self.auto_now_add and getattr(instance, self.model_field_name, None) is None
+                ):
+                    value = datetime.datetime.utcnow()
+                    setattr(instance, self.model_field_name, value)
+                    return value.isoformat(" ")
+            if isinstance(value, datetime.datetime):
+                return value.isoformat(" ")
+            return None
 
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs) -> None:
         if auto_now_add and auto_now:

@@ -39,7 +39,7 @@ def resolve_field_name_into(
         pypika_field = table[field_object.db_column]
         func = field_object.get_for_dialect("function_cast")
         if func:
-            pypika_field = func(field_object, pypika_field)
+            pypika_field = func(pypika_field)
 
         return field_object, pypika_field
 

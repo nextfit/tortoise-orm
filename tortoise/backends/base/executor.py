@@ -1,13 +1,11 @@
 
 import asyncio
-from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type, Set
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Set
 
 from pypika import Parameter
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import ParamsError, UnknownFieldError, NotARelationFieldError
-from tortoise.fields.base import Field
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -16,12 +14,11 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 
 EXECUTOR_CACHE: Dict[
-    str, Tuple[list, str, list, str, Dict[str, Callable], str, Dict[str, str]]
+    str, Tuple[list, str, list, str, str, Dict[str, str]]
 ] = {}
 
 
 class BaseExecutor:
-    TO_DB_OVERRIDE: Dict[Type[Field], Callable] = {}
     EXPLAIN_PREFIX: str = "EXPLAIN"
 
     def __init__(
@@ -46,7 +43,6 @@ class BaseExecutor:
                 self.insert_query,
                 self.all_field_names,
                 self.insert_query_all,
-                self.column_map,
                 self.delete_query,
                 self.update_cache,
             ) = EXECUTOR_CACHE[key]
@@ -65,16 +61,6 @@ class BaseExecutor:
                 self.all_field_names = self.field_names
                 self.insert_query_all = self.insert_query
 
-            self.column_map = {}
-            for field_name in self.all_field_names:
-                field_object = self.model._meta.fields_map[field_name]
-                if field_object.__class__ in self.TO_DB_OVERRIDE:
-                    self.column_map[field_name] = partial(
-                        self.TO_DB_OVERRIDE[field_object.__class__], field_object
-                    )
-                else:
-                    self.column_map[field_name] = field_object.to_db_value
-
             table = self.model._meta.table()
             self.delete_query = str(
                 db.query_class.from_(table)
@@ -89,7 +75,6 @@ class BaseExecutor:
                 self.insert_query,
                 self.all_field_names,
                 self.insert_query_all,
-                self.column_map,
                 self.delete_query,
                 self.update_cache,
             )
@@ -125,12 +110,6 @@ class BaseExecutor:
         # return fields_names, column_names
         return tuple(zip(*field_column_name))
 
-    @classmethod
-    def _field_to_db(cls, field_object: Field, attr: Any, instance) -> Any:
-        if field_object.__class__ in cls.TO_DB_OVERRIDE:
-            return cls.TO_DB_OVERRIDE[field_object.__class__](field_object, attr, instance)
-        return field_object.to_db_value(attr, instance)
-
     def _prepare_insert_statement(self, columns: List[str]) -> str:
         return self.db.query_class.into(self.model._meta.table())\
             .columns(*columns)\
@@ -144,25 +123,27 @@ class BaseExecutor:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_insert(self, instance: "Model") -> None:
+        fields_map = self.model._meta.fields_map
         if instance._custom_generated_pk:
             values = [
-                self.column_map[field_name](getattr(instance, field_name), instance)
+                fields_map[field_name].db_value(getattr(instance, field_name), instance)
                 for field_name in self.all_field_names
             ]
             await self.db.execute_insert(self.insert_query_all, values)
 
         else:
             values = [
-                self.column_map[field_name](getattr(instance, field_name), instance)
+                fields_map[field_name].db_value(getattr(instance, field_name), instance)
                 for field_name in self.field_names
             ]
             insert_result = await self.db.execute_insert(self.insert_query, values)
             await self._process_insert_result(instance, insert_result)
 
     async def execute_bulk_insert(self, instances: "List[Model]") -> None:
+        fields_map = self.model._meta.fields_map
         values_lists = [
             [
-                self.column_map[field_name](getattr(instance, field_name), instance)
+                fields_map[field_name].db_value(getattr(instance, field_name), instance)
                 for field_name in self.field_names
             ]
             for instance in instances
@@ -194,29 +175,32 @@ class BaseExecutor:
         return sql
 
     async def execute_update(self, instance, update_fields: Optional[List[str]]) -> int:
+        model_meta = self.model._meta
         if not update_fields:
-            update_fields = self.model._meta.field_to_db_column_name_map.keys()
+            update_fields = model_meta.field_to_db_column_name_map.keys()
 
         values = [
-            self.column_map[field_name](getattr(instance, field_name), instance)
+            model_meta.fields_map[field_name].db_value(getattr(instance, field_name), instance)
             for field_name in update_fields
-            if not self.model._meta.fields_map[field_name].primary_key
+            if not model_meta.fields_map[field_name].primary_key
         ]
 
-        values.append(self.model._meta.pk.to_db_value(instance.pk, instance))
+        values.append(model_meta.pk.db_value(instance.pk, instance))
         return (await self.db.execute_query(self._get_update_sql(update_fields), values))[0]
 
     async def execute_bulk_update(self, instances: "List[Model]", update_fields: List[str]) -> None:
         if not update_fields:
             raise ParamsError("Update fields must be provided for bulk update")
 
-        if any(self.model._meta.fields_map[field_name].primary_key for field_name in update_fields):
+        model_meta = self.model._meta
+        fields_map = model_meta.fields_map
+        if any(fields_map[field_name].primary_key for field_name in update_fields):
             raise ParamsError("Cannot update primary key")
 
         values_lists = [
-            [self.column_map[field_name](getattr(instance, field_name), instance)
+            [fields_map[field_name].db_value(getattr(instance, field_name), instance)
                 for field_name in update_fields] +
-            [self.model._meta.pk.to_db_value(instance.pk, instance)]
+            [model_meta.pk.db_value(instance.pk, instance)]
 
             for instance in instances
         ]
@@ -226,16 +210,18 @@ class BaseExecutor:
     async def execute_delete(self, instance) -> int:
         return (
             await self.db.execute_query(
-                self.delete_query, [self.model._meta.pk.to_db_value(instance.pk, instance)]
+                self.delete_query, [self.model._meta.pk.db_value(instance.pk, instance)]
             )
         )[0]
 
     def _make_prefetch_queries(self) -> None:
+        fields_map = self.model._meta.fields_map
+
         for field_name, forwarded_prefetches in self._prefetch_map.items():
             if field_name in self._prefetch_queries:
                 related_query = self._prefetch_queries.get(field_name)
             else:
-                relation_field = self.model._meta.fields_map[field_name]
+                relation_field = fields_map[field_name]
                 remote_model = relation_field.remote_model
                 related_query = remote_model.all().using_db(self.db)
 

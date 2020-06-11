@@ -39,7 +39,7 @@ class UpdateQuery(AwaitableStatement):
                 if isinstance(field_object, (ForeignKey, OneToOneField)):
                     fk_field_name: str = field_object.id_field_name
                     fk_field_object = self.model._meta.fields_map[fk_field_name]
-                    value = db_client.executor_class._field_to_db(fk_field_object, value.pk, None)
+                    value = fk_field_object.db_value(value.pk, None)
                     self.query = self.query.set(fk_field_object.db_column, value)
 
                 else:
@@ -54,7 +54,7 @@ class UpdateQuery(AwaitableStatement):
                     value = value.field
 
                 else:
-                    value = db_client.executor_class._field_to_db(field_object, value, None)
+                    value = field_object.db_value(value, None)
 
                 self.query = self.query.set(field_object.db_column, value)
 

@@ -1,4 +1,4 @@
-
+import types
 from typing import Any, Dict, List, Optional, Type, Union, TYPE_CHECKING
 
 from tortoise.exceptions import ConfigurationError
@@ -82,6 +82,9 @@ class Field(metaclass=_FieldMeta):
     def __str__(self):
         return f"{self.model_field_name} ({self.db_column})"
 
+    def db_value(self, value: Any, instance) -> Any:
+        return self.get_for_dialect('to_db_value')(value, instance)
+
     def to_db_value(self, value: Any, instance) -> Any:
         if value is None or isinstance(value, self.field_type):
             return value
@@ -121,8 +124,13 @@ class Field(metaclass=_FieldMeta):
 
         dialect = self.model._meta.db.capabilities.dialect
         db_meta = getattr(self, f"_db_{dialect}", None)
+
         if db_meta and key in db_meta.__dict__:
-            return db_meta.__dict__.get(key)
+            attrib = db_meta.__dict__.get(key)
+            if callable(attrib):
+                attrib = types.MethodType(attrib, self)
+
+            return attrib
 
         return getattr(self, key, None)
 

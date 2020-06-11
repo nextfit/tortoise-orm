@@ -182,8 +182,8 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
             raise OperationalError(f"You should first call .save() on {self.instance}")
 
         db = using_db if using_db else self.remote_model._meta.db
-        pk_formatting_func = type(self.instance)._meta.pk.to_db_value
-        related_pk_formatting_func = type(instances[0])._meta.pk.to_db_value
+        pk_formatting_func = type(self.instance)._meta.pk.db_value
+        related_pk_formatting_func = type(instances[0])._meta.pk.db_value
         through_table = Table(self.field.through)
 
         select_query = (
@@ -257,7 +257,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         """
         db = using_db if using_db else self.remote_model._meta.db
         through_table = Table(self.field.through)
-        pk_formatting_func = type(self.instance)._meta.pk.to_db_value
+        pk_formatting_func = type(self.instance)._meta.pk.db_value
         query = (
             db.query_class.from_(through_table)
             .where(
@@ -275,8 +275,8 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         if not instances:
             raise OperationalError("remove() called on no instances")
         through_table = Table(self.field.through)
-        pk_formatting_func = type(self.instance)._meta.pk.to_db_value
-        related_pk_formatting_func = type(instances[0])._meta.pk.to_db_value
+        pk_formatting_func = type(self.instance)._meta.pk.db_value
+        related_pk_formatting_func = type(instances[0])._meta.pk.db_value
 
         if len(instances) == 1:
             condition = (
@@ -381,7 +381,7 @@ class BackwardFKField(RelationField):
 
     async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
         instance_id_set: set = {
-            self.model._meta.db.executor_class._field_to_db(instance._meta.pk, instance.pk, instance)
+            instance._meta.pk.db_value(instance.pk, instance)
             for instance in instance_list
         }
         related_name = self.related_name
@@ -603,7 +603,7 @@ class BackwardOneToOneField(BackwardFKField):
 
     async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
         instance_id_set: set = {
-            self.model._meta.db.executor_class._field_to_db(instance._meta.pk, instance.pk, instance)
+            instance._meta.pk.db_value(instance.pk, instance)
             for instance in instance_list
         }
         related_name = self.related_name
@@ -786,7 +786,7 @@ class ManyToManyField(RelationField):
 
     async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
         instance_id_set = [
-            self.model._meta.db.executor_class._field_to_db(instance._meta.pk, instance.pk, instance)
+            instance._meta.pk.db_value(instance.pk, instance)
             for instance in instance_list
         ]
 

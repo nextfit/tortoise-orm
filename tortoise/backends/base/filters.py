@@ -27,7 +27,7 @@ def string_encoder(value, *args):
 
 def list_encoder(values, instance, field: Field):
     """Encodes an iterable of a given field into a database-compatible format."""
-    return [field.to_db_value(element, instance) for element in values]
+    return [field.db_value(element, instance) for element in values]
 
 #
 # to_db_value functions
@@ -35,11 +35,11 @@ def list_encoder(values, instance, field: Field):
 
 
 def related_to_db_value_func(field: RelationField):
-    return field.remote_model._meta.pk.to_db_value
+    return field.remote_model._meta.pk.db_value
 
 
 def list_pk_encoder(values, instance, field: Field):
-    return [field.to_db_value(getattr(v, "pk", v), instance) for v in values]
+    return [field.db_value(getattr(v, "pk", v), instance) for v in values]
 
 
 def related_list_to_db_values_func(field: RelationField):
