@@ -169,12 +169,12 @@ class BaseExecutor:
         ]
         await self.db.execute_many(self.insert_query, values_lists)
 
-    def _get_update_sql(self, update_fields: Optional[List[str]]) -> str:
+    def _get_update_sql(self, update_fields: List[str]) -> str:
         """
         Generates the SQL for updating a model depending on provided update_fields.
         Result is cached for performance.
         """
-        key = ",".join(update_fields) if update_fields else ""
+        key = ",".join(update_fields)
         if key in self.update_cache:
             return self.update_cache[key]
 
@@ -182,7 +182,7 @@ class BaseExecutor:
         query = self.db.query_class.update(table)
         count = 0
 
-        for field_name in update_fields or self.model._meta.field_to_db_column_name_map.keys():
+        for field_name in update_fields:
             field_object = self.model._meta.fields_map[field_name]
             if not field_object.primary_key:
                 query = query.set(field_object.db_column, self.parameter(count))
@@ -194,11 +194,15 @@ class BaseExecutor:
         return sql
 
     async def execute_update(self, instance, update_fields: Optional[List[str]]) -> int:
+        if not update_fields:
+            update_fields = self.model._meta.field_to_db_column_name_map.keys()
+
         values = [
             self.column_map[field_name](getattr(instance, field_name), instance)
-            for field_name in update_fields or self.model._meta.field_to_db_column_name_map.keys()
+            for field_name in update_fields
             if not self.model._meta.fields_map[field_name].primary_key
         ]
+
         values.append(self.model._meta.pk.to_db_value(instance.pk, instance))
         return (await self.db.execute_query(self._get_update_sql(update_fields), values))[0]
 
