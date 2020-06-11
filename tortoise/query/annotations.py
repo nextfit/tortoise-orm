@@ -11,7 +11,6 @@ from tortoise.query.term_utils import term_name, resolve_term
 
 if TYPE_CHECKING:
     from tortoise.query.base import AwaitableStatement
-    from tortoise.query.queryset import QuerySet
     from tortoise.models import Model
 
 
@@ -44,7 +43,7 @@ class Annotation:
 class Subquery(Annotation):
     __slots__ = ("_queryset", )
 
-    def __init__(self, queryset: 'QuerySet') -> None:
+    def __init__(self, queryset: 'AwaitableStatement') -> None:
         super().__init__()
         self._queryset = queryset
 

@@ -49,7 +49,7 @@ class UpdateQuery(AwaitableStatement):
 
             else:
                 if isinstance(value, Term):
-                    value = F.resolve(value, context)
+                    value = F.resolve(value, self, context)
                 else:
                     value = executor.column_map[field_name](value, None)
 

@@ -95,6 +95,6 @@ class QueryOrderingNode(QueryOrdering):
 
     def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext):
         if isinstance(self.node, Term):
-            self.node = F.resolve(self.node, context)
+            self.node = F.resolve(self.node, queryset, context)
 
         queryset.query = queryset.query.orderby(self.node)
