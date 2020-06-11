@@ -4,6 +4,7 @@ from pypika.terms import Term
 
 from tortoise.exceptions import IntegrityError, UnknownFieldError, NotADbColumnFieldError
 from tortoise.fields import ForeignKey, OneToOneField, RelationField
+from tortoise.query.annotations import Annotation
 from tortoise.query.base import AwaitableStatement
 from tortoise.query.context import QueryContext
 from tortoise.query.expressions import F
@@ -50,6 +51,11 @@ class UpdateQuery(AwaitableStatement):
             else:
                 if isinstance(value, Term):
                     value = F.resolve(value, self, context)
+
+                elif isinstance(value, Annotation):
+                    value.resolve_into(self, context)
+                    value = value.field
+
                 else:
                     value = executor.column_map[field_name](value, None)
 
