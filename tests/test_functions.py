@@ -1,6 +1,8 @@
 
+from pypika.functions import Count
+
 from tests.testmodels import Brand, Image, Product
-from tests.testmodels.store import create_store_objects
+from tests.testmodels.store import create_store_objects, Category
 from tortoise.contrib import test
 from tortoise.query import Prefetch
 from tortoise.query.annotations import OuterRef, Subquery
@@ -24,6 +26,50 @@ class TestFunctions(test.TestCase):
         query_string = products.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
             'SELECT "id","name","price","brand_id","vendor_id" FROM "store_product" ORDER BY MOD("id"*7,143) LIMIT 20')
+
+    async def test_ordering_aggregations(self):
+
+        await create_store_objects()
+
+        categories = Category.all().order_by(-Count('products')).prefetch_related('products').limit(20)
+        cats_fetched = await categories
+
+        # we don't need to _make_query more over, we cannot event make this call twice.
+        # categories._make_query(context=QueryContext())
+        query_string = categories.query.get_sql().replace('`', '"')
+        self.assertEqual(query_string,
+            'SELECT "store_category"."id","store_category"."name","store_category"."image_id" '
+            'FROM "store_category" '
+            'LEFT OUTER JOIN "store_productcategory" "store_category__productcategory" '
+                'ON "store_category__productcategory"."category_id"="store_category"."id" '
+            'GROUP BY "store_category"."id" '
+            'ORDER BY COUNT("store_category__productcategory"."category_id") DESC '
+            'LIMIT 20')
+
+        cats_distilled = [{'name': c.name, 'products': [p.name for p in c.products]} for c in cats_fetched]
+
+        self.assertEqual(cats_distilled, [
+            {
+                'name': 'category_2',
+                'products': ['product_2', 'product_4', 'product_6', 'product_8', 'product_10',
+                    'product_12', 'product_14', 'product_16', 'product_18', 'product_20'
+                ]
+            },
+            {
+                'name': 'category_3',
+                'products': ['product_3', 'product_6', 'product_9', 'product_12', 'product_15',
+                    'product_18', 'product_21'
+                ]
+            },
+            {
+                'name': 'category_5',
+                'products': ['product_5', 'product_10', 'product_15', 'product_20']
+            },
+            {
+                'name': 'category_7',
+                'products': ['product_7', 'product_14', 'product_21']
+            }
+        ])
 
     async def test_annotation(self):
         products = Product.filter(brand_id=OuterRef('id')).limit(1).values_list('name', flat=True)
