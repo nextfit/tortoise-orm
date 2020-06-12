@@ -2,14 +2,13 @@
 from typing import TypeVar, TYPE_CHECKING
 
 from pypika import Order
-from pypika.terms import Node, Term, Negative
+from pypika.terms import Node, Term, Negative, Field
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import FieldError, UnknownFieldError, NotARelationFieldError
 from tortoise.fields import RelationField
 from tortoise.query.annotations import TermAnnotation
 from tortoise.query.context import QueryContext
-from tortoise.query.expressions import F
 
 if TYPE_CHECKING:
     from tortoise.query.base import AwaitableQuery
@@ -35,8 +34,18 @@ class QueryOrderingField(QueryOrdering):
         model = context.top.model
 
         if self.check_annotations and self.field_name in queryset.annotations:
-            annotation = queryset.annotations[self.field_name]
-            queryset.query = queryset.query.orderby(annotation.field, order=self.direction)
+            #
+            # We need to make sure the annotation will show up
+            # in the final query, since we are referring to it here,
+            # otherwise, these two lines commented below, can create the
+            # whole annotation inside our ordering clause, which
+            # in all imaginable cases is NOT the desired behavior
+            #
+            # annotation = queryset.annotations[self.field_name]
+            # queryset.query = queryset.query.orderby(annotation.field, order=self.direction)
+            #
+
+            queryset.query = queryset.query.orderby(Field(self.field_name), order=self.direction)
             return
 
         field_name, _, field_sub = self.field_name.partition(LOOKUP_SEP)

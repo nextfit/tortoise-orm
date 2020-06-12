@@ -71,6 +71,55 @@ class TestFunctions(test.TestCase):
             }
         ])
 
+    async def test_ordering_annotation_aggregations(self):
+
+        await create_store_objects()
+
+        categories = Category.annotate(cnt=Count('products')).order_by("-cnt").prefetch_related('products').limit(20)
+        cats_fetched = await categories
+
+        # we don't need to _make_query more over, we cannot event make this call twice.
+        # categories._make_query(context=QueryContext())
+        query_string = categories.query.get_sql().replace('`', '"')
+        self.assertEqual(query_string,
+            'SELECT '
+                '"store_category"."id",'
+                '"store_category"."name",'
+                '"store_category"."image_id",'
+                'COUNT("store_category__productcategory"."category_id") "cnt" '
+            'FROM "store_category" '
+            'LEFT OUTER JOIN "store_productcategory" "store_category__productcategory" '
+                'ON "store_category__productcategory"."category_id"="store_category"."id" '
+            'GROUP BY "store_category"."id" '
+            'ORDER BY "cnt" DESC '
+            'LIMIT 20')
+
+        cats_distilled = [{'name': c.name, 'products': [p.name for p in c.products]} for c in cats_fetched]
+
+        self.assertEqual(cats_distilled, [
+            {
+                'name': 'category_2',
+                'products': ['product_2', 'product_4', 'product_6', 'product_8', 'product_10',
+                    'product_12', 'product_14', 'product_16', 'product_18', 'product_20'
+                ]
+            },
+            {
+                'name': 'category_3',
+                'products': ['product_3', 'product_6', 'product_9', 'product_12', 'product_15',
+                    'product_18', 'product_21'
+                ]
+            },
+            {
+                'name': 'category_5',
+                'products': ['product_5', 'product_10', 'product_15', 'product_20']
+            },
+            {
+                'name': 'category_7',
+                'products': ['product_7', 'product_14', 'product_21']
+            }
+        ])
+
+
     async def test_annotation(self):
         products = Product.filter(brand_id=OuterRef('id')).limit(1).values_list('name', flat=True)
         brands = Brand.annotate(product_name=Subquery(products))
