@@ -2,11 +2,12 @@
 from typing import TypeVar, TYPE_CHECKING
 
 from pypika import Order
-from pypika.terms import Node, Term
+from pypika.terms import Node, Term, Negative
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import FieldError, UnknownFieldError, NotARelationFieldError
 from tortoise.fields import RelationField
+from tortoise.query.annotations import TermAnnotation
 from tortoise.query.context import QueryContext
 from tortoise.query.expressions import F
 
@@ -95,6 +96,16 @@ class QueryOrderingNode(QueryOrdering):
 
     def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext):
         if isinstance(self.node, Term):
-            self.node = F.resolve(self.node, queryset, context)
+            term_annotation = TermAnnotation(self.node)
+            term_annotation.resolve_into(queryset, context)
 
-        queryset.query = queryset.query.orderby(self.node)
+            field = term_annotation.field
+            direction = None
+            if isinstance(field, Negative):
+                field = field.term
+                direction = Order.desc
+
+            queryset.query = queryset.query.orderby(field, order=direction)
+
+        else:
+            queryset.query = queryset.query.orderby(self.node)

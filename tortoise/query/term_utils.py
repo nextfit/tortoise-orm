@@ -1,7 +1,7 @@
 
 from typing import Optional, Tuple, TYPE_CHECKING
 
-from pypika.terms import ArithmeticExpression
+from pypika.terms import ArithmeticExpression, Negative
 from pypika.terms import Field as PyPikaField
 from pypika.terms import Function as PyPikaFunction
 from pypika.terms import Term as PyPikaTerm
@@ -104,6 +104,10 @@ def resolve_term(
         if len(term.args) > 0:
             field, term.args[0] = resolve_term(term.args[0], queryset, context, accept_relation)
 
+        return field, term
+
+    elif isinstance(term, Negative):
+        field, term.term = resolve_term(term.term, queryset, context, accept_relation)
         return field, term
 
     elif isinstance(term, ValueWrapper):
