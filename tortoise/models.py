@@ -567,8 +567,8 @@ class Model(metaclass=ModelMeta):
         return QuerySet(cls).exclude(*args, **kwargs)
 
     @classmethod
-    def annotate(cls: Type[MODEL], **kwargs) -> QuerySet[MODEL]:
-        return QuerySet(cls).annotate(**kwargs)
+    def annotate(cls: Type[MODEL], *args, **kwargs) -> QuerySet[MODEL]:
+        return QuerySet(cls).annotate(*args, **kwargs)
 
     @classmethod
     def all(cls: Type[MODEL]) -> QuerySet[MODEL]:
