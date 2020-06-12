@@ -242,12 +242,13 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         for field_name in related_map:
             field_object = model._meta.fields_map[field_name]
-            remote_table = self.join_table_by_field(table, field_object)
+            join_data = self.join_table_by_field(table, field_object)
+            remote_table = join_data.table
 
             cols = [remote_table[col] for col in field_object.remote_model._meta.db_columns]
             self.query = self.query.select(*cols)
             if related_map[field_name]:
-                context.push(field_object.remote_model, remote_table)
+                context.push(join_data.model, join_data.table)
                 self._resolve_select_related(context, related_map[field_name])
                 context.pop()
 

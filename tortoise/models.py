@@ -154,7 +154,7 @@ class MetaInfo:
 
     @property
     def pk_db_column(self) -> str:
-        return self.pk.db_column or self.pk_attr
+        return self.pk.db_column
 
     def finalize_model(self) -> None:
         """

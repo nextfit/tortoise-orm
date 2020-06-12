@@ -1,9 +1,10 @@
 
 from copy import deepcopy
+from dataclasses import dataclass
 from functools import partial
 from typing import Awaitable, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING, Any
 
-from pypika import Criterion, Table
+from pypika import Criterion, Table, Field as PyPikaField
 from typing_extensions import Literal
 
 from tortoise.constants import LOOKUP_SEP
@@ -298,6 +299,15 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         await db.execute_query(str(query))
 
 
+@dataclass
+class JoinData:
+    table: Table
+    criterion: Criterion
+    pypika_field: PyPikaField
+    model: Optional[Type[MODEL]]
+    field_object: Optional[Field]
+
+
 class RelationField(Field, Generic[MODEL]):
     has_db_column = False
 
@@ -312,7 +322,7 @@ class RelationField(Field, Generic[MODEL]):
     def create_relation(self) -> None:
         raise NotImplementedError()
 
-    def get_joins(self, table: Table, full: bool) -> List[Tuple[Table, Criterion]]:
+    def get_joins(self, table: Table, full: bool) -> List[JoinData]:
         """
         Get required joins for this relation
 
@@ -404,10 +414,17 @@ class BackwardFKField(RelationField):
 
         return instance_list
 
-    def get_joins(self, table: Table, full: bool) -> List[Tuple[Table, Criterion]]:
+    def get_joins(self, table: Table, full: bool) -> List[JoinData]:
         table_pk = self.model._meta.pk_db_column
         related_table = self.remote_model._meta.table(alias=self.join_table_alias(table))
-        return [(related_table, table[table_pk] == related_table[self.related_name])]
+        related_field = self.remote_model._meta.fields_map[self.related_name]
+        return [JoinData(
+            related_table,
+            related_table[related_field.db_column] == table[table_pk],
+            related_table[related_field.db_column],
+            self.remote_model,
+            related_field,
+        )]
 
 
 class ForeignKey(RelationField):
@@ -564,11 +581,17 @@ class ForeignKey(RelationField):
                 self.model, self.id_field_name, True, self.description)
             remote_model._meta.add_field(backward_relation_name, backward_relation_field)
 
-    def get_joins(self, table: Table, full: bool) -> List[Tuple[Table, Criterion]]:
+    def get_joins(self, table: Table, full: bool) -> List[JoinData]:
         if full:
-            related_table_pk = self.remote_model._meta.pk_db_column
+            related_field = self.remote_model._meta.pk
             related_table = self.remote_model._meta.table(alias=self.join_table_alias(table))
-            return [(related_table, related_table[related_table_pk] == table[self.db_column])]
+            return [JoinData(
+                related_table,
+                related_table[related_field.db_column] == table[self.db_column],
+                related_table[related_field.db_column],
+                self.remote_model,
+                related_field,
+            )]
 
         else:
             return []
@@ -861,17 +884,29 @@ class ManyToManyField(RelationField):
 
         return instance_list
 
-    def get_joins(self, table: Table, full: bool) -> List[Tuple[Table, Criterion]]:
+    def get_joins(self, table: Table, full: bool) -> List[JoinData]:
         table_pk = self.model._meta.pk_db_column
-        related_table_pk = self.remote_model._meta.pk_db_column
 
         through_table_name = "{}{}{}{}".format(table.get_table_name(), LOOKUP_SEP,
             self.remote_model.__name__.lower(), self.model.__name__.lower())
         through_table = Table(self.through).as_(through_table_name)
-        joins = [(through_table, table[table_pk] == through_table[self.backward_key])]
+        joins = [JoinData(
+            through_table,
+            through_table[self.backward_key] == table[table_pk],
+            through_table[self.backward_key],
+            None,
+            None,
+        )]
 
         if full:
             related_table = self.remote_model._meta.table(alias=self.join_table_alias(table))
-            joins.append((related_table, through_table[self.forward_key] == related_table[related_table_pk]))
+            related_field = self.remote_model._meta.pk
+            joins.append(JoinData(
+                related_table,
+                related_table[related_field.db_column] == through_table[self.forward_key],
+                related_table[related_field.db_column],
+                self.remote_model,
+                related_field
+            ))
 
         return joins

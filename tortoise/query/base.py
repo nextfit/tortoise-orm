@@ -21,6 +21,7 @@ from pypika.terms import Node
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import ParamsError
 from tortoise.fields import RelationField
+from tortoise.fields.relational import JoinData
 from tortoise.filters.q import Q
 from tortoise.query.annotations import Annotation
 from tortoise.query.context import QueryContext
@@ -100,7 +101,7 @@ class AwaitableStatement(Generic[MODEL]):
     def is_aggregate(self) -> bool:
         return any([annotation.field.is_aggregate for annotation in self.annotations.values()])
 
-    def join_table_by_field(self, table, relation_field: RelationField, full=True) -> Optional[Table]:
+    def join_table_by_field(self, table, relation_field: RelationField, full=True) -> Optional[JoinData]:
         """
         :param table:
         :param relation_field:
@@ -113,11 +114,11 @@ class AwaitableStatement(Generic[MODEL]):
         joins = relation_field.get_joins(table, full)
         if joins:
             for join in joins:
-                if join[0] not in self._joined_tables:
-                    self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
-                    self._joined_tables.append(join[0])
+                if join.table not in self._joined_tables:
+                    self.query = self.query.join(join.table, how=JoinType.left_outer).on(join.criterion)
+                    self._joined_tables.append(join.table)
 
-            return joins[-1][0]
+            return joins[-1]
 
         else:
             return None

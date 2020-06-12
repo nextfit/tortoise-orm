@@ -49,8 +49,8 @@ class QueryOrderingField(QueryOrdering):
                     "Ordering by relation is not possible. Order by nested field of related model"
                 )
 
-            related_table = queryset.join_table_by_field(table, field_object)
-            context.push(field_object.remote_model, related_table)
+            join_data = queryset.join_table_by_field(table, field_object)
+            context.push(join_data.model, join_data.table)
             QueryOrderingField(field_sub, self.direction, False).resolve_into(queryset, context)
             context.pop()
 

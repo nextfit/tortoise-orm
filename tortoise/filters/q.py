@@ -130,9 +130,15 @@ class Q:
         key_filter = model._meta.get_filter(key)
         if key_filter:
             if isinstance(field_object, RelationField):
-                related_table = queryset.join_table_by_field(table, field_object, full=False)
-                if related_table:
-                    context.push(field_object.remote_model, related_table)
+                join_data = queryset.join_table_by_field(table, field_object, full=False)
+                if join_data:
+                    #
+                    # We are potentially adding two None here into the context
+                    # however, since we have a valid key_filter it means no sub_field
+                    # and hence to inner tables and no context is necessary, except
+                    # for the correct position of the stack levels,
+                    #
+                    context.push(join_data.model, join_data.table)
                     clauses = QueryClauses(where_criterion=key_filter(context, value))
                     context.pop()
                 else:
@@ -144,8 +150,8 @@ class Q:
                 return QueryClauses(where_criterion=key_filter(context, value))
 
         if isinstance(field_object, RelationField):
-            related_table = queryset.join_table_by_field(table, field_object)
-            context.push(field_object.remote_model, related_table)
+            join_data = queryset.join_table_by_field(table, field_object)
+            context.push(join_data.model, join_data.table)
 
             q = Q(**{field_sub: value})
             q._check_annotations = False

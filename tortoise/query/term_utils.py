@@ -45,20 +45,16 @@ def resolve_field_name_into(
 
     else:
         if field_sub:
-            related_table = queryset.join_table_by_field(table, relation_field)
+            join_data = queryset.join_table_by_field(table, relation_field)
 
-            context.push(relation_field.remote_model, related_table)
+            context.push(join_data.model, join_data.table)
             (field_object, pypika_field) = resolve_field_name_into(field_sub, queryset, context, accept_relation)
             context.pop()
             return field_object, pypika_field
 
         elif accept_relation:
-            related_table = queryset.join_table_by_field(table, relation_field)
-            relation_field_meta = relation_field.remote_model._meta
-            pypika_field = related_table[relation_field_meta.pk_db_column]
-            field_object = relation_field_meta.pk
-
-            return field_object, pypika_field
+            join_data = queryset.join_table_by_field(table, relation_field, full=False)
+            return join_data.field_object, join_data.pypika_field
 
         else:
             raise FieldError("{} is a relation. Try a nested field of the related model".format(relation_field_name))

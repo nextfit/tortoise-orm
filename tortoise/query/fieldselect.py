@@ -48,10 +48,10 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
                 'a field on the related model'.format(field_name)
             )
 
-        field_table = self.join_table_by_field(table, field_object)
+        join_data = self.join_table_by_field(table, field_object)
         forwarded_base, _, forwarded_sub = forwarded_fields.partition(LOOKUP_SEP)
 
-        context.push(field_object.remote_model, field_table)
+        context.push(join_data.model, join_data.table)
         output = self._join_table_with_forwarded_fields(
             context=context,
             field_name=forwarded_base,
