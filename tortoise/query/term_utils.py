@@ -21,7 +21,10 @@ def resolve_field_name_into(
     field_name,
     queryset: "AwaitableStatement[MODEL]",
     context: QueryContext,
-    accept_relation: bool) -> Tuple[Field, PyPikaField]:
+    accept_relation: bool) -> Tuple[Optional[Field], PyPikaField]:
+
+    if field_name in queryset.annotations:
+        return None, queryset.annotations[field_name].field
 
     model = context.top.model
     table = context.top.table
