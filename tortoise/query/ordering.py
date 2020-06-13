@@ -109,7 +109,7 @@ class QueryOrderingNode(QueryOrdering):
             term_annotation.resolve_into(queryset, context)
 
             field = term_annotation.field
-            direction = None
+            direction = Order.asc
             if isinstance(field, Negative):
                 field = field.term
                 direction = Order.desc

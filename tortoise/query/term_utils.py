@@ -57,7 +57,14 @@ def resolve_field_name_into(
 
         elif accept_relation:
             join_data = queryset.join_table_by_field(table, relation_field, full=False)
-            return join_data.field_object, join_data.pypika_field
+            if join_data:
+                return join_data.field_object, join_data.pypika_field
+
+            else:
+                # this can happen only when relation_field is instance of ForeignKey or OneToOneField
+                field_object = model._meta.fields_map[relation_field.id_field_name]
+                pypika_field = table[field_object.db_column]
+                return field_object, pypika_field
 
         else:
             raise FieldError("{} is a relation. Try a nested field of the related model".format(relation_field_name))

@@ -25,9 +25,95 @@ class TestFunctions(test.TestCase):
         products._make_query(context=QueryContext())
         query_string = products.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
-            'SELECT "id","name","price","brand_id","vendor_id" FROM "store_product" ORDER BY MOD("id"*7,143) LIMIT 20')
+            'SELECT "id","name","price","brand_id","vendor_id" FROM "store_product" ORDER BY MOD("id"*7,143) ASC LIMIT 20')
 
-    async def test_ordering_aggregations(self):
+    async def test_ordering_aggregations_m2o(self):
+        products = Product.all().order_by(-Count('brand')).limit(20)
+        products._make_query(context=QueryContext())
+        query_string = products.query.get_sql().replace('`', '"')
+        self.assertEqual(query_string,
+            'SELECT "id","name","price","brand_id","vendor_id" '
+            'FROM "store_product" '
+            'GROUP BY "id" '
+            'ORDER BY COUNT("brand_id") DESC '
+            'LIMIT 20')
+
+    async def test_ordering_annotation_aggregations_m2o(self):
+        await create_store_objects()
+
+        products = Product.annotate(cnt=Count('brand')).order_by("-cnt", "id").limit(5)
+        products_fetched = await products
+
+        # we don't need to _make_query more over, we cannot event make this call twice.
+        # categories._make_query(context=QueryContext())
+        query_string = products.query.get_sql().replace('`', '"')
+        self.assertEqual(query_string,
+            'SELECT '
+                '"id","name","price","brand_id","vendor_id",'
+                'COUNT("brand_id") "cnt" '
+            'FROM "store_product" '
+            'GROUP BY "id" '
+            'ORDER BY "cnt" DESC,"id" ASC '
+            'LIMIT 5')
+
+        products_distilled = [{'name': p.name, 'cnt': p.cnt} for p in products_fetched]
+
+        self.assertEqual(products_distilled, [
+            {'name': 'product_1', 'cnt': 1},
+            {'name': 'product_2', 'cnt': 1},
+            {'name': 'product_3', 'cnt': 1},
+            {'name': 'product_4', 'cnt': 1},
+            {'name': 'product_5', 'cnt': 1}
+        ])
+
+    async def test_ordering_aggregations_o2m(self):
+        await create_store_objects()
+
+        brands = Brand.all().order_by(-Count('products')).prefetch_related('products').limit(20)
+        brands_fetched = await brands
+
+        # we don't need to _make_query more over, we cannot event make this call twice.
+        # brands._make_query(context=QueryContext())
+        query_string = brands.query.get_sql().replace('`', '"')
+        self.assertEqual(query_string,
+            'SELECT "store_brand"."id","store_brand"."name","store_brand"."image_id" '
+            'FROM "store_brand" '
+            'LEFT OUTER JOIN "store_product" "products" '
+                'ON "products"."brand_id"="store_brand"."id" '
+            'GROUP BY "store_brand"."id" '
+            'ORDER BY COUNT("products"."brand_id") DESC '
+            'LIMIT 20')
+
+        brands_distilled = [{'name': c.name, 'products': [p.name for p in c.products]} for c in brands_fetched]
+
+        self.assertEqual(brands_distilled, [
+            {
+                'name': 'brand_6',
+                'products': ['product_16', 'product_17', 'product_18', 'product_19', 'product_20', 'product_21']
+            },
+            {
+                'name': 'brand_5',
+                'products': ['product_11', 'product_12', 'product_13', 'product_14', 'product_15']
+            },
+            {
+                'name': 'brand_4',
+                'products': ['product_7', 'product_8', 'product_9', 'product_10']
+            },
+            {
+                'name': 'brand_3',
+                'products': ['product_4', 'product_5', 'product_6']
+            },
+            {
+                'name': 'brand_2',
+                'products': ['product_2', 'product_3']
+            },
+            {
+                'name': 'brand_1',
+                'products': ['product_1']
+            }
+        ])
+
+    async def test_ordering_aggregations_m2m(self):
 
         await create_store_objects()
 
@@ -71,7 +157,7 @@ class TestFunctions(test.TestCase):
             }
         ])
 
-    async def test_ordering_annotation_aggregations(self):
+    async def test_ordering_annotation_aggregations_m2m(self):
 
         await create_store_objects()
 
