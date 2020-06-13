@@ -80,6 +80,10 @@ class QuerySet(AwaitableQuery[MODEL]):
         if duplicate_keys:
             raise ParamsError("Duplicate annotations: {}".format(duplicate_keys))
 
+        duplicate_keys = args_dict.keys() & self.model._meta.fields_map.keys()
+        if duplicate_keys:
+            raise ParamsError("Annotations {} conflict with existing model fields".format(duplicate_keys))
+
         queryset = self._clone()
         queryset.annotations.update(args_dict)
         return queryset
