@@ -9,7 +9,7 @@ from pypika.terms import ValueWrapper
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import FieldError, ParamsError, UnknownFieldError, NotARelationFieldError
-from tortoise.fields import Field
+from tortoise.fields import Field, RelationField
 from tortoise.query.context import QueryContext
 
 if TYPE_CHECKING:
@@ -34,19 +34,7 @@ def resolve_field_name_into(
     if not relation_field:
         raise UnknownFieldError(relation_field_name, model)
 
-    if relation_field.has_db_column:
-        if field_sub:
-            raise NotARelationFieldError(relation_field_name, model)
-
-        field_object = relation_field
-        pypika_field = table[field_object.db_column]
-        func = field_object.get_for_dialect("function_cast")
-        if func:
-            pypika_field = func(pypika_field)
-
-        return field_object, pypika_field
-
-    else:
+    if isinstance(relation_field, RelationField):
         if field_sub:
             join_data = queryset.join_table_by_field(table, relation_field)
 
@@ -68,6 +56,18 @@ def resolve_field_name_into(
 
         else:
             raise FieldError("{} is a relation. Try a nested field of the related model".format(relation_field_name))
+
+    else:
+        if field_sub:
+            raise NotARelationFieldError(relation_field_name, model)
+
+        field_object = relation_field
+        pypika_field = table[field_object.db_column]
+        func = field_object.get_for_dialect("function_cast")
+        if func:
+            pypika_field = func(pypika_field)
+
+        return field_object, pypika_field
 
 
 def resolve_term(

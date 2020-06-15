@@ -134,20 +134,17 @@ class Field(metaclass=_FieldMeta):
 
         return getattr(self, key, None)
 
-    def describe(self, serializable: bool = True) -> dict:
-        def get_db_column_types() -> Optional[Dict[str, str]]:
-            if self.has_db_column:
-                return {
-                    "": getattr(self, "SQL_TYPE"),
-                    **{
-                        dialect: dialect_options["SQL_TYPE"]
-                        for dialect, dialect_options in self._get_dialects().items()
-                        if "SQL_TYPE" in dialect_options
-                    },
-                }
+    def get_db_column_types(self) -> Optional[Dict[str, str]]:
+        return {
+            "": getattr(self, "SQL_TYPE"),
+            **{
+                dialect: dialect_options["SQL_TYPE"]
+                for dialect, dialect_options in self._get_dialects().items()
+                if "SQL_TYPE" in dialect_options
+            },
+        }
 
-            else:
-                return None
+    def describe(self, serializable: bool = True) -> dict:
 
         def default_name(default: Any) -> Optional[Union[int, float, str, bool]]:
             if isinstance(default, (int, float, str, bool, type(None))):
@@ -180,7 +177,7 @@ class Field(metaclass=_FieldMeta):
             "name": self.model_field_name,
             "field_type": self.__class__.__name__ if serializable else self.__class__,
             "db_column": self.db_column,
-            "db_column_types": get_db_column_types(),
+            "db_column_types": self.get_db_column_types(),
             "python_type": type_name(field_type) if serializable else field_type,
             "generated": self.generated,
             "auto_created": self.auto_created,

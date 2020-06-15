@@ -335,19 +335,22 @@ class RelationField(Field, Generic[MODEL]):
     async def prefetch(self, instance_list: list, related_query: "QuerySet[MODEL]") -> list:
         raise NotImplementedError()
 
-    def describe(self, serializable: bool = True) -> dict:
-        desc = super().describe(serializable)
-
-        # RelationFields are entirely "virtual", so no direct DB representation
-        del desc["db_column"]
-        return desc
-
     def join_table_alias(self, table: Table) -> str:
         # return f"{table.get_table_name()}{LOOKUP_SEP}{self.model_field_name}"
         if table.alias:
             return "{}{}{}".format(table.alias, LOOKUP_SEP, self.model_field_name)
         else:
             return self.model_field_name
+
+    def get_db_column_types(self) -> Optional[Dict[str, str]]:
+        return None
+
+    def describe(self, serializable: bool = True) -> dict:
+        desc = super().describe(serializable)
+
+        # RelationFields are entirely "virtual", so no direct DB representation
+        del desc["db_column"]
+        return desc
 
 
 class BackwardFKField(RelationField):
