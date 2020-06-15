@@ -41,7 +41,7 @@ class TestFunctions(test.TestCase):
     async def test_ordering_annotation_aggregations_m2o(self):
         await create_store_objects()
 
-        products = Product.annotate(cnt=Count('brand')).order_by("-cnt", "id").limit(5)
+        products = Product.annotate(cnt=Count('brand')).order_by("-cnt", "name").limit(5)
         products_fetched = await products
 
         # we don't need to _make_query more over, we cannot event make this call twice.
@@ -53,17 +53,17 @@ class TestFunctions(test.TestCase):
                 'COUNT("brand_id") "cnt" '
             'FROM "store_product" '
             'GROUP BY "id" '
-            'ORDER BY "cnt" DESC,"id" ASC '
+            'ORDER BY "cnt" DESC,"name" ASC '
             'LIMIT 5')
 
-        products_distilled = [{'id': p.id, 'name': p.name, 'cnt': p.cnt} for p in products_fetched]
+        products_distilled = [{'name': p.name, 'cnt': p.cnt} for p in products_fetched]
 
         self.assertEqual(products_distilled, [
-            {'id': 1, 'name': 'product_1', 'cnt': 1},
-            {'id': 2, 'name': 'product_2', 'cnt': 1},
-            {'id': 3, 'name': 'product_3', 'cnt': 1},
-            {'id': 4, 'name': 'product_4', 'cnt': 1},
-            {'id': 5, 'name': 'product_5', 'cnt': 1}
+            {'name': 'product_1', 'cnt': 1},
+            {'name': 'product_10', 'cnt': 1},
+            {'name': 'product_11', 'cnt': 1},
+            {'name': 'product_12', 'cnt': 1},
+            {'name': 'product_13', 'cnt': 1}
         ])
 
     async def test_ordering_aggregations_o2m(self):
