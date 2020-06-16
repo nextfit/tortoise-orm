@@ -199,7 +199,7 @@ class TestPrefetching(test.TestCase):
         # products = await Product.all().prefetch_related('categories')
 
         prefetch = Prefetch('categories', queryset=Category.all().select_related('image'))
-        products = await Product.all().prefetch_related(prefetch)
+        products = await Product.all().order_by('name').prefetch_related(prefetch)
 
         products_distilled = [
             {
@@ -213,31 +213,6 @@ class TestPrefetching(test.TestCase):
 
         self.assertEqual(products_distilled, [
             {'name': 'product_1', 'categories': []},
-            {'name': 'product_2', 'categories': [
-                {'name': 'category_2', 'image': {'src': 'category_image_2'}}
-            ]},
-            {'name': 'product_3', 'categories': [
-                {'name': 'category_3', 'image': {'src': 'category_image_3'}}
-            ]},
-            {'name': 'product_4', 'categories': [
-                {'name': 'category_2', 'image': {'src': 'category_image_2'}}
-            ]},
-            {'name': 'product_5', 'categories': [
-                {'name': 'category_5', 'image': {'src': 'category_image_5'}}
-            ]},
-            {'name': 'product_6', 'categories': [
-                {'name': 'category_2', 'image': {'src': 'category_image_2'}},
-                {'name': 'category_3', 'image': {'src': 'category_image_3'}}
-            ]},
-            {'name': 'product_7', 'categories': [
-                {'name': 'category_7', 'image': {'src': 'category_image_7'}}
-            ]},
-            {'name': 'product_8', 'categories': [
-                {'name': 'category_2', 'image': {'src': 'category_image_2'}}
-            ]},
-            {'name': 'product_9', 'categories': [
-                {'name': 'category_3', 'image': {'src': 'category_image_3'}}
-            ]},
             {'name': 'product_10', 'categories': [
                 {'name': 'category_2', 'image': {'src': 'category_image_2'}},
                 {'name': 'category_5', 'image': {'src': 'category_image_5'}}
@@ -265,6 +240,9 @@ class TestPrefetching(test.TestCase):
                 {'name': 'category_3', 'image': {'src': 'category_image_3'}}
             ]},
             {'name': 'product_19', 'categories': []},
+            {'name': 'product_2', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}}
+            ]},
             {'name': 'product_20', 'categories': [
                 {'name': 'category_2', 'image': {'src': 'category_image_2'}},
                 {'name': 'category_5', 'image': {'src': 'category_image_5'}}
@@ -272,5 +250,27 @@ class TestPrefetching(test.TestCase):
             {'name': 'product_21', 'categories': [
                 {'name': 'category_3', 'image': {'src': 'category_image_3'}},
                 {'name': 'category_7', 'image': {'src': 'category_image_7'}}
+            ]},
+            {'name': 'product_3', 'categories': [
+                {'name': 'category_3', 'image': {'src': 'category_image_3'}}
+            ]},
+            {'name': 'product_4', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}}
+            ]},
+            {'name': 'product_5', 'categories': [
+                {'name': 'category_5', 'image': {'src': 'category_image_5'}}
+            ]},
+            {'name': 'product_6', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}},
+                {'name': 'category_3', 'image': {'src': 'category_image_3'}}
+            ]},
+            {'name': 'product_7', 'categories': [
+                {'name': 'category_7', 'image': {'src': 'category_image_7'}}
+            ]},
+            {'name': 'product_8', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}}
+            ]},
+            {'name': 'product_9', 'categories': [
+                {'name': 'category_3', 'image': {'src': 'category_image_3'}}
             ]},
         ])
