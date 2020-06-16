@@ -42,9 +42,9 @@ class AwaitableStatement(Generic[MODEL]):
         "_db",
         "capabilities",
         "model",
-        "query",
-        "q_objects",
         "annotations",
+        "q_objects",
+        "query",
     )
 
     def __init__(self, model: Type[MODEL], db=None, q_objects=None, annotations=None) -> None:
