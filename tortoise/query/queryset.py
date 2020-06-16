@@ -258,6 +258,8 @@ class QuerySet(AwaitableQuery[MODEL]):
 
     def _init_query_builder(self, context) -> None:
         self.query = self.query_builder(context.alias).select(*self.model._meta.db_columns)
+        self._joined_tables = []
+
         context.push(self.model, self.query._from[-1])
         self._resolve_select_related(context, self._select_related)
         context.pop()

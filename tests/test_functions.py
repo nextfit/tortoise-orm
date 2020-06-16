@@ -44,8 +44,8 @@ class TestFunctions(test.TestCase):
         products = Product.annotate(cnt=Count('brand')).order_by("-cnt", "name").limit(5)
         products_fetched = await products
 
-        # we don't need to _make_query more over, we cannot event make this call twice.
-        # categories._make_query(context=QueryContext())
+        # we don't need to _make_query more over, we cannot even make this call twice.
+        products._make_query(context=QueryContext())
         query_string = products.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
             'SELECT '
@@ -72,8 +72,8 @@ class TestFunctions(test.TestCase):
         brands = Brand.all().order_by(-Count('products')).prefetch_related('products').limit(20)
         brands_fetched = await brands
 
-        # we don't need to _make_query more over, we cannot event make this call twice.
-        # brands._make_query(context=QueryContext())
+        # we don't need to _make_query more over, we cannot even make this call twice.
+        brands._make_query(context=QueryContext())
         query_string = brands.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
             'SELECT "store_brand"."id","store_brand"."name","store_brand"."image_id" '
@@ -120,8 +120,8 @@ class TestFunctions(test.TestCase):
         categories = Category.all().order_by(-Count('products')).prefetch_related('products').limit(20)
         cats_fetched = await categories
 
-        # we don't need to _make_query more over, we cannot event make this call twice.
-        # categories._make_query(context=QueryContext())
+        # we don't need to _make_query more over, we cannot even make this call twice.
+        categories._make_query(context=QueryContext())
         query_string = categories.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
             'SELECT "store_category"."id","store_category"."name","store_category"."image_id" '
@@ -164,8 +164,8 @@ class TestFunctions(test.TestCase):
         categories = Category.annotate(cnt=Count('products')).order_by("-cnt").prefetch_related('products').limit(20)
         cats_fetched = await categories
 
-        # we don't need to _make_query more over, we cannot event make this call twice.
-        # categories._make_query(context=QueryContext())
+        # we don't need to _make_query more over, we cannot even make this call twice.
+        categories._make_query(context=QueryContext())
         query_string = categories.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
             'SELECT '

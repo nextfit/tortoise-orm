@@ -1,4 +1,4 @@
-
+from copy import copy, deepcopy
 from typing import Optional, Tuple, TYPE_CHECKING
 
 from pypika.terms import ArithmeticExpression, Negative
@@ -77,11 +77,12 @@ def resolve_term(
     accept_relation: bool) -> Tuple[Optional[Field], PyPikaTerm]:
 
     if isinstance(term, ArithmeticExpression):
-        field_left, term.left = resolve_term(term.left, queryset, context, accept_relation)
-        field_right, term.right = resolve_term(term.right, queryset, context, accept_relation)
+        pypika_term = copy(term)
+        field_left, pypika_term.left = resolve_term(term.left, queryset, context, accept_relation)
+        field_right, pypika_term.right = resolve_term(term.right, queryset, context, accept_relation)
         field = field_left or field_right
 
-        return field, term
+        return field, pypika_term
 
     if isinstance(term, PyPikaFunction):
         #
@@ -107,15 +108,18 @@ def resolve_term(
         # a field reference as we do here:
         #
 
+        pypika_term = copy(term)
         field = None
         if len(term.args) > 0:
-            field, term.args[0] = resolve_term(term.args[0], queryset, context, accept_relation)
+            pypika_term.args = copy(term.args)
+            field, pypika_term.args[0] = resolve_term(term.args[0], queryset, context, accept_relation)
 
-        return field, term
+        return field, pypika_term
 
     elif isinstance(term, Negative):
-        field, term.term = resolve_term(term.term, queryset, context, accept_relation)
-        return field, term
+        pypika_term = copy(term)
+        field, pypika_term.term = resolve_term(term.term, queryset, context, accept_relation)
+        return field, pypika_term
 
     elif isinstance(term, ValueWrapper):
         if isinstance(term.value, str):
