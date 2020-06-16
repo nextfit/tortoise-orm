@@ -1,11 +1,9 @@
-from copy import copy, deepcopy
+
+from copy import copy
 from typing import Optional, Tuple, TYPE_CHECKING
 
-from pypika.terms import ArithmeticExpression, Negative
-from pypika.terms import Field as PyPikaField
-from pypika.terms import Function as PyPikaFunction
-from pypika.terms import Term as PyPikaTerm
-from pypika.terms import ValueWrapper
+from pypika.terms import ArithmeticExpression, Negative, ValueWrapper
+from pypika.terms import Field as PyPikaField, Function as PyPikaFunction, Term as PyPikaTerm
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import FieldError, ParamsError, UnknownFieldError, NotARelationFieldError

@@ -43,13 +43,11 @@ class AwaitableStatement(Generic[MODEL]):
         "capabilities",
         "model",
         "query",
-        "_joined_tables",
         "q_objects",
         "annotations",
     )
 
     def __init__(self, model: Type[MODEL], db=None, q_objects=None, annotations=None) -> None:
-        self._joined_tables: List[Table] = []
         self._db: BaseDBAsyncClient = db
 
         self.model: Type[MODEL] = model
@@ -64,7 +62,6 @@ class AwaitableStatement(Generic[MODEL]):
         queryset.capabilities = self.capabilities
         queryset.model = self.model
         queryset.query = self.query
-        queryset._joined_tables = deepcopy(self._joined_tables)
         queryset.q_objects = deepcopy(self.q_objects)
         queryset.annotations = deepcopy(self.annotations)
 
@@ -114,9 +111,8 @@ class AwaitableStatement(Generic[MODEL]):
         joins = relation_field.get_joins(table, full)
         if joins:
             for join in joins:
-                if join.table not in self._joined_tables:
+                if not self.query.is_joined(join.table):
                     self.query = self.query.join(join.table, how=JoinType.left_outer).on(join.criterion)
-                    self._joined_tables.append(join.table)
 
             return joins[-1]
 
