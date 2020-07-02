@@ -17,11 +17,8 @@ class TestAggregation(test.TestCase):
         event = Event(name="Test", tournament_id=tournament.id)
         await event.save()
 
-        participants = []
-        for i in range(2):
-            team = Team(name=f"Team {(i + 1)}")
-            await team.save()
-            participants.append(team)
+        await Team.bulk_create(Team(name="Team {}".format(i + 1)) for i in range(2))
+        participants = list(await Team.all())
 
         await event.participants.add(participants[0], participants[1])
         await event.participants.add(participants[0], participants[1])

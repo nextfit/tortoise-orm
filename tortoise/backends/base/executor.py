@@ -1,7 +1,7 @@
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Set
 
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Set, Iterable
 from pypika import Parameter
 
 from tortoise.constants import LOOKUP_SEP
@@ -139,7 +139,7 @@ class BaseExecutor:
             insert_result = await self.db.execute_insert(self.insert_query, values)
             await self._process_insert_result(instance, insert_result)
 
-    async def execute_bulk_insert(self, instances: "List[Model]") -> None:
+    async def execute_bulk_insert(self, instances: Iterable["Model"]) -> None:
         values_lists = [
             [
                 field_object.db_value(getattr(instance, field_object.model_field_name), instance)
@@ -187,7 +187,7 @@ class BaseExecutor:
         values.append(model_meta.pk.db_value(instance.pk, instance))
         return (await self.db.execute_query(self._get_update_sql(update_fields), values))[0]
 
-    async def execute_bulk_update(self, instances: "List[Model]", update_fields: List[str]) -> None:
+    async def execute_bulk_update(self, instances: Iterable["Model"], update_fields: List[str]) -> None:
         if not update_fields:
             raise ParamsError("Update fields must be provided for bulk update")
 

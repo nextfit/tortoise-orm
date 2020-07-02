@@ -1,7 +1,7 @@
 
 import itertools
 from copy import deepcopy
-from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar, Iterator, TYPE_CHECKING
+from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar, Iterator, TYPE_CHECKING, Iterable
 
 from pypika import Order, Table
 
@@ -493,7 +493,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def bulk_create(
-        cls: Type[MODEL], objects: List[MODEL], using_db: Optional["BaseDBAsyncClient"] = None
+        cls: Type[MODEL], objects: Iterable[MODEL], using_db: Optional["BaseDBAsyncClient"] = None
     ) -> None:
         """
         Bulk insert operation:
@@ -516,7 +516,7 @@ class Model(metaclass=ModelMeta):
             ])
 
         :param using_db:
-        :param objects: List of objects to bulk create
+        :param objects: Iterable of objects to bulk create
 
         """
         db = using_db or cls._meta.db
@@ -524,7 +524,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def bulk_update(
-        cls: Type[MODEL], objects: List[MODEL], update_fields: List[str], using_db: Optional["BaseDBAsyncClient"] = None
+        cls: Type[MODEL], objects: Iterable[MODEL], update_fields: List[str], using_db: Optional["BaseDBAsyncClient"] = None
     ) -> None:
         """
         Bulk update operation:
@@ -539,7 +539,7 @@ class Model(metaclass=ModelMeta):
 
         :param update_fields: List of fields to be updated
         :param using_db:
-        :param objects: List of objects to bulk update
+        :param objects: Iterable of objects to bulk update
 
         """
         db = using_db or cls._meta.db

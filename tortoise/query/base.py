@@ -14,7 +14,7 @@ from typing import (
     Union,
 )
 
-from pypika import JoinType, Order, Table
+from pypika import JoinType, Order
 from pypika.queries import QueryBuilder
 from pypika.terms import Node
 
@@ -28,7 +28,7 @@ from tortoise.query.context import QueryContext
 from tortoise.query.ordering import QueryOrdering, QueryOrderingField, QueryOrderingNode
 from tortoise.query.single import FirstQuerySet, GetQuerySet
 
-if TYPE_CHECKING:  # pragma: nocoverage
+if TYPE_CHECKING:
     from tortoise.models import Model
 
 
