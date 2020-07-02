@@ -1,9 +1,13 @@
 
 import binascii
 import os
+from typing import TYPE_CHECKING
 
 from tortoise import fields
 from tortoise.models import Model
+
+if TYPE_CHECKING:
+    from tests.testmodels import UniqueTogetherFieldsWithFK
 
 
 def generate_token():
@@ -11,6 +15,9 @@ def generate_token():
 
 
 class Tournament(Model):
+    class Meta:
+        ordering = ['-created', ]
+
     id = fields.SmallIntegerField(primary_key=True)
     name = fields.CharField(max_length=255)
     desc = fields.TextField(null=True)

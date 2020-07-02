@@ -137,18 +137,22 @@ class TestValues(test.TestCase):
         await Tournament.create(name="Championship")
         await Tournament.create(name="Super Bowl")
 
-        tournaments = await Tournament.annotate(name_length=Length("name")).values_list(
-            "name", "name_length"
-        )
+        tournaments = await Tournament\
+            .annotate(name_length=Length("name"))\
+            .values_list("name", "name_length")\
+            .order_by("name")
+
         self.assertEqual(tournaments, [("Championship", 12), ("Super Bowl", 10)])
 
     async def test_values_annotations_length(self):
         await Tournament.create(name="Championship")
         await Tournament.create(name="Super Bowl")
 
-        tournaments = await Tournament.annotate(name_slength=Length("name")).values(
-            "name", "name_slength"
-        )
+        tournaments = await Tournament\
+            .annotate(name_slength=Length("name"))\
+            .values("name", "name_slength")\
+            .order_by("name")
+
         self.assertEqual(
             tournaments,
             [
@@ -161,21 +165,31 @@ class TestValues(test.TestCase):
         await Tournament.create(name="  x")
         await Tournament.create(name=" y ")
 
-        tournaments = await Tournament.annotate(name_trim=Trim("name")).values_list(
-            "name", "name_trim"
-        )
+        tournaments = await Tournament\
+            .annotate(name_trim=Trim("name"))\
+            .values_list("name", "name_trim")\
+            .order_by("id")
+
         self.assertEqual(tournaments, [("  x", "x"), (" y ", "y")])
 
     async def test_values_annotations_trim(self):
         await Tournament.create(name="  x")
         await Tournament.create(name=" y ")
 
-        tournaments = await Tournament.annotate(name_trim=Trim("name")).values("name", "name_trim")
+        tournaments = await Tournament\
+            .annotate(name_trim=Trim("name"))\
+            .values("name", "name_trim")\
+            .order_by("id")
+
         self.assertEqual(
-            tournaments, [{"name": "  x", "name_trim": "x"}, {"name": " y ", "name_trim": "y"}]
+            tournaments,
+            [
+                {"name": "  x", "name_trim": "x"},
+                {"name": " y ", "name_trim": "y"}
+            ]
         )
 
-    async def test_values_annotations_arthmatic(self):
+    async def test_values_annotations_arithmetic(self):
         await Tournament.create(id=1, name="1")
         await Tournament.create(id=2, name="2")
         await Tournament.create(id=3, name="3")
@@ -183,7 +197,7 @@ class TestValues(test.TestCase):
         await Tournament.create(id=5, name="5")
         await Tournament.create(id=6, name="6")
 
-        tournaments = await Tournament.annotate(new_id=F("id") * 7 + 3).values_list("new_id")
+        tournaments = await Tournament.annotate(new_id=F("id") * 7 + 3).order_by("id").values_list("new_id")
         self.assertEqual(
             tournaments, [(10,), (17,), (24,), (31,), (38,), (45,)]
         )

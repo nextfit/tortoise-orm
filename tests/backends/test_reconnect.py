@@ -19,7 +19,7 @@ class TestReconnect(test.IsolatedTestCase):
         await Tournament.create(name="3")
 
         self.assertEqual(
-            [f"{a.id}:{a.name}" for a in await Tournament.all()], ["1:1", "2:2", "3:3"]
+            [f"{a.id}:{a.name}" for a in await Tournament.all().order_by("id")], ["1:1", "2:2", "3:3"]
         )
 
     @test.requireCapability(supports_transactions=True)
@@ -35,4 +35,4 @@ class TestReconnect(test.IsolatedTestCase):
         await Tortoise._db_client_map["models"]._expire_connections()
 
         async with in_transaction():
-            self.assertEqual([f"{a.id}:{a.name}" for a in await Tournament.all()], ["1:1", "2:2"])
+            self.assertEqual([f"{a.id}:{a.name}" for a in await Tournament.all().order_by("id")], ["1:1", "2:2"])

@@ -1,23 +1,28 @@
+
 from pypika.functions import Count, Min, Sum
 
 from tests.testmodels import Event, Team, Tournament
 from tortoise.contrib import test
-from tortoise.exceptions import FieldError, NotARelationFieldError
+from tortoise.exceptions import NotARelationFieldError
 
 
 class TestAggregation(test.TestCase):
     async def test_aggregation(self):
         tournament = Tournament(name="New Tournament")
         await tournament.save()
+
         await Tournament.create(name="Second tournament")
         await Event(name="Without participants", tournament_id=tournament.id).save()
+
         event = Event(name="Test", tournament_id=tournament.id)
         await event.save()
+
         participants = []
         for i in range(2):
             team = Team(name=f"Team {(i + 1)}")
             await team.save()
             participants.append(team)
+
         await event.participants.add(participants[0], participants[1])
         await event.participants.add(participants[0], participants[1])
 
