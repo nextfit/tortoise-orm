@@ -19,9 +19,10 @@ def resolve_field_name(
     field_name,
     queryset: "AwaitableStatement[MODEL]",
     context: QueryContext,
-    accept_relation: bool) -> Tuple[Optional[Field], PyPikaField]:
+    accept_relation: bool,
+    check_annotations=True) -> Tuple[Optional[Field], PyPikaField]:
 
-    if field_name in queryset.annotations:
+    if check_annotations and field_name in queryset.annotations:
         return None, queryset.annotations[field_name].field
 
     model = context.top.model
@@ -40,7 +41,9 @@ def resolve_field_name(
             join_data = queryset.join_table_by_field(table, relation_field)
 
             context.push(join_data.model, join_data.table)
-            (field_object, pypika_field) = resolve_field_name(field_sub, queryset, context, accept_relation)
+            (field_object, pypika_field) = resolve_field_name(
+                field_sub, queryset, context, accept_relation, check_annotations=False)
+
             context.pop()
             return field_object, pypika_field
 
