@@ -1,13 +1,12 @@
 
-from typing import Any, Callable, List, Tuple, Type, TYPE_CHECKING, Dict
-
-from pypika import Table
+from typing import Any, Callable, List, Type, TYPE_CHECKING, Dict
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import UnknownFieldError, NotARelationFieldError
 from tortoise.fields import JSONField, RelationField
 from tortoise.query.base import MODEL, AwaitableQuery
 from tortoise.query.context import QueryContext
+from tortoise.query.term_utils import resolve_field_name
 
 if TYPE_CHECKING:
     from tortoise.models import Model
@@ -23,82 +22,6 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
     def _copy(self, queryset) -> None:
         super()._copy(queryset)
         queryset.fields_for_select = self.fields_for_select
-
-    def _join_table_with_forwarded_fields(
-        self, context: QueryContext, field_name: str, forwarded_fields: str
-    ) -> Tuple[Table, str]:
-
-        context_item = context.top
-        model = context_item.model
-        table = context_item.table
-
-        field_object = model._meta.fields_map.get(field_name)
-        if not field_object:
-            raise UnknownFieldError(field_name, model)
-
-        if not isinstance(field_object, RelationField):
-            if forwarded_fields:
-                raise NotARelationFieldError(field_name, model)
-
-            return table, field_object.db_column
-
-        if not forwarded_fields:
-            raise ValueError(
-                'Selecting relation "{}" is not possible, select '
-                'a field on the related model'.format(field_name)
-            )
-
-        join_data = self.join_table_by_field(table, field_object)
-        forwarded_base, _, forwarded_sub = forwarded_fields.partition(LOOKUP_SEP)
-
-        context.push(join_data.model, join_data.table)
-        output = self._join_table_with_forwarded_fields(
-            context=context,
-            field_name=forwarded_base,
-            forwarded_fields=forwarded_sub,
-        )
-        context.pop()
-        return output
-
-    def add_field_to_select_query(self, context: QueryContext, field_name, return_as) -> None:
-        table = context.top.table
-
-        if field_name in self.annotations:
-            self.query._select_other(self.annotations[field_name].field.as_(return_as))
-            return
-
-        if field_name == "pk":
-            field_name = self.model._meta.pk_attr
-
-        base_field_name, _, sub_field = field_name.partition(LOOKUP_SEP)
-        field_object = self.model._meta.fields_map.get(base_field_name)
-        if not field_object:
-            raise UnknownFieldError(base_field_name, self.model)
-
-        if isinstance(field_object, RelationField):
-            if not sub_field:
-                raise ValueError(
-                    'Selecting relation "{}" is not possible, select '
-                    'a field on the related model'.format(field_name)
-                )
-
-            context.push(model=self.model, table=self.model._meta.table())
-            related_table, related_db_column = self._join_table_with_forwarded_fields(
-                context=context, field_name=base_field_name, forwarded_fields=sub_field)
-            context.pop()
-
-            self.query._select_field(related_table[related_db_column].as_(return_as))
-
-        else:
-            if sub_field:
-                if isinstance(field_object, JSONField):
-                    path = "{{{}}}".format(sub_field.replace(LOOKUP_SEP, ','))
-                    self.query._select_other(table[field_object.db_column].get_path_json_value(path).as_(return_as))
-                    return
-
-                raise NotARelationFieldError(base_field_name, self.model)
-
-            self.query._select_field(table[field_object.db_column].as_(return_as))
 
     def resolve_to_python_value(self, model: Type["Model"], field_name: str) -> Callable:
         if field_name in self.annotations:
@@ -128,7 +51,8 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
         context.push(self.model, self.query._from[-1])
         self._add_query_details(context=context)
         for return_as, field_name in self.fields_for_select.items():
-            self.add_field_to_select_query(context, field_name, return_as)
+            _, field = resolve_field_name(field_name, self, context, accept_relation=False)
+            self.query._select_other(field.as_(return_as))
 
         context.pop()
 

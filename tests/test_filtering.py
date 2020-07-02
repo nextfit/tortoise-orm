@@ -2,6 +2,7 @@ from pypika.functions import Coalesce, Count, Length, Lower, Trim, Upper
 
 from tests.testmodels import Event, IntFields, Reporter, Team, Tournament
 from tortoise.contrib import test
+from tortoise.exceptions import FieldError
 from tortoise.filters.q import Q
 
 
@@ -346,7 +347,7 @@ class TestFiltering(test.TestCase):
         self.assertSetEqual({t.name_upper for t in tournaments}, {"TOURNAMENT", "NEW TOURNAMENT"})
 
     async def test_values_select_relation(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(FieldError):
             tournament = await Tournament.create(name="New Tournament")
             await Event.create(name="Test", tournament_id=tournament.id)
             await Event.all().values("tournament")

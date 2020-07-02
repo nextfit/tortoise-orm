@@ -59,28 +59,28 @@ class TestValues(test.TestCase):
         tournament = await Tournament.create(name="New Tournament")
         await Event.create(name="Test", tournament_id=tournament.id)
 
-        with self.assertRaisesRegex(ValueError, 'Selecting relation "tournament" is not possible'):
+        with self.assertRaisesRegex(FieldError, "tournament is a relation. Try a nested field of the related model"):
             await Event.filter(name="Test").values("name", "tournament")
 
     async def test_values_list_related_fk_itself(self):
         tournament = await Tournament.create(name="New Tournament")
         await Event.create(name="Test", tournament_id=tournament.id)
 
-        with self.assertRaisesRegex(ValueError, 'Selecting relation "tournament" is not possible'):
+        with self.assertRaisesRegex(FieldError, "tournament is a relation. Try a nested field of the related model"):
             await Event.filter(name="Test").values_list("name", "tournament")
 
     async def test_values_related_rfk_itself(self):
         tournament = await Tournament.create(name="New Tournament")
         await Event.create(name="Test", tournament_id=tournament.id)
 
-        with self.assertRaisesRegex(ValueError, 'Selecting relation "events" is not possible'):
+        with self.assertRaisesRegex(FieldError, "events is a relation. Try a nested field of the related model"):
             await Tournament.filter(name="New Tournament").values("name", "events")
 
     async def test_values_list_related_rfk_itself(self):
         tournament = await Tournament.create(name="New Tournament")
         await Event.create(name="Test", tournament_id=tournament.id)
 
-        with self.assertRaisesRegex(ValueError, 'Selecting relation "events" is not possible'):
+        with self.assertRaisesRegex(FieldError, "events is a relation. Try a nested field of the related model"):
             await Tournament.filter(name="New Tournament").values_list("name", "events")
 
     async def test_values_related_m2m_itself(self):
@@ -90,7 +90,7 @@ class TestValues(test.TestCase):
         await event.participants.add(team)
 
         with self.assertRaisesRegex(
-            ValueError, 'Selecting relation "participants" is not possible'
+            FieldError, "participants is a relation. Try a nested field of the related model"
         ):
             await Event.filter(name="Test").values("name", "participants")
 
@@ -101,7 +101,7 @@ class TestValues(test.TestCase):
         await event.participants.add(team)
 
         with self.assertRaisesRegex(
-            ValueError, 'Selecting relation "participants" is not possible'
+            FieldError, "participants is a relation. Try a nested field of the related model"
         ):
             await Event.filter(name="Test").values_list("name", "participants")
 

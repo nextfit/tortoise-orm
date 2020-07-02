@@ -7,7 +7,7 @@ from pypika.terms import Field as PyPikaField, Function as PyPikaFunction, Term 
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import FieldError, ParamsError, UnknownFieldError, NotARelationFieldError
-from tortoise.fields import Field, RelationField
+from tortoise.fields import Field, RelationField, JSONField
 from tortoise.query.context import QueryContext
 
 if TYPE_CHECKING:
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from tortoise.query.base import AwaitableStatement
 
 
-def resolve_field_name_into(
+def resolve_field_name(
     field_name,
     queryset: "AwaitableStatement[MODEL]",
     context: QueryContext,
@@ -27,6 +27,9 @@ def resolve_field_name_into(
     model = context.top.model
     table = context.top.table
 
+    # if field_name == "pk":
+    #     field_name = model._meta.pk_attr
+
     relation_field_name, _, field_sub = field_name.partition(LOOKUP_SEP)
     relation_field = model._meta.fields_map.get(relation_field_name)
     if not relation_field:
@@ -37,7 +40,7 @@ def resolve_field_name_into(
             join_data = queryset.join_table_by_field(table, relation_field)
 
             context.push(join_data.model, join_data.table)
-            (field_object, pypika_field) = resolve_field_name_into(field_sub, queryset, context, accept_relation)
+            (field_object, pypika_field) = resolve_field_name(field_sub, queryset, context, accept_relation)
             context.pop()
             return field_object, pypika_field
 
@@ -57,6 +60,10 @@ def resolve_field_name_into(
 
     else:
         if field_sub:
+            if isinstance(relation_field, JSONField):
+                path = "{{{}}}".format(field_sub.replace(LOOKUP_SEP, ','))
+                return None, table[relation_field.db_column].get_path_json_value(path)
+
             raise NotARelationFieldError(relation_field_name, model)
 
         field_object = relation_field
@@ -121,7 +128,7 @@ def resolve_term(
 
     elif isinstance(term, ValueWrapper):
         if isinstance(term.value, str):
-            return resolve_field_name_into(term.value, queryset, context, accept_relation)
+            return resolve_field_name(term.value, queryset, context, accept_relation)
 
         return None, term
 
