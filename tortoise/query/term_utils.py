@@ -20,10 +20,20 @@ def resolve_field_name(
     queryset: "AwaitableStatement[MODEL]",
     context: QueryContext,
     accept_relation: bool,
-    check_annotations=True) -> Tuple[Optional[Field], PyPikaField]:
+    check_annotations=True,
+    expand_annotation=True) -> Tuple[Optional[Field], PyPikaField]:
+
+    #
+    # When expand_annotation is False, we need to make sure the annotation
+    # will show up (will be expanded) in the final query, since we are just
+    # referring to it here.
+    #
 
     if check_annotations and field_name in queryset.annotations:
-        return None, queryset.annotations[field_name].field
+        if expand_annotation:
+            return None, queryset.annotations[field_name].field
+        else:
+            return None, PyPikaField(field_name)
 
     model = context.top.model
     table = context.top.table
