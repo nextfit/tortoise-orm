@@ -27,8 +27,8 @@ def resolve_field_name(
     model = context.top.model
     table = context.top.table
 
-    # if field_name == "pk":
-    #     field_name = model._meta.pk_attr
+    if field_name == "pk":
+        field_name = model._meta.pk_attr
 
     relation_field_name, _, field_sub = field_name.partition(LOOKUP_SEP)
     relation_field = model._meta.fields_map.get(relation_field_name)
