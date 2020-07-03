@@ -27,6 +27,9 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
         if field_name in self.annotations:
             return self.annotations[field_name].to_python_value
 
+        if field_name == "pk":
+            field_name = model._meta.pk_attr
+
         base_field_name, _, sub_field = field_name.partition(LOOKUP_SEP)
         field_object = model._meta.fields_map.get(base_field_name)
         if not field_object:
