@@ -6,7 +6,6 @@ from pypika.terms import Node, Term, Negative
 
 from tortoise.query.annotations import TermAnnotation
 from tortoise.query.context import QueryContext
-from tortoise.query.term_utils import resolve_field_name
 
 if TYPE_CHECKING:
     from tortoise.query.base import AwaitableQuery
@@ -29,11 +28,11 @@ class QueryOrderingField(QueryOrdering):
     def resolve_into(self, queryset: "AwaitableQuery[MODEL]", context: QueryContext):
         # So far as I can imagine, the annotation will be expanded
         # independently, we just refer to it here.
-        _, field = resolve_field_name(
-            self.field_name, queryset, context, accept_relation=False, expand_annotation=False)
+        _, field = context.resolve_field_name(
+            self.field_name, queryset, accept_relation=False, expand_annotation=False)
 
-        if not queryset.is_aggregate() or queryset.query._groupbys:
-            queryset.query = queryset.query.orderby(field, order=self.direction)
+        if not queryset.is_aggregate() or context.query._groupbys:
+            context.query = context.query.orderby(field, order=self.direction)
 
 #
 # PyPika Nodes to allow custom ordering methods like RANDOM() for PostgreSQL
@@ -73,7 +72,7 @@ class QueryOrderingNode(QueryOrdering):
                 field = field.term
                 direction = Order.desc
 
-            queryset.query = queryset.query.orderby(field, order=direction)
+            context.query = context.query.orderby(field, order=direction)
 
         else:
-            queryset.query = queryset.query.orderby(self.node)
+            context.query = context.query.orderby(self.node)

@@ -11,7 +11,6 @@ from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
 from tortoise.fields.base import CASCADE, RESTRICT, SET_NULL, Field
 from tortoise.filters import FieldFilter
-from tortoise.query.context import QueryContext
 
 
 if TYPE_CHECKING:
@@ -828,22 +827,21 @@ class ManyToManyField(RelationField):
             .where(through_table[field_object.backward_key].isin(instance_id_set))
         )
 
-        context = QueryContext()
-
         related_query_table = related_query.model._meta.table()
         related_pk_field = related_query.model._meta.pk_db_column
-        related_query._init_query_builder(context)
-        related_query.query = (
-            related_query.query.join(subquery)
+        context = related_query.create_query_context(parent_context=None)
+        context.query = (
+            context.query.join(subquery)
             .on(getattr(subquery, field_object.forward_key) == related_query_table[related_pk_field])
             .select(getattr(subquery, field_object.backward_key))
         )
 
-        related_query._add_query_details(context.push(
+        context.push(
             related_query.model,
             related_query_table,
             {field_object.through: through_table.as_(subquery.alias)}
-        ))
+        )
+        related_query._add_query_details(context)
 
         #
         # Following few lines are transformed version of these lines, when I was trying
@@ -858,7 +856,7 @@ class ManyToManyField(RelationField):
         #         ]
         #
 
-        _, db_columns, raw_results = await self.model._meta.db.execute_query(related_query.query.get_sql())
+        _, db_columns, raw_results = await self.model._meta.db.execute_query(context.query.get_sql())
         relations: List[Tuple[Any, MODEL]] = []
         for row in raw_results:
             row_iter = iter(zip(db_columns, row))

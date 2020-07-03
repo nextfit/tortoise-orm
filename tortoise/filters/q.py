@@ -130,7 +130,7 @@ class Q:
         key_filter = model._meta.get_filter(key)
         if key_filter:
             if isinstance(field_object, RelationField):
-                join_data = queryset.join_table_by_field(table, field_object, full=False)
+                join_data = context.join_table_by_field(table, field_object, full=False)
                 if join_data:
                     #
                     # We are potentially adding two None here into the context
@@ -150,7 +150,7 @@ class Q:
                 return QueryClauses(where_criterion=key_filter(context, value))
 
         if isinstance(field_object, RelationField):
-            join_data = queryset.join_table_by_field(table, field_object)
+            join_data = context.join_table_by_field(table, field_object)
             context.push(join_data.model, join_data.table)
 
             q = Q(**{field_sub: value})
@@ -185,8 +185,8 @@ class Q:
 
     def resolve_into(self, queryset: "AwaitableStatement[MODEL]", context: QueryContext):
         clauses = self._resolve(queryset, context)
-        queryset.query._wheres = clauses.where_criterion
-        queryset.query._havings = clauses.having_criterion
+        context.query._wheres = clauses.where_criterion
+        context.query._havings = clauses.having_criterion
 
-        if not queryset.query._validate_table(clauses.where_criterion):
-            queryset.query._foreign_table = True
+        if not context.query._validate_table(clauses.where_criterion):
+            context.query._foreign_table = True

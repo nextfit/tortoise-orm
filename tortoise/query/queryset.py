@@ -1,8 +1,9 @@
 
 import itertools
 from copy import copy
-from typing import Dict, List, Set, Type, Union, TYPE_CHECKING
+from typing import Dict, List, Set, Type, Union, TYPE_CHECKING, Optional
 
+from pypika.queries import QueryBuilder
 from pypika.terms import Term
 
 from tortoise.exceptions import FieldError, ParamsError
@@ -230,46 +231,26 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         return queryset
 
-    def _resolve_select_related(self, context: QueryContext, related_map: Dict[str, Dict]) -> None:
-        """
-        This method goes hand in hand with Model._init_from_db_row(row_iter, related_map)
-        where this method created a selections columns to be queried, and _init_from_db_row
-        follows the same path to "pickup" those columns to recreate the model object
+    def create_query_context(self, parent_context: Optional[QueryContext]) -> QueryContext:
+        query = self.query_builder(parent_context.alias if parent_context else None)\
+            .select(*self.model._meta.db_columns)
 
-        :param context: Query Context
-        :param related_map: Map of pre-selected relations
-        :return: None
-        """
-
-        model = context.top.model
-        table = context.top.table
-
-        for field_name in related_map:
-            field_object = model._meta.fields_map[field_name]
-            join_data = self.join_table_by_field(table, field_object)
-            remote_table = join_data.table
-
-            cols = [remote_table[col] for col in field_object.remote_model._meta.db_columns]
-            self.query = self.query.select(*cols)
-            if related_map[field_name]:
-                context.push(join_data.model, join_data.table)
-                self._resolve_select_related(context, related_map[field_name])
-                context.pop()
-
-    def _init_query_builder(self, context) -> None:
-        self.query = self.query_builder(context.alias).select(*self.model._meta.db_columns)
-        context.push(self.model, self.query._from[-1])
-        self._resolve_select_related(context, self._select_related)
+        context = QueryContext(query, parent_context)
+        context.push(self.model, query._from[-1])
+        context.resolve_select_related(self._select_related)
         context.pop()
 
-    def _make_query(self, context: QueryContext) -> None:
-        self._init_query_builder(context)
+        return context
 
-        context.push(self.model, self.query._from[-1])
+    def create_query(self, parent_context: Optional[QueryContext]) -> QueryBuilder:
+        context = self.create_query_context(parent_context)
+
+        context.push(self.model, context.query._from[-1])
         self._add_query_details(context=context)
         for return_as, annotation in self.annotations.items():
-            self.query._select_other(annotation.field.as_(return_as))
+            context.query._select_other(annotation.field.as_(return_as))
         context.pop()
+        return context.query
 
     async def _execute(self) -> List[MODEL]:
         db_client = self._get_db_client()

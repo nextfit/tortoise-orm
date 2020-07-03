@@ -14,14 +14,12 @@ from typing import (
     Union,
 )
 
-from pypika import JoinType, Order
+from pypika import Order
 from pypika.queries import QueryBuilder
 from pypika.terms import Node
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import ParamsError
-from tortoise.fields import RelationField
-from tortoise.fields.relational import JoinData
 from tortoise.filters.q import Q
 from tortoise.query.annotations import Annotation
 from tortoise.query.context import QueryContext
@@ -33,7 +31,6 @@ if TYPE_CHECKING:
 
 
 MODEL = TypeVar("MODEL", bound="Model")
-QUERY: QueryBuilder = QueryBuilder()
 STATEMENT = TypeVar('STATEMENT', bound='AwaitableStatement')
 
 
@@ -44,14 +41,12 @@ class AwaitableStatement(Generic[MODEL]):
         "model",
         "annotations",
         "q_objects",
-        "query",
     )
 
     def __init__(self, model: Type[MODEL], db=None, q_objects=None, annotations=None) -> None:
         self._db: BaseDBAsyncClient = db
 
         self.model: Type[MODEL] = model
-        self.query: QueryBuilder = QUERY
         self.capabilities: Capabilities = model._meta.db.capabilities
 
         self.q_objects: List[Q] = q_objects or []
@@ -61,7 +56,6 @@ class AwaitableStatement(Generic[MODEL]):
         queryset._db = self._db
         queryset.capabilities = self.capabilities
         queryset.model = self.model
-        queryset.query = self.query
         queryset.q_objects = deepcopy(self.q_objects)
         queryset.annotations = deepcopy(self.annotations)
 
@@ -98,27 +92,6 @@ class AwaitableStatement(Generic[MODEL]):
     def is_aggregate(self) -> bool:
         return any([annotation.field.is_aggregate for annotation in self.annotations.values()])
 
-    def join_table_by_field(self, table, relation_field: RelationField, full=True) -> Optional[JoinData]:
-        """
-        :param table:
-        :param relation_field:
-        :param full: If needed to join fully, or only to the point where primary key of the relation is available.
-            For example for ForeignKey and OneToOneField, when full is False, not joins is needed.
-            Also for ManyToManyField, when full is False, only the through table is needed to be joined
-        :return: related_table
-        """
-
-        joins = relation_field.get_joins(table, full)
-        if joins:
-            for join in joins:
-                if not self.query.is_joined(join.table):
-                    self.query = self.query.join(join.table, how=JoinType.left_outer).on(join.criterion)
-
-            return joins[-1]
-
-        else:
-            return None
-
     def query_builder(self, alias=None) -> QueryBuilder:
         meta = self.model._meta
         return meta.db.query_class.from_(meta.table(alias))
@@ -130,14 +103,17 @@ class AwaitableStatement(Generic[MODEL]):
     def _get_db_client(self) -> BaseDBAsyncClient:
         return self._db or self.model._meta.db
 
-    def _make_query(self, context: QueryContext) -> None:
+    @property
+    def query(self) -> QueryBuilder:
+        return self.create_query(None)
+
+    def create_query(self, parent_context: Optional[QueryContext]) -> QueryBuilder:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def _execute(self) -> Any:
         raise NotImplementedError()  # pragma: nocoverage
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
-        self._make_query(context=QueryContext())
         return self._execute().__await__()
 
     def using_db(self, _db: BaseDBAsyncClient) -> "AwaitableStatement[MODEL]":
@@ -165,7 +141,6 @@ class AwaitableStatement(Generic[MODEL]):
             **The output format may (and will) vary greatly depending on the database backend.**
         """
 
-        self._make_query(context=QueryContext())
         db_client = self._get_db_client()
         return await db_client\
             .executor_class(model=self.model, db=db_client)\
@@ -309,13 +284,13 @@ class AwaitableQuery(AwaitableStatement[MODEL]):
         super()._add_query_details(context)
         self.__resolve_orderings(context=context)
         if self._limit:
-            self.query._limit = self._limit
+            context.query._limit = self._limit
 
         if self._offset:
-            self.query._offset = self._offset
+            context.query._offset = self._offset
 
         if self._distinct:
-            self.query._distinct = True
+            context.query._distinct = True
 
     async def __aiter__(self) -> AsyncIterator[Any]:
         for val in await self:

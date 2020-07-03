@@ -1,5 +1,6 @@
 
 from pypika.functions import Count
+from pypika.queries import QueryBuilder
 from pypika.terms import Term
 
 from tortoise.exceptions import IntegrityError, UnknownFieldError, NotADbColumnFieldError
@@ -7,6 +8,8 @@ from tortoise.fields import ForeignKey, OneToOneField, RelationField
 from tortoise.query.annotations import Annotation, TermAnnotation
 from tortoise.query.base import AwaitableStatement
 from tortoise.query.context import QueryContext
+
+from typing import Optional
 
 
 class UpdateQuery(AwaitableStatement):
@@ -16,12 +19,12 @@ class UpdateQuery(AwaitableStatement):
         super().__init__(model, db, q_objects, annotations)
         self.update_kwargs = update_kwargs
 
-    def _make_query(self, context: QueryContext) -> None:
+    def create_query(self, parent_context: Optional[QueryContext]) -> QueryBuilder:
 
         db_client = self._get_db_client()
-        table = self.model._meta.table(context.alias)
-        self.query = db_client.query_class.update(table)
+        table = self.model._meta.table(parent_context.alias if parent_context else None)
 
+        context = QueryContext(query=db_client.query_class.update(table), parent_context=parent_context)
         context.push(self.model, table)
         self._add_query_details(context=context)
 
@@ -39,7 +42,7 @@ class UpdateQuery(AwaitableStatement):
                     fk_field_name: str = field_object.id_field_name
                     fk_field_object = self.model._meta.fields_map[fk_field_name]
                     value = fk_field_object.db_value(value.pk, None)
-                    self.query = self.query.set(fk_field_object.db_column, value)
+                    context.query = context.query.set(fk_field_object.db_column, value)
 
                 else:
                     raise NotADbColumnFieldError(field_name, self.model)
@@ -57,9 +60,10 @@ class UpdateQuery(AwaitableStatement):
                 else:
                     value = field_object.db_value(value, None)
 
-                self.query = self.query.set(field_object.db_column, value)
+                context.query = context.query.set(field_object.db_column, value)
 
         context.pop()
+        return context.query
 
     async def _execute(self) -> int:
         return (await self._get_db_client().execute_query(str(self.query)))[0]
@@ -71,12 +75,15 @@ class DeleteQuery(AwaitableStatement):
     def __init__(self, model, db, q_objects, annotations) -> None:
         super().__init__(model, db, q_objects, annotations)
 
-    def _make_query(self, context: QueryContext) -> None:
-        self.query = self.query_builder(context.alias)
-        context.push(self.model, self.query._from[-1])
+    def create_query(self, parent_context: Optional[QueryContext]) -> QueryBuilder:
+        query = self.query_builder(parent_context.alias if parent_context else None)
+        context = QueryContext(query, parent_context)
+        context.push(self.model, query._from[-1])
         self._add_query_details(context=context)
-        self.query._delete_from = True
+        context.query._delete_from = True
         context.pop()
+
+        return context.query
 
     async def _execute(self) -> int:
         return (await self._get_db_client().execute_query(str(self.query)))[0]
@@ -88,12 +95,16 @@ class CountQuery(AwaitableStatement):
     def __init__(self, model, db, q_objects, annotations) -> None:
         super().__init__(model, db, q_objects, annotations)
 
-    def _make_query(self, context: QueryContext) -> None:
-        self.query = self.query_builder(context.alias)
-        context.push(self.model, self.query._from[-1])
+    def create_query(self, parent_context: Optional[QueryContext]) -> QueryBuilder:
+        query = self.query_builder(parent_context.alias if parent_context else None)
+
+        context = QueryContext(query, parent_context)
+        context.push(self.model, query._from[-1])
         self._add_query_details(context=context)
-        self.query._select_other(Count("*"))
+        context.query._select_other(Count("*"))
         context.pop()
+
+        return context.query
 
     async def _execute(self) -> int:
         _, db_columns, result = await self._get_db_client().execute_query(str(self.query))

@@ -7,7 +7,7 @@ from pypika.terms import Term as PyPikaTerm
 from tortoise.exceptions import BaseORMException, FieldError, ParamsError
 from tortoise.fields import BackwardFKField, Field, ForeignKey, ManyToManyField, OneToOneField
 from tortoise.query.context import QueryContext
-from tortoise.query.term_utils import term_name, resolve_term
+from tortoise.query.term_utils import term_name
 
 if TYPE_CHECKING:
     from tortoise.query.base import AwaitableStatement
@@ -48,8 +48,7 @@ class Subquery(Annotation):
         self._queryset = queryset
 
     def resolve_into(self, queryset: "AwaitableStatement[MODEL]", context: QueryContext):
-        self._queryset._make_query(context=context)
-        self._field = self._queryset.query
+        self._field = self._queryset.create_query(parent_context=context)
 
     def __str__(self):
         return f"Subquery({self._queryset})"
@@ -131,9 +130,9 @@ class TermAnnotation(Annotation):
             return value
 
     def resolve_into(self, queryset: "AwaitableStatement[MODEL]", context: QueryContext):
-        self._field_object, self._field = resolve_term(self._term, queryset, context, accept_relation=True)
+        self._field_object, self._field = context.resolve_term(self._term, queryset, accept_relation=True)
 
         model = context.top.model
         table = context.top.table
         if self._add_group_by and self._field.is_aggregate:
-            queryset.query = queryset.query.groupby(table[model._meta.pk_db_column])
+            context.query = context.query.groupby(table[model._meta.pk_db_column])

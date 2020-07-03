@@ -15,21 +15,18 @@ class TestFunctions(test.TestCase):
 
     async def test_random_ordering(self):
         products = Product.all().order_by(RandomOrdering()).limit(20)
-        products._make_query(context=QueryContext())
         query_string = products.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
             'SELECT "id","name","price","brand_id","vendor_id" FROM "store_product" ORDER BY RANDOM() LIMIT 20')
 
     async def test_ordering_functions(self):
         products = Product.all().order_by((F('id') * 7) % 143).limit(20)
-        products._make_query(context=QueryContext())
         query_string = products.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
             'SELECT "id","name","price","brand_id","vendor_id" FROM "store_product" ORDER BY MOD("id"*7,143) ASC LIMIT 20')
 
     async def test_ordering_aggregations_m2o(self):
         products = Product.all().order_by(-Count('brand')).limit(20)
-        products._make_query(context=QueryContext())
         query_string = products.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
             'SELECT "id","name","price","brand_id","vendor_id" '
@@ -44,8 +41,6 @@ class TestFunctions(test.TestCase):
         products = Product.annotate(cnt=Count('brand')).order_by("-cnt", "name").limit(5)
         products_fetched = await products
 
-        # we don't need to _make_query more over, we cannot even make this call twice.
-        products._make_query(context=QueryContext())
         query_string = products.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
             'SELECT '
@@ -72,8 +67,6 @@ class TestFunctions(test.TestCase):
         brands = Brand.all().order_by(-Count('products')).prefetch_related('products').limit(20)
         brands_fetched = await brands
 
-        # we don't need to _make_query more over, we cannot even make this call twice.
-        brands._make_query(context=QueryContext())
         query_string = brands.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
             'SELECT "store_brand"."id","store_brand"."name","store_brand"."image_id" '
@@ -120,8 +113,6 @@ class TestFunctions(test.TestCase):
         categories = Category.all().order_by(-Count('products')).prefetch_related('products').limit(20)
         cats_fetched = await categories
 
-        # we don't need to _make_query more over, we cannot even make this call twice.
-        categories._make_query(context=QueryContext())
         query_string = categories.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
             'SELECT "store_category"."id","store_category"."name","store_category"."image_id" '
@@ -164,8 +155,6 @@ class TestFunctions(test.TestCase):
         categories = Category.annotate(cnt=Count('products')).order_by("-cnt").prefetch_related('products').limit(20)
         cats_fetched = await categories
 
-        # we don't need to _make_query more over, we cannot even make this call twice.
-        categories._make_query(context=QueryContext())
         query_string = categories.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
             'SELECT '
@@ -209,8 +198,6 @@ class TestFunctions(test.TestCase):
     async def test_annotation(self):
         products = Product.filter(brand_id=OuterRef('id')).limit(1).values_list('name', flat=True)
         brands = Brand.annotate(product_name=Subquery(products))
-
-        brands._make_query(context=QueryContext())
         query_string = brands.query.get_sql().replace('`', '"')
 
         self.assertEqual(query_string,
@@ -221,8 +208,6 @@ class TestFunctions(test.TestCase):
 
     async def test_annotation_f(self):
         products = Product.all().annotate(new_order=F('id') * 5)
-        products._make_query(context=QueryContext())
-
         query_string = products.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
             'SELECT "id","name","price","brand_id","vendor_id","id"*5 "new_order" FROM "store_product" ORDER BY "id" ASC')

@@ -1,12 +1,13 @@
 
 from typing import Any, Callable, List, Type, TYPE_CHECKING, Dict
 
+from pypika.queries import QueryBuilder
+
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import UnknownFieldError, NotARelationFieldError
 from tortoise.fields import JSONField, RelationField
 from tortoise.query.base import MODEL, AwaitableQuery
 from tortoise.query.context import QueryContext
-from tortoise.query.term_utils import resolve_field_name
 
 if TYPE_CHECKING:
     from tortoise.models import Model
@@ -49,15 +50,18 @@ class FieldSelectQuery(AwaitableQuery[MODEL]):
 
             return field_object.to_python_value
 
-    def _make_query(self, context: QueryContext) -> None:
-        self.query = self.query_builder(context.alias)
-        context.push(self.model, self.query._from[-1])
+    def create_query(self, parent_context: QueryContext) -> QueryBuilder:
+        query = self.query_builder(parent_context.alias if parent_context else None)
+        context = QueryContext(query, parent_context)
+        context.push(self.model, query._from[-1])
+
         self._add_query_details(context=context)
         for return_as, field_name in self.fields_for_select.items():
-            _, field = resolve_field_name(field_name, self, context, accept_relation=False)
-            self.query._select_other(field.as_(return_as))
+            _, field = context.resolve_field_name(field_name, self, accept_relation=False)
+            context.query._select_other(field.as_(return_as))
 
         context.pop()
+        return context.query
 
 
 class ValuesListQuery(FieldSelectQuery):

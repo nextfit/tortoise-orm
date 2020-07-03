@@ -1,7 +1,9 @@
 
+from typing import TYPE_CHECKING
 from pypika import Criterion
 
-from tortoise.query.context import QueryContext
+if TYPE_CHECKING:
+    from tortoise.query.context import QueryContext
 
 
 class FieldFilter:
@@ -10,5 +12,5 @@ class FieldFilter:
         self.opr = opr
         self.value_encoder = value_encoder
 
-    def __call__(self, context: QueryContext, value) -> Criterion:
+    def __call__(self, context: "QueryContext", value) -> Criterion:
         raise NotImplementedError()
