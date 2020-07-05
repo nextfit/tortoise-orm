@@ -6,7 +6,6 @@ from tests.testmodels.store import create_store_objects, Category
 from tortoise.contrib import test
 from tortoise.query import Prefetch
 from tortoise.query.annotations import OuterRef, Subquery
-from tortoise.query.context import QueryContext
 from tortoise.query.expressions import F
 from tortoise.query.ordering import RandomOrdering
 
@@ -61,6 +60,29 @@ class TestFunctions(test.TestCase):
             {'name': 'product_13', 'cnt': 1}
         ])
 
+    async def test_ordering_annotation_aggregations_m2o_values(self):
+        await create_store_objects()
+
+        products = Product.annotate(cnt=Count('brand')).order_by("-cnt", "name").values('cnt', 'name').limit(5)
+        products_fetched = await products
+
+        query_string = products.query.get_sql().replace('`', '"')
+        self.assertEqual(query_string,
+            'SELECT '
+                'COUNT("brand_id") "cnt","name" "name" '
+            'FROM "store_product" '
+            'GROUP BY "id" '
+            'ORDER BY "cnt" DESC,"name" ASC '
+            'LIMIT 5')
+
+        self.assertEqual(products_fetched, [
+            {'name': 'product_1', 'cnt': 1},
+            {'name': 'product_10', 'cnt': 1},
+            {'name': 'product_11', 'cnt': 1},
+            {'name': 'product_12', 'cnt': 1},
+            {'name': 'product_13', 'cnt': 1}
+        ])
+
     async def test_ordering_aggregations_o2m(self):
         await create_store_objects()
 
@@ -105,6 +127,36 @@ class TestFunctions(test.TestCase):
                 'products': ['product_1']
             }
         ])
+
+    async def test_ordering_aggregations_o2m_values(self):
+        await create_store_objects()
+
+        brands = Brand.all().values('name', 'products__name').order_by('name', 'products__name').limit(10)
+        brands_fetched = await brands
+
+        query_string = brands.query.get_sql().replace('`', '"')
+        self.assertEqual(query_string,
+            'SELECT '
+                '"store_brand"."name" "name","products"."name" "products__name" '
+            'FROM "store_brand" '
+            'LEFT OUTER JOIN "store_product" "products" '
+            'ON "products"."brand_id"="store_brand"."id" '
+            'ORDER BY "store_brand"."name" ASC,"products"."name" ASC '
+            'LIMIT 10'
+        )
+
+        self.assertEqual(brands_fetched, [
+            {'name': 'brand_1', 'products__name': 'product_1'},
+            {'name': 'brand_2', 'products__name': 'product_2'},
+            {'name': 'brand_2', 'products__name': 'product_3'},
+            {'name': 'brand_3', 'products__name': 'product_4'},
+            {'name': 'brand_3', 'products__name': 'product_5'},
+            {'name': 'brand_3', 'products__name': 'product_6'},
+            {'name': 'brand_4', 'products__name': 'product_10'},
+            {'name': 'brand_4', 'products__name': 'product_7'},
+            {'name': 'brand_4', 'products__name': 'product_8'},
+            {'name': 'brand_4', 'products__name': 'product_9'}]
+        )
 
     async def test_ordering_aggregations_m2m(self):
 
