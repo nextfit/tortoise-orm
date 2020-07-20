@@ -43,7 +43,8 @@ class TestGenerateSchema(test.SimpleTestCase):
                     "apps": {"models": {"models": [module], "default_connection": "default"}},
                 }
             )
-            self.sqls = Tortoise._db_client_map["default"].get_schema_sql(safe).split(";\n")
+
+            self.sqls = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=safe).split(";\n")
 
     def get_sql(self, text: str) -> str:
         return re.sub(r"[ \t\n\r]+", " ", [sql for sql in self.sqls if text in sql][0])

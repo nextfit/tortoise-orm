@@ -4,7 +4,7 @@ import logging.config
 import os
 import pytest
 
-from tortoise.contrib.test import TruncationTestCase, SimpleTestCase
+from tortoise.contrib.test import TruncationTestCase, SimpleTestCase, TestEventLoopPolicy
 
 LOGGING = {
     'version': 1,
@@ -49,7 +49,7 @@ LOGGING = {
 }
 
 
-@pytest.yield_fixture(scope='session')
+@pytest.fixture(scope='session')
 def event_loop(request):
     loop = asyncio.get_event_loop()
     yield loop
@@ -65,6 +65,11 @@ def initialize_tests(request, event_loop):
 
     SimpleTestCase.tortoise_test_db = os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
 
+    # original_policy = asyncio.get_event_loop_policy()
+    # asyncio.set_event_loop_policy(TestEventLoopPolicy(event_loop))
+
     event_loop.run_until_complete(TruncationTestCase.initialize())
     yield True
     event_loop.run_until_complete(TruncationTestCase.finalize())
+
+    # asyncio.set_event_loop_policy(original_policy)

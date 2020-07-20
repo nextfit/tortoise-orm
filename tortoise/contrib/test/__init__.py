@@ -1,4 +1,5 @@
 
+import asyncio
 import tortoise
 
 from functools import wraps
@@ -27,6 +28,104 @@ Mark test as expecting failure.
 
 On success it will be marked as unexpected success.
 """
+
+
+class TestEventLoopPolicy(asyncio.AbstractEventLoopPolicy):
+    def __init__(self, loop):
+        self.loop = loop
+        self.watcher = None
+
+    def get_event_loop(self):
+        return self.loop
+
+    def new_event_loop(self):
+        return self.loop
+
+    def set_event_loop(self, loop):
+        self.loop = loop
+
+    def _check_unix(self):
+        if not hasattr(asyncio, "SafeChildWatcher"):
+            raise NotImplementedError
+
+    def get_child_watcher(self):
+        self._check_unix()
+        if self.watcher is None:
+            self.watcher = asyncio.SafeChildWatcher()
+            self.watcher.attach_loop(self.loop)
+
+        return self.watcher
+
+    def set_child_watcher(self, watcher):
+        self._check_unix()
+        self.watcher = watcher
+
+    def reset_watcher(self):
+        if self.watcher:
+            self.watcher.close()
+
+
+#
+# class _Policy(asyncio.AbstractEventLoopPolicy):
+#     def __init__(self, original_policy, loop, forbid_get_event_loop):
+#         self.original_policy = original_policy
+#         self.forbid_get_event_loop = forbid_get_event_loop
+#         self.loop = loop
+#         self.watcher = None
+#
+#     # we override the loop from the original policy because we don't want to
+#     # instantiate a "default loop" that may be never closed (usually, we only
+#     # run the test, so the "original default loop" is not even created by the
+#     # policy).
+#     def get_event_loop(self):
+#         if self.forbid_get_event_loop:
+#             raise AssertionError("TestCase.forbid_get_event_loop is True, "
+#                                  "asyncio.get_event_loop() must not be called")
+#         elif self.loop:
+#             return self.loop
+#         else:
+#             return self.original_policy.get_event_loop()
+#
+#     def new_event_loop(self):
+#         return self.original_policy.new_event_loop()
+#
+#     def set_event_loop(self, loop):
+#         result = self.original_policy.set_event_loop(loop)
+#         self.loop = loop
+#         return result
+#
+#     def _check_unix(self):
+#         if not hasattr(asyncio, "SafeChildWatcher"):
+#             raise NotImplementedError
+#
+#     def get_child_watcher(self):
+#         self._check_unix()
+#         if self.loop:
+#             if self.watcher is None:
+#                 self.watcher = asyncio.SafeChildWatcher()
+#                 self.watcher.attach_loop(self.loop)
+#
+#             return self.watcher
+#         else:
+#             return self.original_policy.get_child_watcher()
+#
+#     def set_child_watcher(self, watcher):
+#         self._check_unix()
+#         if self.loop:
+#             result = self.original_policy.set_child_watcher(watcher)
+#             self.watcher = watcher
+#             return result
+#         else:
+#             return self.original_policy.set_child_watcher(watcher)
+#
+#     def reset_watcher(self):
+#         if self.watcher:
+#             self.watcher.close()
+#             # force the original policy to reissue a child watcher next time
+#             # get_child_watcher() is called, which effectively attach the loop
+#             # to the new watcher. That's the best we can do so far
+#             self.original_policy.set_child_watcher(None)
+#
 
 
 class SimpleTestCase(IsolatedAsyncioTestCase):
@@ -104,8 +203,11 @@ class TruncationTestCase(SimpleTestCase):
         # except DBConnectionError:  # pragma: nocoverage
         #     pass
 
+        original_tortoise = tortoise.Tortoise
+        tortoise.Tortoise = cls.tortoise_test
         await cls.tortoise_test.init(cls.get_db_config(), _create_db=True)
         await cls.tortoise_test.generate_schemas(safe=False)
+        tortoise.Tortoise = original_tortoise
 
     @classmethod
     async def finalize(cls) -> None:
@@ -116,10 +218,11 @@ class TruncationTestCase(SimpleTestCase):
         await cls.tortoise_test._drop_databases()
 
     def setUp(self) -> None:
+        self.original_tortoise = tortoise.Tortoise
         tortoise.Tortoise = self.tortoise_test
 
     def tearDown(self) -> None:
-        tortoise.Tortoise = tortoise._Tortoise()
+        tortoise.Tortoise = self.original_tortoise
 
     async def asyncSetUp(self) -> None:
         # TODO: This is a naive implementation: Will fail to clear M2M and non-cascade foreign keys

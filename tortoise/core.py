@@ -204,13 +204,6 @@ class _Tortoise:
             )
         return config
 
-    def get_models_for_connection(self, connection_name) -> List[Type[Model]]:
-        return [model
-            for models_map in self._app_models_map.values()
-            for model in models_map.values()
-            if model._meta.connection_name == connection_name
-        ]
-
     async def init(
         self,
         config: Optional[Dict[str, Any]] = None,
@@ -337,6 +330,48 @@ class _Tortoise:
         self._app_models_map.clear()
         self._current_transaction_map.clear()
 
+    def get_schema_sql(self, db_client, safe=True) -> str:
+        models_to_create = [
+            model
+            for models_map in self._app_models_map.values() for model in models_map.values()
+            if model._meta.connection_name == db_client.connection_name
+        ]
+
+        for model in models_to_create:
+            model.check()
+
+        schema_generator = db_client.schema_generator(db_client)
+        tables_to_create = []
+        for model in models_to_create:
+            tables_to_create.extend(schema_generator.get_table_sql_list(model, safe))
+
+        primary_tables = {t.db_table: t for t in tables_to_create if t.primary}
+        table_state_map: Dict[str, int] = dict()
+        table_creation_sqls: List[str] = []
+
+        def dfs(table_name: str) -> None:
+            table_state = table_state_map.get(table_name, 0)  # 0 == NOT_VISITED
+            if table_state == 1:  # 1 == VISITING
+                raise ConfigurationError("Can't create schema due to cyclic fk references")
+
+            if table_state == 0:  # 0 == NOT_VISITED
+                table_state_map[table_name] = 1  # 1 == VISITING
+                table = primary_tables[table_name]
+                for ref_table in table.references:
+                    if ref_table != table_name:  # avoid self references
+                        dfs(ref_table)
+                table_creation_sqls.append(table.creation_sql)
+                table_state_map[table_name] = 2  # 2 == VISITED
+
+        for db_table in primary_tables.keys():
+            dfs(db_table)
+
+        m2m_creation_sqls = [t.creation_sql
+            for t in tables_to_create if not t.primary and t.db_table not in table_state_map]
+
+        schema_creation_string = "\n".join(table_creation_sqls + m2m_creation_sqls)
+        return schema_creation_string
+
     async def generate_schemas(self, safe: bool = True) -> None:
         """
         Generate schemas according to models provided to ``.init()`` method.
@@ -350,8 +385,14 @@ class _Tortoise:
         """
         if not self._inited:
             raise ConfigurationError("You have to call .init() first before generating schemas")
+
         for db_client in self._db_client_map.values():
-            await db_client.generate_schema(safe)
+            schema = self.get_schema_sql(db_client, safe)
+            if schema:
+                self.logger.debug("Creating schema: %s", schema)
+                await db_client.execute_script(schema)
+            else:
+                self.logger.debug("Generated schema for %s was empty", db_client.connection_name)
 
     async def _drop_databases(self) -> None:
         """

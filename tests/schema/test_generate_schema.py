@@ -39,7 +39,8 @@ class TestGenerateSchema(test.SimpleTestCase):
                     "apps": {"models": {"models": [module], "default_connection": "default"}},
                 }
             )
-            self.sqls = Tortoise._db_client_map["default"].get_schema_sql(safe).split(";\n")
+
+            self.sqls = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=safe).split(";\n")
 
     def get_sql(self, text: str) -> str:
         return re.sub(r"[ \t\n\r]+", " ", " ".join([sql for sql in self.sqls if text in sql]))
@@ -134,7 +135,7 @@ class TestGenerateSchema(test.SimpleTestCase):
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = Tortoise.get_db_client("default").get_schema_sql(safe=False)
+        sql = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -211,7 +212,7 @@ CREATE TABLE "team_team" (
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = Tortoise.get_db_client("default").get_schema_sql(safe=True)
+        sql = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=True)
         self.assertEqual(
             sql.strip(),
             """
@@ -307,7 +308,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
                         "apps": {"models": {"models": [module], "default_connection": "default"}},
                     }
                 )
-                self.sqls = Tortoise._db_client_map["default"].get_schema_sql(safe).split("; ")
+                self.sqls = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=safe).split("; ")
         except ImportError:
             raise test.SkipTest("aiomysql not installed")
 
@@ -350,7 +351,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = Tortoise.get_db_client("default").get_schema_sql(safe=False)
+        sql = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -438,7 +439,7 @@ CREATE TABLE `team_team` (
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = Tortoise.get_db_client("default").get_schema_sql(safe=True)
+        sql = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=True)
 
         self.assertEqual(
             sql.strip(),
@@ -544,7 +545,7 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
                         "apps": {"models": {"models": [module], "default_connection": "default"}},
                     }
                 )
-                self.sqls = Tortoise._db_client_map["default"].get_schema_sql(safe).split("; ")
+                self.sqls = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=safe).split("; ")
         except ImportError:
             raise test.SkipTest("asyncpg not installed")
 
@@ -570,7 +571,7 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = Tortoise.get_db_client("default").get_schema_sql(safe=False)
+        sql = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -660,7 +661,7 @@ CREATE TABLE "team_team" (
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = Tortoise.get_db_client("default").get_schema_sql(safe=True)
+        sql = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=True)
         self.assertEqual(
             sql.strip(),
             """

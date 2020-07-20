@@ -1,14 +1,13 @@
 
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Type, TYPE_CHECKING, TypeVar
+from typing import Any, List, Optional, Sequence, Tuple, Type, TYPE_CHECKING, TypeVar
 
 from pypika import Query
 
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.filters import BaseFilter
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
-from tortoise.exceptions import ConfigurationError
 
 if TYPE_CHECKING:
     from tortoise.transactions.context import TransactionContext
@@ -122,13 +121,6 @@ class BaseDBAsyncClient:
     def _copy(self: DBCLIENT, base: DBCLIENT) -> None:
         self.connection_name = base.connection_name
 
-    async def generate_schema(self, safe: bool) -> None:
-        schema = self.get_schema_sql(safe)
-        self.log.debug("Creating schema: %s", schema)
-
-        if schema:  # pragma: nobranch
-            await self.execute_script(schema)
-
     async def create_connection(self, with_db: bool) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
@@ -170,45 +162,6 @@ class BaseDBAsyncClient:
 
     async def execute_many(self, query: str, values: List[list]) -> None:
         raise NotImplementedError()  # pragma: nocoverage
-
-    def get_schema_sql(self, safe=True) -> str:
-        from tortoise import Tortoise
-
-        models_to_create = Tortoise.get_models_for_connection(self.connection_name)
-        for model in models_to_create:
-            model.check()
-
-        schema_generator = self.schema_generator(self)
-        tables_to_create = []
-        for model in models_to_create:
-            tables_to_create.extend(schema_generator.get_table_sql_list(model, safe))
-
-        primary_tables = {t.db_table: t for t in tables_to_create if t.primary}
-        table_state_map: Dict[str, int] = dict()
-        table_creation_sqls: List[str] = []
-
-        def dfs(table_name: str) -> None:
-            table_state = table_state_map.get(table_name, 0)  # 0 == NOT_VISITED
-            if table_state == 1:  # 1 == VISITING
-                raise ConfigurationError("Can't create schema due to cyclic fk references")
-
-            if table_state == 0:  # 0 == NOT_VISITED
-                table_state_map[table_name] = 1  # 1 == VISITING
-                table = primary_tables[table_name]
-                for ref_table in table.references:
-                    if ref_table != table_name:  # avoid self references
-                        dfs(ref_table)
-                table_creation_sqls.append(table.creation_sql)
-                table_state_map[table_name] = 2  # 2 == VISITED
-
-        for db_table in primary_tables.keys():
-            dfs(db_table)
-
-        m2m_creation_sqls = [t.creation_sql
-            for t in tables_to_create if not t.primary and t.db_table not in table_state_map]
-
-        schema_creation_string = "\n".join(table_creation_sqls + m2m_creation_sqls)
-        return schema_creation_string
 
 
 class AsyncDbClientTransactionMixin:
