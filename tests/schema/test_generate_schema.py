@@ -1,7 +1,6 @@
-# pylint: disable=C0301
-import re
 
-from asynctest.mock import CoroutineMock, patch
+import re
+from unittest.mock import patch, AsyncMock
 
 from tortoise import Tortoise
 from tortoise.contrib import test
@@ -29,7 +28,7 @@ class TestGenerateSchema(test.SimpleTestCase):
 
     async def init_for(self, module: str, safe=False) -> None:
         with patch(
-            "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=CoroutineMock()
+            "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=AsyncMock()
         ):
             await Tortoise.init(
                 {
@@ -292,7 +291,7 @@ CREATE TABLE IF NOT EXISTS "team_team" (
 class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
         try:
-            with patch("aiomysql.create_pool", new=CoroutineMock()):
+            with patch("aiomysql.create_pool", new=AsyncMock()):
                 await Tortoise.init(
                     {
                         "connections": {
@@ -531,7 +530,7 @@ CREATE TABLE IF NOT EXISTS `team_team` (
 class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
         try:
-            with patch("asyncpg.create_pool", new=CoroutineMock()):
+            with patch("asyncpg.create_pool", new=AsyncMock()):
                 await Tortoise.init(
                     {
                         "connections": {

@@ -1,4 +1,4 @@
-from asynctest.mock import CoroutineMock, patch
+from unittest.mock import AsyncMock, patch
 
 from tortoise import Tortoise
 from tortoise.contrib import test
@@ -6,7 +6,7 @@ from tortoise.contrib import test
 
 class TestConnectionParams(test.TestCase):
     async def test_mysql_connection_params(self):
-        with patch("aiomysql.create_pool", new=CoroutineMock()) as mysql_connect:
+        with patch("aiomysql.create_pool", new=AsyncMock()) as mysql_connect:
             await Tortoise._init_connections(
                 {
                     "models": {
@@ -39,7 +39,7 @@ class TestConnectionParams(test.TestCase):
 
     async def test_postres_connection_params(self):
         try:
-            with patch("asyncpg.create_pool", new=CoroutineMock()) as asyncpg_connect:
+            with patch("asyncpg.create_pool", new=AsyncMock()) as asyncpg_connect:
                 await Tortoise._init_connections(
                     {
                         "models": {
