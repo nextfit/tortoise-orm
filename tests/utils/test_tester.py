@@ -22,10 +22,10 @@ class TestTesterSync(test.SimpleTestCase):
 
 
 class TestTesterASync(test.SimpleTestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
         self.baa = "TES"
 
-    async def tearDown(self):
+    async def asyncTearDown(self):
         self.assertEqual(self.baa, "TES")
 
     @test.skip("Skip it")

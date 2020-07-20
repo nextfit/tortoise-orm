@@ -17,7 +17,7 @@ from tortoise.query.expressions import F
 
 
 class TestQueryset(test.TestCase):
-    async def setUp(self):
+    async def asyncSetUp(self) -> None:
         # Build large dataset
         self.intfields = [await IntFields.create(intnum=val) for val in range(10, 100, 3)]
 

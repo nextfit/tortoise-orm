@@ -8,17 +8,12 @@ from unittest.mock import AsyncMock, patch
 
 from tortoise import Tortoise
 from tortoise.contrib import test
-from tortoise.exceptions import ConfigurationError
 
 
 class TestGenerateSchema(test.SimpleTestCase):
-    async def setUp(self):
-        try:
-            Tortoise._app_models_map = {}
-            Tortoise._db_client_map = {}
-            Tortoise._inited = False
-        except ConfigurationError:
-            pass
+    def setUp(self):
+        Tortoise._app_models_map = {}
+        Tortoise._db_client_map = {}
         Tortoise._inited = False
         self.sqls = ""
         self.post_sqls = ""
@@ -26,7 +21,7 @@ class TestGenerateSchema(test.SimpleTestCase):
             "engine"
         ]
 
-    async def tearDown(self):
+    async def asyncTearDown(self) -> None:
         Tortoise._db_client_map = {}
         await Tortoise._reset_apps()
 

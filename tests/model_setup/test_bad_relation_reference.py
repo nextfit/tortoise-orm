@@ -4,16 +4,12 @@ from tortoise.exceptions import ConfigurationError
 
 
 class TestBadReleationReferenceErrors(test.SimpleTestCase):
-    async def setUp(self):
-        try:
-            Tortoise._app_models_map = {}
-            Tortoise._db_client_map = {}
-            Tortoise._inited = False
-        except ConfigurationError:
-            pass
+    def setUp(self):
+        Tortoise._app_models_map = {}
+        Tortoise._db_client_map = {}
         Tortoise._inited = False
 
-    async def tearDown(self):
+    async def asyncTearDown(self) -> None:
         await Tortoise.close_connections()
         await Tortoise._reset_apps()
 

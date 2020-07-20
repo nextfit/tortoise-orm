@@ -7,9 +7,7 @@ from tortoise.transactions import in_transaction
 
 
 class TestTwoDatabases(test.SimpleTestCase):
-    async def setUp(self):
-        if Tortoise._inited:
-            await self._tearDownDB()
+    async def asyncSetUp(self) -> None:
         first_db_config = test.getDBConfig(app_label="models", modules=["tests.testmodels"])
         second_db_config = test.getDBConfig(app_label="events", modules=["tests.testmodels"])
         merged_config = {
@@ -21,7 +19,7 @@ class TestTwoDatabases(test.SimpleTestCase):
         self.db = Tortoise.get_db_client("models")
         self.second_db = Tortoise.get_db_client("events")
 
-    async def tearDown(self):
+    async def asyncTearDown(self) -> None:
         await Tortoise._drop_databases()
 
     async def test_two_databases(self):
