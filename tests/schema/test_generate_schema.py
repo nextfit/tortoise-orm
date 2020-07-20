@@ -8,6 +8,9 @@ from tortoise.exceptions import ConfigurationError
 
 
 class TestGenerateSchema(test.SimpleTestCase):
+
+    tortoise_test_modules = []
+
     def setUp(self):
         Tortoise._app_models_map = {}
         Tortoise._db_client_map = {}
@@ -15,9 +18,7 @@ class TestGenerateSchema(test.SimpleTestCase):
 
         self.sqls = ""
         self.post_sqls = ""
-        self.engine = test.getDBConfig(app_label="models", modules=[])["connections"]["models"][
-            "engine"
-        ]
+        self.engine = self.get_db_config()["connections"]["models"]["engine"]
 
     async def asyncTearDown(self) -> None:
         Tortoise._db_client_map = {}

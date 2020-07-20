@@ -179,7 +179,7 @@ class _Tortoise:
                     field_objects = list(model._meta.fields_map.values())
                     for field in field_objects:
                         if isinstance(field, RelationField) and not field.auto_created:
-                            field.create_relation()
+                            field.create_relation(self)
 
                     model._meta._inited = True
                     models_list.append(model)

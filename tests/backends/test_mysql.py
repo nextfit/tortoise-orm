@@ -9,7 +9,7 @@ from tortoise.contrib import test
 
 class TestMySQL(test.SimpleTestCase):
     def setUp(self) -> None:
-        self.db_config = test.getDBConfig(app_label="models", modules=["tests.testmodels"])
+        self.db_config = self.get_db_config()
         if self.db_config["connections"]["models"]["engine"] != "tortoise.backends.mysql":
             raise test.SkipTest("MySQL only")
 

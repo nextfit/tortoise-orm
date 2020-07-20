@@ -4,7 +4,7 @@ import logging.config
 import os
 import pytest
 
-from tortoise.contrib.test import finalizer, initializer
+from tortoise.contrib.test import TruncationTestCase, SimpleTestCase
 
 LOGGING = {
     'version': 1,
@@ -57,25 +57,14 @@ def event_loop(request):
 
 
 @pytest.fixture(scope="session", autouse=True)
-async def initialize_tests(request, event_loop):
-    # def _finalizer():
-    #     finalizer(event_loop)
-
+def initialize_tests(request, event_loop):
     try:
         logging.config.dictConfig(LOGGING)
     except AttributeError as e:
         print(e)
 
-    # request.addfinalizer(_finalizer)
+    SimpleTestCase.tortoise_test_db = os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
 
-    db_url = os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
-    modules = str(os.environ.get("TORTOISE_TEST_MODULES", "tests.testmodels")).split(",")
-    if not modules:
-        raise Exception("TORTOISE_TEST_MODULES env var not defined")
-
-    # initializer(modules, db_url=db_url, loop=event_loop)
-    await initializer(modules, db_url=db_url)
-
+    event_loop.run_until_complete(TruncationTestCase.initialize())
     yield True
-
-    await finalizer()
+    event_loop.run_until_complete(TruncationTestCase.finalize())

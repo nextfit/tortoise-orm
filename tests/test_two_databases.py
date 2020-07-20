@@ -8,8 +8,8 @@ from tortoise.transactions import in_transaction
 
 class TestTwoDatabases(test.SimpleTestCase):
     async def asyncSetUp(self) -> None:
-        first_db_config = test.getDBConfig(app_label="models", modules=["tests.testmodels"])
-        second_db_config = test.getDBConfig(app_label="events", modules=["tests.testmodels"])
+        first_db_config = self.get_db_config(app_label="models")
+        second_db_config = self.get_db_config(app_label="events")
         merged_config = {
             "connections": {**first_db_config["connections"], **second_db_config["connections"]},
             "apps": {**first_db_config["apps"], **second_db_config["apps"]},

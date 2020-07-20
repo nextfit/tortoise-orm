@@ -11,7 +11,7 @@ from tortoise.exceptions import OperationalError
 
 class TestPostgreSQL(test.SimpleTestCase):
     def setUp(self):
-        self.db_config = test.getDBConfig(app_label="models", modules=["tests.testmodels"])
+        self.db_config = self.get_db_config()
         if self.db_config["connections"]["models"]["engine"] != "tortoise.backends.asyncpg":
             raise test.SkipTest("PostgreSQL only")
 

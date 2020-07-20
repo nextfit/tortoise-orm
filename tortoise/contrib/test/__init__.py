@@ -1,21 +1,19 @@
+
+import tortoise
+
 from functools import wraps
+from tortoise.backends.base.config_generator import generate_config
+from tortoise.transactions.context import TransactionContext
 from typing import Any, List
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless, IsolatedAsyncioTestCase
 
-from tortoise import Tortoise
-from tortoise.backends.base.config_generator import generate_config
-from tortoise.exceptions import DBConnectionError
-from tortoise.transactions.context import TransactionContext
 
 __all__ = (
     "SimpleTestCase",
     "TestCase",
     "TruncationTestCase",
     "IsolatedTestCase",
-    "getDBConfig",
     "requireCapability",
-    "initializer",
-    "finalizer",
     "SkipTest",
     "expectedFailure",
     "skip",
@@ -24,92 +22,11 @@ __all__ = (
 )
 
 
-_TORTOISE_TEST_DB = "sqlite://:memory:"
-# pylint: disable=W0201
-
 expectedFailure.__doc__ = """
 Mark test as expecting failure.
 
 On success it will be marked as unexpected success.
 """
-
-_CONFIG: dict = {}
-_CONNECTIONS: dict = {}
-_MODULES: List[str] = []
-_CONN_MAP: dict = {}
-
-
-def getDBConfig(app_label: str, modules: List[str]) -> dict:
-    """
-    DB Config factory, for use in testing.
-
-    :param app_label: Label of the app (must be distinct for multiple apps).
-    :param modules: List of modules to look for models in.
-    """
-    return generate_config(
-        _TORTOISE_TEST_DB,
-        app_modules={app_label: modules},
-        testing=True,
-        connection_label=app_label,
-    )
-
-
-async def _init_db(config: dict) -> None:
-    try:
-        await Tortoise.init(config)
-        await Tortoise._drop_databases()
-    except DBConnectionError:  # pragma: nocoverage
-        pass
-
-    await Tortoise.init(config, _create_db=True)
-    await Tortoise.generate_schemas(safe=False)
-
-
-def _restore_default() -> None:
-    Tortoise._app_models_map = {}
-    Tortoise._db_client_map = _CONNECTIONS.copy()
-    Tortoise._current_transaction_map.update(_CONN_MAP)
-    Tortoise._init_apps(_CONFIG["apps"])
-    Tortoise._inited = True
-
-
-async def initializer(modules: List[str], db_url: str) -> None:
-
-    """
-    Sets up the DB for testing. Must be called as part of test environment setup.
-
-    :param modules: List of modules to look for models in.
-    :param db_url: The db_url, defaults to ``sqlite://:memory``.
-    :param loop: Optional event loop.
-    """
-    # pylint: disable=W0603
-    global _CONFIG
-    global _CONNECTIONS
-    global _TORTOISE_TEST_DB
-    global _MODULES
-    global _CONN_MAP
-    _MODULES = modules
-    if db_url is not None:  # pragma: nobranch
-        _TORTOISE_TEST_DB = db_url
-
-    _CONFIG = getDBConfig(app_label="models", modules=_MODULES)
-
-    await _init_db(_CONFIG)
-
-    _CONNECTIONS = Tortoise._db_client_map.copy()
-    _CONN_MAP = Tortoise._current_transaction_map.copy()
-
-    Tortoise._app_models_map = {}
-    Tortoise._db_client_map = {}
-    Tortoise._inited = False
-
-
-async def finalizer() -> None:
-    """
-    Cleans up the DB after testing. Must be called as part of the test environment teardown.
-    """
-    _restore_default()
-    await Tortoise._drop_databases()
 
 
 class SimpleTestCase(IsolatedAsyncioTestCase):
@@ -119,11 +36,21 @@ class SimpleTestCase(IsolatedAsyncioTestCase):
 
     """
 
-    def tearDown(self) -> None:
-        Tortoise._app_models_map = {}
-        Tortoise._db_client_map = {}
-        Tortoise._current_transaction_map = {}
-        Tortoise._inited = False
+    tortoise_test_db = None
+    tortoise_test_modules: List[str] = ["tests.testmodels"]
+
+    @classmethod
+    def get_db_config(cls, app_label="models") -> dict:
+        """
+        DB Config factory, for use in testing.
+
+        """
+        return generate_config(
+            cls.tortoise_test_db,
+            app_modules={app_label: cls.tortoise_test_modules},
+            testing=True,
+            connection_label=app_label,
+        )
 
 
 class IsolatedTestCase(SimpleTestCase):
@@ -139,17 +66,18 @@ class IsolatedTestCase(SimpleTestCase):
     If you define a ``tortoise_test_modules`` list, it overrides the DB setup module for the tests.
     """
 
-    tortoise_test_modules: List[str] = []
+    def setUp(self) -> None:
+        self.isolated_tortoise = tortoise._Tortoise()
+        tortoise.Tortoise = self.isolated_tortoise
 
     async def asyncSetUp(self) -> None:
-        config = getDBConfig(app_label="models", modules=self.tortoise_test_modules or _MODULES)
-        await Tortoise.init(config, _create_db=True)
-        await Tortoise.generate_schemas(safe=False)
-        self._db_client_map = Tortoise._db_client_map.copy()
+        await self.isolated_tortoise.init(self.get_db_config(), _create_db=True)
+        await self.isolated_tortoise.generate_schemas(safe=False)
+        self._db_client_map = self.isolated_tortoise._db_client_map.copy()
 
     async def asyncTearDown(self) -> None:
-        Tortoise._db_client_map = self._db_client_map.copy()
-        await Tortoise._drop_databases()
+        self.isolated_tortoise._db_client_map = self._db_client_map.copy()
+        await self.isolated_tortoise._drop_databases()
 
 
 class TruncationTestCase(SimpleTestCase):
@@ -160,14 +88,46 @@ class TruncationTestCase(SimpleTestCase):
     Note that usage of this does not guarantee that auto-number-pks will be reset to 1.
     """
 
-    async def asyncSetUp(self) -> None:
-        _restore_default()
+    tortoise_test = tortoise._Tortoise()
 
+    @classmethod
+    async def initialize(cls) -> None:
+
+        """
+        Sets up the global DB for testing. Must be called as part of test environment setup.
+
+        """
+
+        # try:
+        #     await Tortoise.init(_CONFIG)
+        #     await Tortoise._drop_databases()
+        # except DBConnectionError:  # pragma: nocoverage
+        #     pass
+
+        await cls.tortoise_test.init(cls.get_db_config(), _create_db=True)
+        await cls.tortoise_test.generate_schemas(safe=False)
+
+    @classmethod
+    async def finalize(cls) -> None:
+        """
+        Cleans up the DB after testing. Must be called as part of the test environment teardown.
+        """
+
+        await cls.tortoise_test._drop_databases()
+
+    def setUp(self) -> None:
+        tortoise.Tortoise = self.tortoise_test
+
+    def tearDown(self) -> None:
+        tortoise.Tortoise = tortoise._Tortoise()
+
+    async def asyncSetUp(self) -> None:
         # TODO: This is a naive implementation: Will fail to clear M2M and non-cascade foreign keys
-        for models_map in Tortoise._app_models_map.values():
+        for models_map in self.tortoise_test._app_models_map.values():
             for model in models_map.values():
                 await model._meta.db.execute_script(f"DELETE FROM {model._meta.db_table}")  # nosec
 
+    #
     # async def asyncTearDown(self) -> None:
     #     _restore_default()
     #
@@ -175,13 +135,14 @@ class TruncationTestCase(SimpleTestCase):
     #     for models_map in Tortoise._app_models_map.values():
     #         for model in models_map.values():
     #             await model._meta.db.execute_script(f"DELETE FROM {model._meta.db_table}")  # nosec
+    #
 
 
 class TestTransactionContext(TransactionContext):
     __slots__ = ("token", )
 
     async def __aenter__(self):
-        current_transaction = Tortoise._current_transaction_map[self.connection_name]
+        current_transaction = tortoise.Tortoise._current_transaction_map[self.connection_name]
         self.token = current_transaction.set(self.db_client)
 
         await self.db_client.acquire()
@@ -190,7 +151,7 @@ class TestTransactionContext(TransactionContext):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self.db_client.rollback()
-        Tortoise._current_transaction_map[self.connection_name].reset(self.token)
+        tortoise.Tortoise._current_transaction_map[self.connection_name].reset(self.token)
         await self.db_client.release()
 
 
@@ -252,7 +213,7 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
 
             @wraps(test_item)
             def skip_wrapper(*args, **kwargs):
-                db = Tortoise.get_db_client(connection_name)
+                db = tortoise.Tortoise.get_db_client(connection_name)
                 for key, val in conditions.items():
                     if getattr(db.capabilities, key) != val:
                         raise SkipTest(f"Capability {key} != {val}")
@@ -266,6 +227,7 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
             for var in dir(test_item)
             if var.startswith("test_") and callable(getattr(test_item, var))
         }
+
         for name, func in funcs.items():
             setattr(
                 test_item,

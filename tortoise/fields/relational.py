@@ -318,7 +318,7 @@ class RelationField(Field, Generic[MODEL]):
     def attribute_property(self) -> property:
         raise NotImplementedError()
 
-    def create_relation(self) -> None:
+    def create_relation(self, tortoise) -> None:
         raise NotImplementedError()
 
     def get_joins(self, table: Table, full: bool) -> List[JoinData]:
@@ -384,7 +384,7 @@ class BackwardFKField(RelationField):
             )
         )
 
-    def create_relation(self) -> None:
+    def create_relation(self, tortoise) -> None:
         raise RuntimeError("This method on should not have been called on a generated relation.")
 
     def create_filter(self, opr, value_encoder) -> FieldFilter:
@@ -542,9 +542,8 @@ class ForeignKey(RelationField):
 
         return instance_list
 
-    def create_relation(self) -> None:
-        from tortoise import Tortoise
-        remote_model = Tortoise.get_model(self.model_name)
+    def create_relation(self, tortoise) -> None:
+        remote_model = tortoise.get_model(self.model_name)
 
         self.id_field_name = f"{self.model_field_name}_id"
 
@@ -761,8 +760,7 @@ class ManyToManyField(RelationField):
         from tortoise.filters.relational import ManyToManyRelationFilter
         return ManyToManyRelationFilter(self, opr, value_encoder)
 
-    def create_relation(self) -> None:
-        from tortoise import Tortoise
+    def create_relation(self, tortoise) -> None:
 
         backward_key = self.backward_key
         model_name_lower = self.model.__name__.lower()
@@ -776,14 +774,14 @@ class ManyToManyField(RelationField):
             self.backward_key = backward_key
 
         remote_app_name, remote_model_name = self.model_name.split(".")
-        remote_model = Tortoise.get_model(self.model_name)
+        remote_model = tortoise.get_model(self.model_name)
         self.remote_model = remote_model
 
         if not self.through:
             self.through = "{}_{}".format(model_name_lower, remote_model.__name__.lower())
 
         if "." in self.through:
-            through_model = Tortoise.get_model(self.through)
+            through_model = tortoise.get_model(self.through)
             self.through = through_model._meta.db_table
 
         backward_relation_name = self.related_name
