@@ -21,7 +21,6 @@ class TestGenerateSchema(test.SimpleTestCase):
         self.engine = self.get_db_config()["connections"]["models"]["engine"]
 
     def tearDown(self) -> None:
-        Tortoise._db_client_map = {}
         Tortoise._reset_apps()
 
     def init_for(self, module: str, safe=False) -> None:

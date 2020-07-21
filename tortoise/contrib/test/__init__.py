@@ -75,10 +75,10 @@ class IsolatedTestCase(SimpleTestCase):
 
         await self.isolated_tortoise.open_connections(create_db=True)
         await self.isolated_tortoise.generate_schemas(safe=False)
-        self._db_client_map = self.isolated_tortoise._db_client_map.copy()
+        # self._db_client_map = self.isolated_tortoise._db_client_map.copy()
 
     async def asyncTearDown(self) -> None:
-        self.isolated_tortoise._db_client_map = self._db_client_map.copy()
+        # self.isolated_tortoise._db_client_map = self._db_client_map.copy()
         await self.isolated_tortoise._drop_databases()
 
 

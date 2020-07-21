@@ -305,6 +305,7 @@ class _Tortoise:
 
         self._app_models_map.clear()
         self._current_transaction_map.clear()
+        self._db_client_map.clear()
 
     def get_schema_sql(self, db_client, safe=True) -> str:
         models_to_create = [
@@ -376,7 +377,6 @@ class _Tortoise:
         for db_client in self._db_client_map.values():
             await db_client.close()
 
-        self._db_client_map = {}
         self.logger.info("Tortoise-ORM closed connections")
 
     async def generate_schemas(self, safe: bool = True) -> None:
@@ -414,5 +414,4 @@ class _Tortoise:
             await db_client.close()
             await db_client.db_delete()
 
-        self._db_client_map = {}
         self._reset_apps()
