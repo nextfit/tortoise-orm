@@ -1,11 +1,15 @@
 
-import tortoise
+import logging
 
 from functools import wraps
+from tortoise import Tortoise, _Tortoise
 from tortoise.backends.base.config_generator import generate_config
 from tortoise.transactions.context import TransactionContext
 from typing import Any, List
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless, IsolatedAsyncioTestCase
+
+
+logger = logging.getLogger("tortoise.test")
 
 
 __all__ = (
@@ -67,18 +71,15 @@ class IsolatedTestCase(SimpleTestCase):
     """
 
     def setUp(self) -> None:
-        self.isolated_tortoise = tortoise._Tortoise()
-        self.isolated_tortoise.init(self.get_db_config())
-        tortoise.Tortoise = self.isolated_tortoise
+        Tortoise.init(self.get_db_config())
 
     async def asyncSetUp(self) -> None:
-        await self.isolated_tortoise.open_connections(create_db=True)
-        await self.isolated_tortoise.generate_schemas(safe=False)
-        # self._db_client_map = self.isolated_tortoise._db_client_map.copy()
+        await Tortoise.open_connections(create_db=True)
+        await Tortoise.generate_schemas(safe=False)
 
     async def asyncTearDown(self) -> None:
-        # self.isolated_tortoise._db_client_map = self._db_client_map.copy()
-        await self.isolated_tortoise._drop_databases()
+        await Tortoise._drop_databases()
+        await Tortoise.close_connections()
 
 
 class TruncationTestCase(SimpleTestCase):
@@ -89,7 +90,14 @@ class TruncationTestCase(SimpleTestCase):
     Note that usage of this does not guarantee that auto-number-pks will be reset to 1.
     """
 
-    tortoise_test = tortoise._Tortoise()
+    tortoise_test = _Tortoise()
+
+    @classmethod
+    def restore_tortoise(cls) -> None:
+        Tortoise._inited = cls.tortoise_test._inited
+        Tortoise._app_models_map = cls.tortoise_test._app_models_map.copy()
+        Tortoise._db_client_map = cls.tortoise_test._db_client_map.copy()
+        Tortoise._current_transaction_map = cls.tortoise_test._current_transaction_map.copy()
 
     @classmethod
     async def initialize(cls) -> None:
@@ -105,14 +113,16 @@ class TruncationTestCase(SimpleTestCase):
         # except DBConnectionError:  # pragma: nocoverage
         #     pass
 
-        original_tortoise = tortoise.Tortoise
-        tortoise.Tortoise = cls.tortoise_test
+        Tortoise.init(cls.get_db_config())
 
-        cls.tortoise_test.init(cls.get_db_config())
+        await Tortoise.open_connections(create_db=True)
+        await Tortoise.generate_schemas(safe=False)
+        await Tortoise.close_connections()
 
-        await cls.tortoise_test.open_connections(create_db=True)
-        await cls.tortoise_test.generate_schemas(safe=False)
-        tortoise.Tortoise = original_tortoise
+        cls.tortoise_test._inited = Tortoise._inited
+        cls.tortoise_test._app_models_map = Tortoise._app_models_map.copy()
+        cls.tortoise_test._db_client_map = Tortoise._db_client_map.copy()
+        cls.tortoise_test._current_transaction_map = Tortoise._current_transaction_map.copy()
 
     @classmethod
     async def finalize(cls) -> None:
@@ -123,18 +133,12 @@ class TruncationTestCase(SimpleTestCase):
         await cls.tortoise_test.open_connections()
         await cls.tortoise_test._drop_databases()
 
-    def setUp(self) -> None:
-        self.original_tortoise = tortoise.Tortoise
-        tortoise.Tortoise = self.tortoise_test
-
-    def tearDown(self) -> None:
-        tortoise.Tortoise = self.original_tortoise
-
     async def asyncSetUp(self) -> None:
-        await self.tortoise_test.open_connections()
+        self.restore_tortoise()
+        await Tortoise.open_connections()
 
         # TODO: This is a naive implementation: Will fail to clear M2M and non-cascade foreign keys
-        for models_map in self.tortoise_test._app_models_map.values():
+        for models_map in Tortoise._app_models_map.values():
             for model in models_map.values():
                 await model._meta.db.execute_script(f"DELETE FROM {model._meta.db_table}")  # nosec
 
@@ -153,7 +157,7 @@ class TestTransactionContext(TransactionContext):
     __slots__ = ("token", )
 
     async def __aenter__(self):
-        current_transaction = tortoise.Tortoise._current_transaction_map[self.connection_name]
+        current_transaction = Tortoise._current_transaction_map[self.connection_name]
         self.token = current_transaction.set(self.db_client)
 
         await self.db_client.acquire()
@@ -162,7 +166,7 @@ class TestTransactionContext(TransactionContext):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self.db_client.rollback()
-        tortoise.Tortoise._current_transaction_map[self.connection_name].reset(self.token)
+        Tortoise._current_transaction_map[self.connection_name].reset(self.token)
         await self.db_client.release()
 
 
@@ -224,7 +228,7 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
 
             @wraps(test_item)
             def skip_wrapper(*args, **kwargs):
-                db = tortoise.Tortoise.get_db_client(connection_name)
+                db = Tortoise.get_db_client(connection_name)
                 for key, val in conditions.items():
                     if getattr(db.capabilities, key) != val:
                         raise SkipTest(f"Capability {key} != {val}")

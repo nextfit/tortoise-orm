@@ -306,6 +306,7 @@ class _Tortoise:
         self._app_models_map.clear()
         self._current_transaction_map.clear()
         self._db_client_map.clear()
+        self._inited = False
 
     def get_schema_sql(self, db_client, safe=True) -> str:
         models_to_create = [
