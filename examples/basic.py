@@ -18,7 +18,9 @@ class Event(Model):
 
 
 async def run():
-    await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
+    Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
+
+    await Tortoise.open_connections()
     await Tortoise.generate_schemas()
 
     event = await Event.create(name="Test")

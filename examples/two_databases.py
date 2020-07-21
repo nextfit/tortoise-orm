@@ -54,7 +54,7 @@ class Team(Model):
 
 
 async def run():
-    await Tortoise.init(
+    Tortoise.init(
         {
             "connections": {
                 "first": {
@@ -72,6 +72,8 @@ async def run():
             },
         }
     )
+
+    await Tortoise.open_connections()
     await Tortoise.generate_schemas()
     client = Tortoise.get_db_client("first")
     second_client = Tortoise.get_db_client("second")

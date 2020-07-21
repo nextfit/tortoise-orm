@@ -45,19 +45,19 @@ class Team(Model):
         table_description = "The TEAMS!"
 
 
-async def run():
+def run():
     print("SQLite:\n")
-    await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
+    Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
     sql = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=False)
     print(sql)
 
     print("\n\nMySQL:\n")
-    await Tortoise.init(db_url="mysql://root:@127.0.0.1:3306/", modules={"models": ["__main__"]})
+    Tortoise.init(db_url="mysql://root:@127.0.0.1:3306/", modules={"models": ["__main__"]})
     sql = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=False)
     print(sql)
 
     print("\n\nPostgreSQL:\n")
-    await Tortoise.init(
+    Tortoise.init(
         db_url="postgres://postgres:@127.0.0.1:5432/", modules={"models": ["__main__"]}
     )
     sql = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=False)
@@ -65,4 +65,4 @@ async def run():
 
 
 if __name__ == "__main__":
-    run_async(run())
+    run()

@@ -20,12 +20,15 @@ class TestMySQL(test.SimpleTestCase):
     async def test_bad_charset(self):
         self.db_config["connections"]["models"]["charset"] = "terrible"
         with self.assertRaisesRegex(ConnectionError, "Unknown charset"):
-            await Tortoise.init(self.db_config)
+            Tortoise.init(self.db_config)
+            await Tortoise.open_connections()
 
     async def test_ssl_true(self):
         self.db_config["connections"]["models"]["ssl"] = True
         try:
-            await Tortoise.init(self.db_config)
+            Tortoise.init(self.db_config)
+            await Tortoise.open_connections()
+
         except (ConnectionError, ssl.SSLError):
             pass
         else:
@@ -39,6 +42,8 @@ class TestMySQL(test.SimpleTestCase):
 
         self.db_config["connections"]["models"]["ssl"] = ctx
         try:
-            await Tortoise.init(self.db_config, _create_db=True)
+            Tortoise.init(self.db_config)
+            await Tortoise.open_connections(create_db=True)
+
         except ConnectionError:
             pass

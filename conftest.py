@@ -1,10 +1,9 @@
-
 import asyncio
 import logging.config
 import os
 import pytest
 
-from tortoise.contrib.test import TruncationTestCase, SimpleTestCase, TestEventLoopPolicy
+from tortoise.contrib.test import TruncationTestCase, SimpleTestCase
 
 LOGGING = {
     'version': 1,
@@ -57,7 +56,7 @@ def event_loop(request):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def initialize_tests(request, event_loop):
+async def initialize_tests(request):
     try:
         logging.config.dictConfig(LOGGING)
     except AttributeError as e:
@@ -65,11 +64,6 @@ def initialize_tests(request, event_loop):
 
     SimpleTestCase.tortoise_test_db = os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
 
-    # original_policy = asyncio.get_event_loop_policy()
-    # asyncio.set_event_loop_policy(TestEventLoopPolicy(event_loop))
-
-    event_loop.run_until_complete(TruncationTestCase.initialize())
+    await TruncationTestCase.initialize()
     yield True
-    event_loop.run_until_complete(TruncationTestCase.finalize())
-
-    # asyncio.set_event_loop_policy(original_policy)
+    await TruncationTestCase.finalize()

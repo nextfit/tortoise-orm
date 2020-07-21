@@ -13,10 +13,10 @@ class TestInitErrors(test.SimpleTestCase):
 
     async def asyncTearDown(self):
         await Tortoise.close_connections()
-        await Tortoise._reset_apps()
+        Tortoise._reset_apps()
 
-    async def test_basic_init(self):
-        await Tortoise.init(
+    def test_basic_init(self):
+        Tortoise.init(
             {
                 "connections": {
                     "default": {
@@ -32,9 +32,9 @@ class TestInitErrors(test.SimpleTestCase):
         self.assertIn("models", Tortoise._app_models_map)
         self.assertIsNotNone(Tortoise.get_db_client("default"))
 
-    async def test_empty_modules_init(self):
+    def test_empty_modules_init(self):
         with self.assertWarnsRegex(RuntimeWarning, 'Module "tests.model_setup" has no models'):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -48,11 +48,11 @@ class TestInitErrors(test.SimpleTestCase):
                 }
             )
 
-    async def test_dup1_init(self):
+    def test_dup1_init(self):
         with self.assertRaisesRegex(
             ConfigurationError, 'backward relation "events" duplicates in model Tournament'
         ):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -69,11 +69,11 @@ class TestInitErrors(test.SimpleTestCase):
                 }
             )
 
-    async def test_dup2_init(self):
+    def test_dup2_init(self):
         with self.assertRaisesRegex(
             ConfigurationError, 'backward relation "events" duplicates in model Team'
         ):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -90,11 +90,11 @@ class TestInitErrors(test.SimpleTestCase):
                 }
             )
 
-    async def test_dup3_init(self):
+    def test_dup3_init(self):
         with self.assertRaisesRegex(
             ConfigurationError, 'backward relation "event" duplicates in model Tournament'
         ):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -111,11 +111,11 @@ class TestInitErrors(test.SimpleTestCase):
                 }
             )
 
-    async def test_generated_nonint(self):
+    def test_generated_nonint(self):
         with self.assertRaisesRegex(
             ConfigurationError, "Field 'val' \\(CharField\\) can't be DB-generated"
         ):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -132,12 +132,12 @@ class TestInitErrors(test.SimpleTestCase):
                 }
             )
 
-    async def test_multiple_pk(self):
+    def test_multiple_pk(self):
         with self.assertRaisesRegex(
             ConfigurationError,
             "Can't create model Tournament with two primary keys, only single primary key is supported",
         ):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -154,13 +154,13 @@ class TestInitErrors(test.SimpleTestCase):
                 }
             )
 
-    async def test_nonpk_id(self):
+    def test_nonpk_id(self):
         with self.assertRaisesRegex(
             ConfigurationError,
             "Can't create model Tournament without explicit primary key if"
             " field 'id' already present",
         ):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -177,9 +177,9 @@ class TestInitErrors(test.SimpleTestCase):
                 }
             )
 
-    async def test_unknown_connection(self):
+    def test_unknown_connection(self):
         with self.assertRaisesRegex(ConfigurationError, 'Unknown connection "fioop"'):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -193,14 +193,14 @@ class TestInitErrors(test.SimpleTestCase):
                 }
             )
 
-    async def test_url_without_modules(self):
+    def test_url_without_modules(self):
         with self.assertRaisesRegex(
             ConfigurationError, 'You must specify "db_url" and "modules" together'
         ):
-            await Tortoise.init(db_url=f"sqlite://{':memory:'}")
+            Tortoise.init(db_url=f"sqlite://{':memory:'}")
 
-    async def test_default_connection_init(self):
-        await Tortoise.init(
+    def test_default_connection_init(self):
+        Tortoise.init(
             {
                 "connections": {
                     "default": {
@@ -214,8 +214,8 @@ class TestInitErrors(test.SimpleTestCase):
         self.assertIn("models", Tortoise._app_models_map)
         self.assertIsNotNone(Tortoise.get_db_client("default"))
 
-    async def test_db_url_init(self):
-        await Tortoise.init(
+    def test_db_url_init(self):
+        Tortoise.init(
             {
                 "connections": {"default": f"sqlite://{':memory:'}"},
                 "apps": {
@@ -226,16 +226,16 @@ class TestInitErrors(test.SimpleTestCase):
         self.assertIn("models", Tortoise._app_models_map)
         self.assertIsNotNone(Tortoise.get_db_client("default"))
 
-    async def test_shorthand_init(self):
-        await Tortoise.init(
+    def test_shorthand_init(self):
+        Tortoise.init(
             db_url=f"sqlite://{':memory:'}", modules={"models": ["tests.testmodels"]}
         )
         self.assertIn("models", Tortoise._app_models_map)
         self.assertIsNotNone(Tortoise.get_db_client("default"))
 
-    async def test_init_wrong_connection_engine(self):
+    def test_init_wrong_connection_engine(self):
         with self.assertRaisesRegex(ImportError, "tortoise.backends.test"):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -249,12 +249,12 @@ class TestInitErrors(test.SimpleTestCase):
                 }
             )
 
-    async def test_init_wrong_connection_engine_2(self):
+    def test_init_wrong_connection_engine_2(self):
         with self.assertRaisesRegex(
             ConfigurationError,
             'Backend for engine "tortoise.backends" does not implement db client',
         ):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -268,9 +268,9 @@ class TestInitErrors(test.SimpleTestCase):
                 }
             )
 
-    async def test_init_no_connections(self):
+    def test_init_no_connections(self):
         with self.assertRaisesRegex(ConfigurationError, 'Config must define "connections" section'):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "apps": {
                         "models": {"models": ["tests.testmodels"], "default_connection": "default"}
@@ -278,9 +278,9 @@ class TestInitErrors(test.SimpleTestCase):
                 }
             )
 
-    async def test_init_no_apps(self):
+    def test_init_no_apps(self):
         with self.assertRaisesRegex(ConfigurationError, 'Config must define "apps" section'):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -291,11 +291,11 @@ class TestInitErrors(test.SimpleTestCase):
                 }
             )
 
-    async def test_init_config_and_config_file(self):
+    def test_init_config_and_config_file(self):
         with self.assertRaisesRegex(
             ConfigurationError, 'You should init either from "config", "config_file" or "db_url"'
         ):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -310,19 +310,19 @@ class TestInitErrors(test.SimpleTestCase):
                 config_file="file.json",
             )
 
-    async def test_init_config_file_wrong_extension(self):
+    def test_init_config_file_wrong_extension(self):
         with self.assertRaisesRegex(
             ConfigurationError, "Unknown config extension .ini, only .yml and .json are supported"
         ):
-            await Tortoise.init(config_file="config.ini")
+            Tortoise.init(config_file="config.ini")
 
-    async def test_init_json_file(self):
-        await Tortoise.init(config_file=os.path.dirname(__file__) + "/init.json")
+    def test_init_json_file(self):
+        Tortoise.init(config_file=os.path.dirname(__file__) + "/init.json")
         self.assertIn("models", Tortoise._app_models_map)
         self.assertIsNotNone(Tortoise.get_db_client("default"))
 
-    async def test_init_yaml_file(self):
-        await Tortoise.init(config_file=os.path.dirname(__file__) + "/init.yaml")
+    def test_init_yaml_file(self):
+        Tortoise.init(config_file=os.path.dirname(__file__) + "/init.yaml")
         self.assertIn("models", Tortoise._app_models_map)
         self.assertIsNotNone(Tortoise.get_db_client("default"))
 
@@ -338,9 +338,9 @@ class TestInitErrors(test.SimpleTestCase):
         ):
             await Tortoise._drop_databases()
 
-    async def test_bad_models(self):
+    def test_bad_models(self):
         with self.assertRaisesRegex(ConfigurationError, 'Module "tests.testmodels2" not found'):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {

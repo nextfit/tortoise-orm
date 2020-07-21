@@ -20,15 +20,15 @@ class TestGenerateSchema(test.SimpleTestCase):
         self.post_sqls = ""
         self.engine = self.get_db_config()["connections"]["models"]["engine"]
 
-    async def asyncTearDown(self) -> None:
+    def tearDown(self) -> None:
         Tortoise._db_client_map = {}
-        await Tortoise._reset_apps()
+        Tortoise._reset_apps()
 
-    async def init_for(self, module: str, safe=False) -> None:
+    def init_for(self, module: str, safe=False) -> None:
         with patch(
             "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=AsyncMock()
         ):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -45,14 +45,14 @@ class TestGenerateSchema(test.SimpleTestCase):
     def get_sql(self, text: str) -> str:
         return re.sub(r"[ \t\n\r]+", " ", " ".join([sql for sql in self.sqls if text in sql]))
 
-    async def test_noid(self):
-        await self.init_for("tests.testmodels")
+    def test_noid(self):
+        self.init_for("tests.testmodels")
         sql = self.get_sql('"noid"')
         self.assertIn('"name" VARCHAR(255)', sql)
         self.assertIn('"id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL', sql)
 
-    async def test_minrelation(self):
-        await self.init_for("tests.testmodels")
+    def test_minrelation(self):
+        self.init_for("tests.testmodels")
         sql = self.get_sql('"minrelation"')
         self.assertIn(
             '"tournament_id" SMALLINT NOT NULL REFERENCES "tournament" ("id") ON DELETE CASCADE',
@@ -66,75 +66,75 @@ class TestGenerateSchema(test.SimpleTestCase):
         )
         self.assertIn('"team_id" INT NOT NULL REFERENCES "team" ("id") ON DELETE CASCADE', sql)
 
-    async def test_safe_generation(self):
+    def test_safe_generation(self):
         """Assert that the IF NOT EXISTS clause is included when safely generating schema."""
-        await self.init_for("tests.testmodels", True)
+        self.init_for("tests.testmodels", True)
         sql = self.get_sql("")
         self.assertIn("IF NOT EXISTS", sql)
 
-    async def test_unsafe_generation(self):
+    def test_unsafe_generation(self):
         """Assert that the IF NOT EXISTS clause is not included when generating schema."""
-        await self.init_for("tests.testmodels", False)
+        self.init_for("tests.testmodels", False)
         sql = self.get_sql("")
         self.assertNotIn("IF NOT EXISTS", sql)
 
-    async def test_cyclic(self):
+    def test_cyclic(self):
         with self.assertRaisesRegex(
             ConfigurationError, "Can't create schema due to cyclic fk references"
         ):
-            await self.init_for("tests.schema.models_cyclic")
+            self.init_for("tests.schema.models_cyclic")
 
-    async def test_create_index(self):
-        await self.init_for("tests.testmodels")
+    def test_create_index(self):
+        self.init_for("tests.testmodels")
         sql = self.get_sql("CREATE INDEX")
         self.assertIsNotNone(re.search(r"idx_tournament_created_\w+", sql))
 
-    async def test_fk_bad_model_name(self):
+    def test_fk_bad_model_name(self):
         with self.assertRaisesRegex(
             ConfigurationError, 'ForeignKey accepts model name in format "app.Model"'
         ):
-            await self.init_for("tests.schema.models_fk_1")
+            self.init_for("tests.schema.models_fk_1")
 
-    async def test_fk_bad_on_delete(self):
+    def test_fk_bad_on_delete(self):
         with self.assertRaisesRegex(
             ConfigurationError, "on_delete can only be CASCADE, RESTRICT or SET_NULL"
         ):
-            await self.init_for("tests.schema.models_fk_2")
+            self.init_for("tests.schema.models_fk_2")
 
-    async def test_fk_bad_null(self):
+    def test_fk_bad_null(self):
         with self.assertRaisesRegex(
             ConfigurationError, "If on_delete is SET_NULL, then field must have null=True set"
         ):
-            await self.init_for("tests.schema.models_fk_3")
+            self.init_for("tests.schema.models_fk_3")
 
-    async def test_o2o_bad_on_delete(self):
+    def test_o2o_bad_on_delete(self):
         with self.assertRaisesRegex(
             ConfigurationError, "on_delete can only be CASCADE, RESTRICT or SET_NULL"
         ):
-            await self.init_for("tests.schema.models_o2o_2")
+            self.init_for("tests.schema.models_o2o_2")
 
-    async def test_o2o_bad_null(self):
+    def test_o2o_bad_null(self):
         with self.assertRaisesRegex(
             ConfigurationError, "If on_delete is SET_NULL, then field must have null=True set"
         ):
-            await self.init_for("tests.schema.models_o2o_3")
+            self.init_for("tests.schema.models_o2o_3")
 
-    async def test_m2m_bad_model_name(self):
+    def test_m2m_bad_model_name(self):
         with self.assertRaisesRegex(
             ConfigurationError, 'Foreign key accepts model name in format "app.Model"'
         ):
-            await self.init_for("tests.schema.models_m2m_1")
+            self.init_for("tests.schema.models_m2m_1")
 
-    async def test_table_and_row_comment_generation(self):
-        await self.init_for("tests.testmodels")
+    def test_table_and_row_comment_generation(self):
+        self.init_for("tests.testmodels")
         sql = self.get_sql("comments")
         self.assertRegex(sql, r".*\/\* Upvotes done on the comment.*\*\/")
         self.assertRegex(sql, r".*\\n.*")
         self.assertIn("\\/", sql)
 
-    async def test_schema(self):
+    def test_schema(self):
         self.maxDiff = None
-        await self.init_for("tests.schema.models_schema_create")
+        self.init_for("tests.schema.models_schema_create")
         sql = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=False)
         self.assertEqual(
             sql.strip(),
@@ -209,9 +209,9 @@ CREATE TABLE "team_team" (
 """.strip(),
         )
 
-    async def test_schema_safe(self):
+    def test_schema_safe(self):
         self.maxDiff = None
-        await self.init_for("tests.schema.models_schema_create")
+        self.init_for("tests.schema.models_schema_create")
         sql = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=True)
         self.assertEqual(
             sql.strip(),
@@ -288,10 +288,10 @@ CREATE TABLE IF NOT EXISTS "team_team" (
 
 
 class TestGenerateSchemaMySQL(TestGenerateSchema):
-    async def init_for(self, module: str, safe=False) -> None:
+    def init_for(self, module: str, safe=False) -> None:
         try:
             with patch("aiomysql.create_pool", new=AsyncMock()):
-                await Tortoise.init(
+                Tortoise.init(
                     {
                         "connections": {
                             "default": {
@@ -312,19 +312,19 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
         except ImportError:
             raise test.SkipTest("aiomysql not installed")
 
-    async def test_noid(self):
-        await self.init_for("tests.testmodels")
+    def test_noid(self):
+        self.init_for("tests.testmodels")
         sql = self.get_sql("`noid`")
         self.assertIn("`name` VARCHAR(255)", sql)
         self.assertIn("`id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT", sql)
 
-    async def test_create_index(self):
-        await self.init_for("tests.testmodels")
+    def test_create_index(self):
+        self.init_for("tests.testmodels")
         sql = self.get_sql("KEY")
         self.assertIsNotNone(re.search(r"idx_tournament_created_\w+", sql))
 
-    async def test_minrelation(self):
-        await self.init_for("tests.testmodels")
+    def test_minrelation(self):
+        self.init_for("tests.testmodels")
         sql = self.get_sql("`minrelation`")
         self.assertIn("`tournament_id` SMALLINT NOT NULL,", sql)
         self.assertIn(
@@ -340,17 +340,17 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
         self.assertIn("`team_id` INT NOT NULL", sql)
         self.assertIn("FOREIGN KEY (`team_id`) REFERENCES `team` (`id`) ON DELETE CASCADE", sql)
 
-    async def test_table_and_row_comment_generation(self):
-        await self.init_for("tests.testmodels")
+    def test_table_and_row_comment_generation(self):
+        self.init_for("tests.testmodels")
         sql = self.get_sql("comments")
         self.assertIn("COMMENT='Test Table comment'", sql)
         self.assertIn("COMMENT 'This column acts as it\\'s own comment'", sql)
         self.assertRegex(sql, r".*\\n.*")
         self.assertRegex(sql, r".*it\\'s.*")
 
-    async def test_schema(self):
+    def test_schema(self):
         self.maxDiff = None
-        await self.init_for("tests.schema.models_schema_create")
+        self.init_for("tests.schema.models_schema_create")
         sql = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=False)
         self.assertEqual(
             sql.strip(),
@@ -436,9 +436,9 @@ CREATE TABLE `team_team` (
 """.strip(),
         )
 
-    async def test_schema_safe(self):
+    def test_schema_safe(self):
         self.maxDiff = None
-        await self.init_for("tests.schema.models_schema_create")
+        self.init_for("tests.schema.models_schema_create")
         sql = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=True)
 
         self.assertEqual(
@@ -527,10 +527,10 @@ CREATE TABLE IF NOT EXISTS `team_team` (
 
 
 class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
-    async def init_for(self, module: str, safe=False) -> None:
+    def init_for(self, module: str, safe=False) -> None:
         try:
             with patch("asyncpg.create_pool", new=AsyncMock()):
-                await Tortoise.init(
+                Tortoise.init(
                     {
                         "connections": {
                             "default": {
@@ -549,14 +549,14 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
         except ImportError:
             raise test.SkipTest("asyncpg not installed")
 
-    async def test_noid(self):
-        await self.init_for("tests.testmodels")
+    def test_noid(self):
+        self.init_for("tests.testmodels")
         sql = self.get_sql('"noid"')
         self.assertIn('"name" VARCHAR(255)', sql)
         self.assertIn('"id" SERIAL NOT NULL PRIMARY KEY', sql)
 
-    async def test_table_and_row_comment_generation(self):
-        await self.init_for("tests.testmodels")
+    def test_table_and_row_comment_generation(self):
+        self.init_for("tests.testmodels")
         sql = self.get_sql("comments")
         self.assertIn("COMMENT ON TABLE \"comments\" IS 'Test Table comment'", sql)
         self.assertIn(
@@ -568,9 +568,9 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
             'COMMENT ON COLUMN "comments"."multiline_comment" IS \'Some \\n comment\'', sql
         )
 
-    async def test_schema(self):
+    def test_schema(self):
         self.maxDiff = None
-        await self.init_for("tests.schema.models_schema_create")
+        self.init_for("tests.schema.models_schema_create")
         sql = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=False)
         self.assertEqual(
             sql.strip(),
@@ -658,9 +658,9 @@ CREATE TABLE "team_team" (
 """.strip(),
         )
 
-    async def test_schema_safe(self):
+    def test_schema_safe(self):
         self.maxDiff = None
-        await self.init_for("tests.schema.models_schema_create")
+        self.init_for("tests.schema.models_schema_create")
         sql = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=True)
         self.assertEqual(
             sql.strip(),

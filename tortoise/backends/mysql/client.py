@@ -136,16 +136,13 @@ class MySQLClient(BaseDBAsyncClient):
             for conn in self._pool._free:
                 conn._reader.set_exception(EOFError("EOF"))
 
-    async def _close(self) -> None:
+    async def close(self) -> None:
         if self._pool:  # pragma: nobranch
             self._pool.close()
             await self._pool.wait_closed()
 
             self.log.debug("Closed connection pool %s", self._pool)
             self._pool = None
-
-    async def close(self) -> None:
-        await self._close()
 
     async def db_create(self) -> None:
         await self.create_connection(with_db=False)

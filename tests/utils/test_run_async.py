@@ -8,12 +8,12 @@ class TestRunAsync(TestCase):
         self.somevalue = 1
 
     async def init(self):
-        await Tortoise.init(db_url="sqlite://:memory:", modules={"models": []})
+        Tortoise.init(db_url="sqlite://:memory:", modules={"models": []})
         self.somevalue = 2
         self.assertNotEqual(Tortoise._db_client_map, {})
 
     async def init_raise(self):
-        await Tortoise.init(db_url="sqlite://:memory:", modules={"models": []})
+        Tortoise.init(db_url="sqlite://:memory:", modules={"models": []})
         self.somevalue = 3
         self.assertNotEqual(Tortoise._db_client_map, {})
         raise Exception("Some exception")

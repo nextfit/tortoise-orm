@@ -112,7 +112,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         if self._pool:  # pragma: nobranch
             await self._pool.expire_connections()
 
-    async def _close(self) -> None:
+    async def close(self) -> None:
         if self._pool:  # pragma: nobranch
             try:
                 await asyncio.wait_for(self._pool.close(), 10)
@@ -121,9 +121,6 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
             self.log.debug("Closed connection pool %s", self._pool)
             self._pool = None
-
-    async def close(self) -> None:
-        await self._close()
 
     async def db_create(self) -> None:
         await self.create_connection(with_db=False)

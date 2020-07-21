@@ -24,7 +24,7 @@ class TestGenerateSchema(test.SimpleTestCase):
 
     async def asyncTearDown(self) -> None:
         Tortoise._db_client_map = {}
-        await Tortoise._reset_apps()
+        Tortoise._reset_apps()
 
     async def init_for(self, module: str, safe=False) -> None:
         if self.engine != "tortoise.backends.sqlite":
@@ -32,7 +32,7 @@ class TestGenerateSchema(test.SimpleTestCase):
         with patch(
             "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=AsyncMock()
         ):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -43,7 +43,6 @@ class TestGenerateSchema(test.SimpleTestCase):
                     "apps": {"models": {"models": [module], "default_connection": "default"}},
                 }
             )
-
             self.sqls = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=safe).split(";\n")
 
     def get_sql(self, text: str) -> str:

@@ -14,7 +14,7 @@ class Report(Model):
 
 
 async def run():
-    await Tortoise.init(
+    Tortoise.init(
         {
             "connections": {
                 "default": {
@@ -28,8 +28,9 @@ async def run():
             },
             "apps": {"models": {"models": ["__main__"], "default_connection": "default"}},
         },
-        _create_db=True,
     )
+
+    await Tortoise.open_connections(create_db=True)
     await Tortoise.generate_schemas()
 
     report_data = {"foo": "bar"}

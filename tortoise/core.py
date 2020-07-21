@@ -107,7 +107,7 @@ class _Tortoise:
         except AttributeError:
             raise ConfigurationError(f'Backend for engine "{engine}" does not implement db client')
 
-    async def _init_connections(self, connections_config: dict, create_db: bool) -> None:
+    def _init_connections(self, connections_config: dict) -> None:
         for connection_name, conn_config in connections_config.items():
             if isinstance(conn_config, str):
                 conn_config = expand_db_url(conn_config)
@@ -118,10 +118,6 @@ class _Tortoise:
             db_params.update({"connection_name": connection_name})
             db_client = client_class(**db_params)
 
-            if create_db:
-                await db_client.db_create()
-
-            await db_client.create_connection(with_db=True)
             self._db_client_map[connection_name] = db_client
             self._current_transaction_map[connection_name] = ContextVar(connection_name, default=db_client)
 
@@ -204,11 +200,10 @@ class _Tortoise:
             )
         return config
 
-    async def init(
+    def init(
         self,
         config: Optional[Dict[str, Any]] = None,
         config_file: Optional[str] = None,
-        _create_db: bool = False,
         db_url: Optional[str] = None,
         modules: Optional[Dict[str, List[str]]] = None,
     ) -> None:
@@ -255,10 +250,6 @@ class _Tortoise:
             Path to .json or .yml (if PyYAML installed) file containing config with
             same format as above.
 
-        :param _create_db:
-            If ``True`` tries to create database for specified connections,
-            could be used for testing purposes.
-
         :param db_url:
             Use a DB_URL string. See :ref:`db_url`
 
@@ -292,8 +283,7 @@ class _Tortoise:
             raise ConfigurationError('Config must define "apps" section')
 
         if self._inited:
-            await self.close_connections()
-            await self._reset_apps()
+            self._reset_apps()
 
         connections_config = config["connections"]  # type: ignore
         apps_config = config["apps"]  # type: ignore
@@ -303,26 +293,12 @@ class _Tortoise:
             str(apps_config),
         )
 
-        await self._init_connections(connections_config, _create_db)
+        self._init_connections(connections_config)
         self._init_apps(apps_config)
         self._init_models()
         self._inited = True
 
-    async def close_connections(self) -> None:
-        """
-        Close all connections cleanly.
-
-        It is required for this to be called on exit,
-        else your event loop may never complete
-        as it is waiting for the connections to die.
-        """
-        for db_client in self._db_client_map.values():
-            await db_client.close()
-
-        self._db_client_map = {}
-        self.logger.info("Tortoise-ORM shutdown")
-
-    async def _reset_apps(self) -> None:
+    def _reset_apps(self) -> None:
         for models_map in self._app_models_map.values():
             for model in models_map.values():
                 model._meta.connection_name = None
@@ -372,6 +348,37 @@ class _Tortoise:
         schema_creation_string = "\n".join(table_creation_sqls + m2m_creation_sqls)
         return schema_creation_string
 
+    async def open_connections(self, create_db: bool = False) -> None:
+        """
+        Open connections in the current context
+
+        :param create_db:
+            If ``True`` tries to create database for specified connections,
+            could be used for testing purposes.
+        :return: None
+        """
+
+        self.logger.info("Tortoise-ORM opening connections")
+        for connection_name, db_client in self._db_client_map.items():
+            if create_db:
+                await db_client.db_create()
+
+            await db_client.create_connection(with_db=True)
+
+    async def close_connections(self) -> None:
+        """
+        Close all connections cleanly.
+
+        It is required for this to be called on exit,
+        else your event loop may never complete
+        as it is waiting for the connections to die.
+        """
+        for db_client in self._db_client_map.values():
+            await db_client.close()
+
+        self._db_client_map = {}
+        self.logger.info("Tortoise-ORM closed connections")
+
     async def generate_schemas(self, safe: bool = True) -> None:
         """
         Generate schemas according to models provided to ``.init()`` method.
@@ -383,6 +390,8 @@ class _Tortoise:
         safe:
             When set to true, creates the table only when it does not already exist.
         """
+        logging.info("Tortoise-ORM generating schemas")
+
         if not self._inited:
             raise ConfigurationError("You have to call .init() first before generating schemas")
 
@@ -406,4 +415,4 @@ class _Tortoise:
             await db_client.db_delete()
 
         self._db_client_map = {}
-        await self._reset_apps()
+        self._reset_apps()

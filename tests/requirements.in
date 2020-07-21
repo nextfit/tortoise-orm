@@ -26,7 +26,6 @@ black
 
 ## Test tools
 tox
-asynctest
 green
 coveralls
 pytest

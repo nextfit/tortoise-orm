@@ -11,11 +11,11 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
 
     async def asyncTearDown(self) -> None:
         await Tortoise.close_connections()
-        await Tortoise._reset_apps()
+        Tortoise._reset_apps()
 
     async def test_wrong_app_init(self):
         with self.assertRaisesRegex(ConfigurationError, "No app with name 'app' registered."):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -36,7 +36,7 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
         with self.assertRaisesRegex(
             ConfigurationError, "No model with name 'Tour' registered in app 'models'."
         ):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -57,7 +57,7 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
         with self.assertRaisesRegex(
             ConfigurationError, 'ForeignKey accepts model name in format "app.Model"'
         ):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -78,7 +78,7 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
         with self.assertRaisesRegex(
             ConfigurationError, 'ForeignKey accepts model name in format "app.Model"'
         ):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
@@ -99,7 +99,7 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
         with self.assertRaisesRegex(
             ConfigurationError, 'OneToOneField accepts model name in format "app.Model"'
         ):
-            await Tortoise.init(
+            Tortoise.init(
                 {
                     "connections": {
                         "default": {
