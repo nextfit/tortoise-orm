@@ -62,6 +62,9 @@ async def initialize_tests(request):
     except AttributeError as e:
         print(e)
 
+    logger = logging.getLogger("tortoise.test")
+    logger.debug("initialize_tests")
+
     SimpleTestCase.tortoise_test_db = os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
 
     await TruncationTestCase.initialize()

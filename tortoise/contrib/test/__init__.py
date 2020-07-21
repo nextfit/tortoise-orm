@@ -216,7 +216,8 @@ class TestCase(TruncationTestCase):
                 if not fut.cancelled():
                     fut.set_exception(ex)
 
-        await Tortoise.close_connections()
+        if models_db_client.capabilities.supports_transactions:
+            await Tortoise.close_connections()
 
 
 def requireCapability(connection_name: str = "models", **conditions: Any):
