@@ -1,4 +1,4 @@
-
+import asyncio
 import logging
 
 from functools import wraps
@@ -132,6 +132,7 @@ class TruncationTestCase(SimpleTestCase):
 
         await cls.tortoise_test.open_connections()
         await cls.tortoise_test._drop_databases()
+        await cls.tortoise_test.close_connections()
 
     async def asyncSetUp(self) -> None:
         self.restore_tortoise()
@@ -142,15 +143,8 @@ class TruncationTestCase(SimpleTestCase):
             for model in models_map.values():
                 await model._meta.db.execute_script(f"DELETE FROM {model._meta.db_table}")  # nosec
 
-    #
-    # async def asyncTearDown(self) -> None:
-    #     _restore_default()
-    #
-    #     # TODO: This is a naive implementation: Will fail to clear M2M and non-cascade foreign keys
-    #     for models_map in Tortoise._app_models_map.values():
-    #         for model in models_map.values():
-    #             await model._meta.db.execute_script(f"DELETE FROM {model._meta.db_table}")  # nosec
-    #
+    async def asyncTearDown(self) -> None:
+        await Tortoise.close_connections()
 
 
 class TestTransactionContext(TransactionContext):
@@ -178,22 +172,51 @@ class TestCase(TruncationTestCase):
     This is a fast test runner. Don't use it if your test uses transactions.
     """
 
-    # async def _run_outcome(self, outcome, expecting_failure, testMethod) -> None:
-    #     _restore_default()
-    #     self.__db__ = Tortoise.get_db_client("models")
-    #     if self.__db__.capabilities.supports_transactions:
-    #         db_client = self.__db__.in_transaction().db_client
-    #         async with TestTransactionContext(db_client):
-    #             await super()._run_outcome(outcome, expecting_failure, testMethod)
-    #     else:
-    #         await super()._run_outcome(outcome, expecting_failure, testMethod)
-    #
-    # async def asyncTearDown(self) -> None:
-    #     if self.__db__.capabilities.supports_transactions:
-    #         _restore_default()
-    #     else:
-    #         await super()._tearDownDB()
-    pass
+    async def asyncSetUp(self) -> None:
+        models_db_client = Tortoise.get_db_client("models")
+        if not models_db_client.capabilities.supports_transactions:
+            await super().asyncSetUp()
+
+    async def asyncTearDown(self) -> None:
+        models_db_client = Tortoise.get_db_client("models")
+        if not models_db_client.capabilities.supports_transactions:
+            await super().asyncTearDown()
+
+    async def _asyncioLoopRunner(self, fut):
+        models_db_client = Tortoise.get_db_client("models")
+        if models_db_client.capabilities.supports_transactions:
+            self.restore_tortoise()
+            await Tortoise.open_connections()
+
+        self._asyncioCallsQueue = queue = asyncio.Queue()
+        fut.set_result(None)
+        while True:
+            query = await queue.get()
+            queue.task_done()
+            if query is None:
+                break
+
+            fut, awaitable = query
+            try:
+                if models_db_client.capabilities.supports_transactions:
+                    db_client = models_db_client.in_transaction().db_client
+                    async with TestTransactionContext(db_client):
+                        ret = await awaitable
+
+                else:
+                    ret = await awaitable
+
+                if not fut.cancelled():
+                    fut.set_result(ret)
+
+            except asyncio.CancelledError:
+                raise
+
+            except Exception as ex:
+                if not fut.cancelled():
+                    fut.set_exception(ex)
+
+        await Tortoise.close_connections()
 
 
 def requireCapability(connection_name: str = "models", **conditions: Any):
