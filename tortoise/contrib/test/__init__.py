@@ -34,6 +34,10 @@ class SimpleTestCase(IsolatedAsyncioTestCase):
     The Tortoise base test class.
     This will ensure that your DB environment has a test double set up for use.
 
+    Note to use ``{}`` as a string-replacement parameter, for your DB_URL.
+    That will create a randomised database name.
+
+    If you define a ``tortoise_test_modules`` list, it overrides the DB setup module for the tests.
     """
 
     tortoise_test_db = None
@@ -57,22 +61,17 @@ class IsolatedTestCase(SimpleTestCase):
     """
     Use this if your test needs perfect isolation.
 
-    Note to use ``{}`` as a string-replacement parameter, for your DB_URL.
-    That will create a randomised database name.
-
     It will create and destroy a new DB instance for every test.
     This is obviously slow, but guarantees a fresh DB.
 
-    If you define a ``tortoise_test_modules`` list, it overrides the DB setup module for the tests.
     """
 
     def setUp(self) -> None:
         self.isolated_tortoise = tortoise._Tortoise()
+        self.isolated_tortoise.init(self.get_db_config())
         tortoise.Tortoise = self.isolated_tortoise
 
     async def asyncSetUp(self) -> None:
-        self.isolated_tortoise.init(self.get_db_config())
-
         await self.isolated_tortoise.open_connections(create_db=True)
         await self.isolated_tortoise.generate_schemas(safe=False)
         # self._db_client_map = self.isolated_tortoise._db_client_map.copy()
