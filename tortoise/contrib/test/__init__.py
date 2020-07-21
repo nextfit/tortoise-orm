@@ -132,7 +132,6 @@ class TruncationTestCase(SimpleTestCase):
 
         await cls.tortoise_test.open_connections()
         await cls.tortoise_test._drop_databases()
-        await cls.tortoise_test.close_connections()
 
     async def asyncSetUp(self) -> None:
         self.restore_tortoise()

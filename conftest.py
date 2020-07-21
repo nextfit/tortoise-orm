@@ -47,6 +47,13 @@ LOGGING = {
     },
 }
 
+try:
+    logging.config.dictConfig(LOGGING)
+except AttributeError as e:
+    print(e)
+
+logger = logging.getLogger("tortoise.test")
+
 
 @pytest.fixture(scope='session')
 def event_loop(request):
@@ -57,16 +64,9 @@ def event_loop(request):
 
 @pytest.fixture(scope="session", autouse=True)
 async def initialize_tests(request):
-    try:
-        logging.config.dictConfig(LOGGING)
-    except AttributeError as e:
-        print(e)
-
-    logger = logging.getLogger("tortoise.test")
     logger.debug("initialize_tests")
 
     SimpleTestCase.tortoise_test_db = os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
-
     await TruncationTestCase.initialize()
     yield True
     await TruncationTestCase.finalize()
