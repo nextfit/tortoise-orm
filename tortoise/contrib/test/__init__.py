@@ -82,6 +82,23 @@ class IsolatedTestCase(SimpleTestCase):
         await Tortoise.close_connections()
 
 
+class TestTransactionContext(TransactionContext):
+    __slots__ = ("token", )
+
+    async def __aenter__(self):
+        current_transaction = Tortoise._current_transaction_map[self.connection_name]
+        self.token = current_transaction.set(self.db_client)
+
+        await self.db_client.acquire()
+        await self.db_client.start()
+        return self.db_client
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.db_client.rollback()
+        Tortoise._current_transaction_map[self.connection_name].reset(self.token)
+        await self.db_client.release()
+
+
 class TruncationTestCase(SimpleTestCase):
     """
     Use this when your tests contain transactions.
@@ -91,6 +108,9 @@ class TruncationTestCase(SimpleTestCase):
     """
 
     tortoise_test = _Tortoise()
+
+    wrap_in_transaction = False
+    avoid_transaction = {'asyncSetUp', 'asyncTearDown'}
 
     @classmethod
     def restore_tortoise(cls) -> None:
@@ -134,58 +154,23 @@ class TruncationTestCase(SimpleTestCase):
         await cls.tortoise_test._drop_databases()
 
     async def asyncSetUp(self) -> None:
-        self.restore_tortoise()
-        await Tortoise.open_connections()
-
-        # TODO: This is a naive implementation: Will fail to clear M2M and non-cascade foreign keys
-        for models_map in Tortoise._app_models_map.values():
-            for model in models_map.values():
-                await model._meta.db.execute_script(f"DELETE FROM {model._meta.db_table}")  # nosec
+        if not self.wrap_in_transaction:
+            for models_map in Tortoise._app_models_map.values():
+                for model in models_map.values():
+                    await model._meta.db.execute_script(f"DELETE FROM {model._meta.db_table}")  # nosec
 
     async def asyncTearDown(self) -> None:
-        await Tortoise.close_connections()
-
-
-class TestTransactionContext(TransactionContext):
-    __slots__ = ("token", )
-
-    async def __aenter__(self):
-        current_transaction = Tortoise._current_transaction_map[self.connection_name]
-        self.token = current_transaction.set(self.db_client)
-
-        await self.db_client.acquire()
-        await self.db_client.start()
-        return self.db_client
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        await self.db_client.rollback()
-        Tortoise._current_transaction_map[self.connection_name].reset(self.token)
-        await self.db_client.release()
-
-
-class TestCase(TruncationTestCase):
-    """
-    An asyncio capable test class that will ensure that each test will be run at
-    separate transaction that will rollback on finish.
-
-    This is a fast test runner. Don't use it if your test uses transactions.
-    """
-
-    async def asyncSetUp(self) -> None:
-        models_db_client = Tortoise.get_db_client("models")
-        if not models_db_client.capabilities.supports_transactions:
-            await super().asyncSetUp()
-
-    async def asyncTearDown(self) -> None:
-        models_db_client = Tortoise.get_db_client("models")
-        if not models_db_client.capabilities.supports_transactions:
-            await super().asyncTearDown()
+        pass
 
     async def _asyncioLoopRunner(self, fut):
+        self.restore_tortoise()
+
+        # if "models" db client does not support transactions, turn it off even if it is on
         models_db_client = Tortoise.get_db_client("models")
-        if models_db_client.capabilities.supports_transactions:
-            self.restore_tortoise()
-            await Tortoise.open_connections()
+        if not models_db_client.capabilities.supports_transactions:
+            self.wrap_in_transaction = False
+
+        await Tortoise.open_connections()
 
         self._asyncioCallsQueue = queue = asyncio.Queue()
         fut.set_result(None)
@@ -197,7 +182,7 @@ class TestCase(TruncationTestCase):
 
             fut, awaitable = query
             try:
-                if models_db_client.capabilities.supports_transactions:
+                if self.wrap_in_transaction and awaitable.__name__ not in self.avoid_transaction:
                     db_client = models_db_client.in_transaction().db_client
                     async with TestTransactionContext(db_client):
                         ret = await awaitable
@@ -215,8 +200,18 @@ class TestCase(TruncationTestCase):
                 if not fut.cancelled():
                     fut.set_exception(ex)
 
-        if models_db_client.capabilities.supports_transactions:
-            await Tortoise.close_connections()
+        await Tortoise.close_connections()
+
+
+class TestCase(TruncationTestCase):
+    """
+    An asyncio capable test class that will ensure that each test will be run at
+    separate transaction that will rollback on finish.
+
+    This is a fast test runner. Don't use it if your test uses transactions.
+    """
+
+    wrap_in_transaction = True
 
 
 def requireCapability(connection_name: str = "models", **conditions: Any):
