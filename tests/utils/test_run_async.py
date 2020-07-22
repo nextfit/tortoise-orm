@@ -1,19 +1,21 @@
 
+from unittest import IsolatedAsyncioTestCase
 from tortoise import Tortoise, run_async
-from tortoise.contrib.test import SimpleTestCase
 
 
-class TestRunAsync(SimpleTestCase):
+class TestRunAsync(IsolatedAsyncioTestCase):
     def setUp(self):
         self.somevalue = 1
 
     async def init(self):
         Tortoise.init(db_url="sqlite://:memory:", modules={"models": []})
+        await Tortoise.open_connections()
         self.somevalue = 2
         self.assertNotEqual(Tortoise._db_client_map, {})
 
     async def init_raise(self):
         Tortoise.init(db_url="sqlite://:memory:", modules={"models": []})
+        await Tortoise.open_connections()
         self.somevalue = 3
         self.assertNotEqual(Tortoise._db_client_map, {})
         raise Exception("Some exception")

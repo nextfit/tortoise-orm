@@ -2,7 +2,7 @@
 from tortoise.contrib import test
 
 
-class TestTesterSync(test.SimpleTestCase):
+class TestTesterSync(test.TestCase):
     def setUp(self):
         self.moo = "SET"
 
@@ -21,7 +21,7 @@ class TestTesterSync(test.SimpleTestCase):
         self.assertEqual(self.moo, "SET")
 
 
-class TestTesterASync(test.SimpleTestCase):
+class TestTesterASync(test.TestCase):
     async def asyncSetUp(self):
         self.baa = "TES"
 

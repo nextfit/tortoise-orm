@@ -1,11 +1,11 @@
-import os
 
+import os
+from unittest import IsolatedAsyncioTestCase
 from tortoise import Tortoise
-from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 
 
-class TestInitErrors(test.SimpleTestCase):
+class TestInitErrors(IsolatedAsyncioTestCase):
     def setUp(self):
         Tortoise._app_models_map = {}
         Tortoise._db_client_map = {}
