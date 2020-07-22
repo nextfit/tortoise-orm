@@ -22,7 +22,7 @@ class TestConnectionParams(IsolatedAsyncioTestCase):
             },
         )
 
-        with patch("aiomysql.create_pool", new=AsyncMock()) as mysql_connect:
+        with patch("aiomysql.create_pool", new=AsyncMock(return_value=None)) as mysql_connect:
             await Tortoise.open_connections()
             mysql_connect.assert_awaited_once_with(  # nosec
                 autocommit=True,
@@ -38,7 +38,7 @@ class TestConnectionParams(IsolatedAsyncioTestCase):
                 sql_mode="STRICT_TRANS_TABLES",
             )
 
-            await Tortoise.close_connections()
+        await Tortoise.close_connections()
 
     async def test_postgres_connection_params(self):
         try:
@@ -57,7 +57,7 @@ class TestConnectionParams(IsolatedAsyncioTestCase):
                 },
             )
 
-            with patch("asyncpg.create_pool", new=AsyncMock()) as asyncpg_connect:
+            with patch("asyncpg.create_pool", new=AsyncMock(return_value=None)) as asyncpg_connect:
                 await Tortoise.open_connections()
                 asyncpg_connect.assert_awaited_once_with(  # nosec
                     None,
@@ -72,7 +72,7 @@ class TestConnectionParams(IsolatedAsyncioTestCase):
                     min_size=1,
                 )
 
-                await Tortoise.close_connections()
+            await Tortoise.close_connections()
 
         except ImportError:
             self.skipTest("asyncpg not installed")
