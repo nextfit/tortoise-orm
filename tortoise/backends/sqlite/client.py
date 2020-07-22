@@ -52,7 +52,7 @@ class SqliteClient(BaseDBAsyncClient):
         self.pragmas.setdefault("foreign_keys", "ON")
 
         self._connection: Optional[aiosqlite.Connection] = None
-        self._lock = asyncio.Lock()
+        self._lock = None
 
     def _copy(self, base) -> None:
         super()._copy(base)
@@ -72,6 +72,8 @@ class SqliteClient(BaseDBAsyncClient):
                 cursor = await self._connection.execute(f"PRAGMA {pragma}={val}")
                 await cursor.close()
 
+            self._lock = asyncio.Lock()
+
             self.log.debug(
                 "Created connection %s with params: filename=%s %s",
                 self._connection,
@@ -89,6 +91,7 @@ class SqliteClient(BaseDBAsyncClient):
                 " ".join([f"{k}={v}" for k, v in self.pragmas.items()]),
             )
             self._connection = None
+            self._lock = None
 
     async def db_create(self) -> None:
         pass

@@ -125,7 +125,6 @@ class TruncationTestCase(SimpleTestCase):
         Cleans up the DB after testing. Must be called as part of the test environment teardown.
         """
 
-        await cls.tortoise_test.open_connections()
         await cls.tortoise_test.drop_databases()
 
     async def _asyncioLoopRunner(self, fut):

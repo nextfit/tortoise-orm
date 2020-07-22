@@ -50,7 +50,7 @@ test: deps
 	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: py.test --cov=tortoise
 
 test_sqlite:
-	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: py.test --cov=tortoise --cov-report=
+	$(py_warn) TORTOISE_TEST_DB="sqlite://test_\{\}.sqlite3" py.test --cov=tortoise --cov-report=
 
 test_postgres:
 	python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB="postgres://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}" py.test --cov=tortoise --cov-append --cov-report=
