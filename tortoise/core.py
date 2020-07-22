@@ -282,8 +282,7 @@ class _Tortoise:
         if "apps" not in config:
             raise ConfigurationError('Config must define "apps" section')
 
-        if self._inited:
-            self._reset_apps()
+        self._reset_apps()
 
         connections_config = config["connections"]  # type: ignore
         apps_config = config["apps"]  # type: ignore
@@ -299,9 +298,10 @@ class _Tortoise:
         self._inited = True
 
     def _reset_apps(self) -> None:
-        for models_map in self._app_models_map.values():
-            for model in models_map.values():
-                model._meta.connection_name = None
+        if self._inited:
+            for models_map in self._app_models_map.values():
+                for model in models_map.values():
+                    model._meta.connection_name = None
 
         self._app_models_map.clear()
         self._current_transaction_map.clear()

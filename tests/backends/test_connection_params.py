@@ -6,23 +6,23 @@ from tortoise.contrib import test
 
 class TestConnectionParams(test.TestCase):
     async def test_mysql_connection_params(self):
-        with patch("aiomysql.create_pool", new=AsyncMock()) as mysql_connect:
-            await Tortoise._init_connections(
-                {
-                    "models": {
-                        "engine": "tortoise.backends.mysql",
-                        "database": "test",
-                        "host": "127.0.0.1",
-                        "password": "foomip",
-                        "port": 3306,
-                        "user": "root",
-                        "connect_timeout": 1.5,
-                        "charset": "utf8mb4",
-                    }
-                },
-                False,
-            )
+        Tortoise._init_connections(
+            {
+                "models": {
+                    "engine": "tortoise.backends.mysql",
+                    "database": "test",
+                    "host": "127.0.0.1",
+                    "password": "foomip",
+                    "port": 3306,
+                    "user": "root",
+                    "connect_timeout": 1.5,
+                    "charset": "utf8mb4",
+                }
+            },
+        )
 
+        with patch("aiomysql.create_pool", new=AsyncMock()) as mysql_connect:
+            await Tortoise.open_connections()
             mysql_connect.assert_awaited_once_with(  # nosec
                 autocommit=True,
                 charset="utf8mb4",
@@ -39,23 +39,23 @@ class TestConnectionParams(test.TestCase):
 
     async def test_postres_connection_params(self):
         try:
-            with patch("asyncpg.create_pool", new=AsyncMock()) as asyncpg_connect:
-                await Tortoise._init_connections(
-                    {
-                        "models": {
-                            "engine": "tortoise.backends.asyncpg",
-                            "database": "test",
-                            "host": "127.0.0.1",
-                            "password": "foomip",
-                            "port": 5432,
-                            "user": "root",
-                            "timeout": 30,
-                            "ssl": True,
-                        }
-                    },
-                    False,
-                )
+            Tortoise._init_connections(
+                {
+                    "models": {
+                        "engine": "tortoise.backends.asyncpg",
+                        "database": "test",
+                        "host": "127.0.0.1",
+                        "password": "foomip",
+                        "port": 5432,
+                        "user": "root",
+                        "timeout": 30,
+                        "ssl": True,
+                    }
+                },
+            )
 
+            with patch("asyncpg.create_pool", new=AsyncMock()) as asyncpg_connect:
+                await Tortoise.open_connections()
                 asyncpg_connect.assert_awaited_once_with(  # nosec
                     None,
                     database="test",
@@ -68,5 +68,6 @@ class TestConnectionParams(test.TestCase):
                     max_size=5,
                     min_size=1,
                 )
+
         except ImportError:
             self.skipTest("asyncpg not installed")

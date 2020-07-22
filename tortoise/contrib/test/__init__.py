@@ -82,23 +82,6 @@ class IsolatedTestCase(SimpleTestCase):
         await Tortoise.close_connections()
 
 
-class TestTransactionContext(TransactionContext):
-    __slots__ = ("token", )
-
-    async def __aenter__(self):
-        current_transaction = Tortoise._current_transaction_map[self.connection_name]
-        self.token = current_transaction.set(self.db_client)
-
-        await self.db_client.acquire()
-        await self.db_client.start()
-        return self.db_client
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        await self.db_client.rollback()
-        Tortoise._current_transaction_map[self.connection_name].reset(self.token)
-        await self.db_client.release()
-
-
 class TruncationTestCase(SimpleTestCase):
     """
     Use this when your tests contain transactions.
@@ -108,9 +91,7 @@ class TruncationTestCase(SimpleTestCase):
     """
 
     tortoise_test = _Tortoise()
-
     wrap_in_transaction = False
-    avoid_transaction = {'asyncSetUp', 'asyncTearDown'}
 
     @classmethod
     def restore_tortoise(cls) -> None:
@@ -153,15 +134,6 @@ class TruncationTestCase(SimpleTestCase):
         await cls.tortoise_test.open_connections()
         await cls.tortoise_test._drop_databases()
 
-    async def asyncSetUp(self) -> None:
-        if not self.wrap_in_transaction:
-            for models_map in Tortoise._app_models_map.values():
-                for model in models_map.values():
-                    await model._meta.db.execute_script(f"DELETE FROM {model._meta.db_table}")  # nosec
-
-    async def asyncTearDown(self) -> None:
-        pass
-
     async def _asyncioLoopRunner(self, fut):
         self.restore_tortoise()
 
@@ -182,16 +154,29 @@ class TruncationTestCase(SimpleTestCase):
 
             fut, awaitable = query
             try:
-                if self.wrap_in_transaction and awaitable.__name__ not in self.avoid_transaction:
-                    db_client = models_db_client.in_transaction().db_client
-                    async with TestTransactionContext(db_client):
-                        ret = await awaitable
+                if awaitable.__name__ == 'asyncSetUp':
+                    if self.wrap_in_transaction:
+                        db_client = models_db_client.in_transaction().db_client
+                        current_transaction = Tortoise._current_transaction_map[db_client.connection_name]
+                        token = current_transaction.set(db_client)
 
-                else:
-                    ret = await awaitable
+                        await db_client.acquire()
+                        await db_client.start()
 
+                ret = await awaitable
                 if not fut.cancelled():
                     fut.set_result(ret)
+
+                if awaitable.__name__ == 'asyncTearDown':
+                    if self.wrap_in_transaction:
+                        await db_client.rollback()
+                        current_transaction.reset(token)
+                        await db_client.release()
+
+                    else:
+                        for models_map in Tortoise._app_models_map.values():
+                            for model in models_map.values():
+                                await model._meta.db.execute_script(f"DELETE FROM {model._meta.db_table}")  # nosec
 
             except asyncio.CancelledError:
                 raise
