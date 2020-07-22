@@ -16,8 +16,11 @@ class TestPostgreSQL(test.SimpleTestCase):
             raise test.SkipTest("PostgreSQL only")
 
     async def asyncTearDown(self) -> None:
-        if Tortoise._inited:
+        try:
             await Tortoise.drop_databases()
+
+        except ConnectionError:
+            pass
 
     async def test_schema(self):
         from asyncpg.exceptions import InvalidSchemaNameError

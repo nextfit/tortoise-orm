@@ -1,9 +1,9 @@
-from unittest import TestCase
 
 from tortoise import Tortoise, run_async
+from tortoise.contrib.test import SimpleTestCase
 
 
-class TestRunAsync(TestCase):
+class TestRunAsync(SimpleTestCase):
     def setUp(self):
         self.somevalue = 1
 
@@ -19,16 +19,16 @@ class TestRunAsync(TestCase):
         raise Exception("Some exception")
 
     def test_run_async(self):
+        Tortoise._reset()
         self.assertEqual(Tortoise._db_client_map, {})
         self.assertEqual(self.somevalue, 1)
         run_async(self.init())
-        self.assertEqual(Tortoise._db_client_map, {})
         self.assertEqual(self.somevalue, 2)
 
     def test_run_async_raised(self):
+        Tortoise._reset()
         self.assertEqual(Tortoise._db_client_map, {})
         self.assertEqual(self.somevalue, 1)
         with self.assertRaises(Exception):
             run_async(self.init_raise())
-        self.assertEqual(Tortoise._db_client_map, {})
         self.assertEqual(self.somevalue, 3)

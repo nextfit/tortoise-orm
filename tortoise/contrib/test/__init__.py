@@ -4,7 +4,6 @@ import logging
 from functools import wraps
 from tortoise import Tortoise, _Tortoise
 from tortoise.backends.base.config_generator import generate_config
-from tortoise.transactions.context import TransactionContext
 from typing import Any, List
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless, IsolatedAsyncioTestCase
 
