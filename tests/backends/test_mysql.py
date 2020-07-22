@@ -5,6 +5,7 @@ import ssl
 
 from tortoise import Tortoise
 from tortoise.contrib import test
+from tortoise.exceptions import DBConnectionError
 
 
 class TestMySQL(test.SimpleTestCase):
@@ -14,8 +15,11 @@ class TestMySQL(test.SimpleTestCase):
             raise test.SkipTest("MySQL only")
 
     async def asyncTearDown(self) -> None:
-        if Tortoise._inited:
+        try:
             await Tortoise.drop_databases()
+
+        except DBConnectionError:
+            pass
 
     async def test_bad_charset(self):
         self.db_config["connections"]["models"]["charset"] = "terrible"
