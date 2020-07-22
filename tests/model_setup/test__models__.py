@@ -4,8 +4,6 @@ Tests for __models__
 
 import re
 
-from unittest.mock import AsyncMock, patch
-
 from tortoise import Tortoise
 from tortoise.contrib import test
 
@@ -28,21 +26,19 @@ class TestGenerateSchema(test.SimpleTestCase):
     async def init_for(self, module: str, safe=False) -> None:
         if self.engine != "tortoise.backends.sqlite":
             raise test.SkipTest("sqlite only")
-        with patch(
-            "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=AsyncMock()
-        ):
-            Tortoise.init(
-                {
-                    "connections": {
-                        "default": {
-                            "engine": "tortoise.backends.sqlite",
-                            "file_path": ":memory:",
-                        }
-                    },
-                    "apps": {"models": {"models": [module], "default_connection": "default"}},
-                }
-            )
-            self.sqls = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=safe).split(";\n")
+
+        Tortoise.init(
+            {
+                "connections": {
+                    "default": {
+                        "engine": "tortoise.backends.sqlite",
+                        "file_path": ":memory:",
+                    }
+                },
+                "apps": {"models": {"models": [module], "default_connection": "default"}},
+            }
+        )
+        self.sqls = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=safe).split(";\n")
 
     def get_sql(self, text: str) -> str:
         return re.sub(r"[ \t\n\r]+", " ", [sql for sql in self.sqls if text in sql][0])

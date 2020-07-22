@@ -1,9 +1,11 @@
+
+from unittest import IsolatedAsyncioTestCase
+
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
-from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 
 
-class TestConfigGenerator(test.SimpleTestCase):
+class TestConfigGenerator(IsolatedAsyncioTestCase):
     def test_unknown_scheme(self):
         with self.assertRaises(ConfigurationError):
             expand_db_url("moo://baa")

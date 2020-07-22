@@ -1,10 +1,11 @@
+
+from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, patch
 
 from tortoise import Tortoise
-from tortoise.contrib import test
 
 
-class TestConnectionParams(test.TestCase):
+class TestConnectionParams(IsolatedAsyncioTestCase):
     async def test_mysql_connection_params(self):
         Tortoise._init_connections(
             {
@@ -37,7 +38,9 @@ class TestConnectionParams(test.TestCase):
                 sql_mode="STRICT_TRANS_TABLES",
             )
 
-    async def test_postres_connection_params(self):
+            await Tortoise.close_connections()
+
+    async def test_postgres_connection_params(self):
         try:
             Tortoise._init_connections(
                 {
@@ -68,6 +71,8 @@ class TestConnectionParams(test.TestCase):
                     max_size=5,
                     min_size=1,
                 )
+
+                await Tortoise.close_connections()
 
         except ImportError:
             self.skipTest("asyncpg not installed")

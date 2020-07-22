@@ -1,7 +1,5 @@
 
 import re
-from unittest.mock import patch, AsyncMock
-
 from tortoise import Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
@@ -24,22 +22,19 @@ class TestGenerateSchema(test.SimpleTestCase):
         Tortoise._reset()
 
     def init_for(self, module: str, safe=False) -> None:
-        with patch(
-            "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=AsyncMock()
-        ):
-            Tortoise.init(
-                {
-                    "connections": {
-                        "default": {
-                            "engine": "tortoise.backends.sqlite",
-                            "file_path": ":memory:",
-                        }
-                    },
-                    "apps": {"models": {"models": [module], "default_connection": "default"}},
-                }
-            )
+        Tortoise.init(
+            {
+                "connections": {
+                    "default": {
+                        "engine": "tortoise.backends.sqlite",
+                        "file_path": ":memory:",
+                    }
+                },
+                "apps": {"models": {"models": [module], "default_connection": "default"}},
+            }
+        )
 
-            self.sqls = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=safe).split(";\n")
+        self.sqls = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=safe).split(";\n")
 
     def get_sql(self, text: str) -> str:
         return re.sub(r"[ \t\n\r]+", " ", " ".join([sql for sql in self.sqls if text in sql]))
@@ -288,28 +283,24 @@ CREATE TABLE IF NOT EXISTS "team_team" (
 
 class TestGenerateSchemaMySQL(TestGenerateSchema):
     def init_for(self, module: str, safe=False) -> None:
-        try:
-            with patch("aiomysql.create_pool", new=AsyncMock()):
-                Tortoise.init(
-                    {
-                        "connections": {
-                            "default": {
-                                "engine": "tortoise.backends.mysql",
-                                "database": "test",
-                                "host": "127.0.0.1",
-                                "password": "foomip",
-                                "port": 3306,
-                                "user": "root",
-                                "connect_timeout": 1.5,
-                                "charset": "utf8mb4",
-                            }
-                        },
-                        "apps": {"models": {"models": [module], "default_connection": "default"}},
+        Tortoise.init(
+            {
+                "connections": {
+                    "default": {
+                        "engine": "tortoise.backends.mysql",
+                        "database": "test",
+                        "host": "127.0.0.1",
+                        "password": "foomip",
+                        "port": 3306,
+                        "user": "root",
+                        "connect_timeout": 1.5,
+                        "charset": "utf8mb4",
                     }
-                )
-                self.sqls = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=safe).split("; ")
-        except ImportError:
-            raise test.SkipTest("aiomysql not installed")
+                },
+                "apps": {"models": {"models": [module], "default_connection": "default"}},
+            }
+        )
+        self.sqls = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=safe).split("; ")
 
     def test_noid(self):
         self.init_for("tests.testmodels")
@@ -527,26 +518,22 @@ CREATE TABLE IF NOT EXISTS `team_team` (
 
 class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
     def init_for(self, module: str, safe=False) -> None:
-        try:
-            with patch("asyncpg.create_pool", new=AsyncMock()):
-                Tortoise.init(
-                    {
-                        "connections": {
-                            "default": {
-                                "engine": "tortoise.backends.asyncpg",
-                                "database": "test",
-                                "host": "127.0.0.1",
-                                "password": "foomip",
-                                "port": 3306,
-                                "user": "root",
-                            }
-                        },
-                        "apps": {"models": {"models": [module], "default_connection": "default"}},
+        Tortoise.init(
+            {
+                "connections": {
+                    "default": {
+                        "engine": "tortoise.backends.asyncpg",
+                        "database": "test",
+                        "host": "127.0.0.1",
+                        "password": "foomip",
+                        "port": 3306,
+                        "user": "root",
                     }
-                )
-                self.sqls = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=safe).split("; ")
-        except ImportError:
-            raise test.SkipTest("asyncpg not installed")
+                },
+                "apps": {"models": {"models": [module], "default_connection": "default"}},
+            }
+        )
+        self.sqls = Tortoise.get_schema_sql(Tortoise.get_db_client("default"), safe=safe).split("; ")
 
     def test_noid(self):
         self.init_for("tests.testmodels")
