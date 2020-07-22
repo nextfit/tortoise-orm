@@ -78,8 +78,7 @@ class IsolatedTestCase(SimpleTestCase):
         await Tortoise.generate_schemas(safe=False)
 
     async def asyncTearDown(self) -> None:
-        await Tortoise._drop_databases()
-        await Tortoise.close_connections()
+        await Tortoise.drop_databases()
 
 
 class TruncationTestCase(SimpleTestCase):
@@ -108,12 +107,6 @@ class TruncationTestCase(SimpleTestCase):
 
         """
 
-        # try:
-        #     await Tortoise.init(_CONFIG)
-        #     await Tortoise._drop_databases()
-        # except DBConnectionError:  # pragma: nocoverage
-        #     pass
-
         Tortoise.init(cls.get_db_config())
 
         await Tortoise.open_connections(create_db=True)
@@ -125,6 +118,8 @@ class TruncationTestCase(SimpleTestCase):
         cls.tortoise_test._db_client_map = Tortoise._db_client_map.copy()
         cls.tortoise_test._current_transaction_map = Tortoise._current_transaction_map.copy()
 
+        Tortoise._reset()
+
     @classmethod
     async def finalize(cls) -> None:
         """
@@ -132,7 +127,7 @@ class TruncationTestCase(SimpleTestCase):
         """
 
         await cls.tortoise_test.open_connections()
-        await cls.tortoise_test._drop_databases()
+        await cls.tortoise_test.drop_databases()
 
     async def _asyncioLoopRunner(self, fut):
         self.restore_tortoise()

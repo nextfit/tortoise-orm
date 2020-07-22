@@ -23,7 +23,7 @@ class TestTwoDatabases(test.SimpleTestCase):
         self.second_db = Tortoise.get_db_client("events")
 
     async def asyncTearDown(self) -> None:
-        await Tortoise._drop_databases()
+        await Tortoise.drop_databases()
 
     async def test_two_databases(self):
         tournament = await Tournament.create(name="Tournament")

@@ -282,7 +282,7 @@ class _Tortoise:
         if "apps" not in config:
             raise ConfigurationError('Config must define "apps" section')
 
-        self._reset_apps()
+        self._reset()
 
         connections_config = config["connections"]  # type: ignore
         apps_config = config["apps"]  # type: ignore
@@ -297,7 +297,7 @@ class _Tortoise:
         self._init_models()
         self._inited = True
 
-    def _reset_apps(self) -> None:
+    def _reset(self) -> None:
         if self._inited:
             for models_map in self._app_models_map.values():
                 for model in models_map.values():
@@ -404,7 +404,7 @@ class _Tortoise:
             else:
                 self.logger.debug("Generated schema for %s was empty", db_client.connection_name)
 
-    async def _drop_databases(self) -> None:
+    async def drop_databases(self) -> None:
         """
         Tries to drop all databases provided in config passed to ``.init()`` method.
         Normally should be used only for testing purposes.
@@ -415,4 +415,4 @@ class _Tortoise:
             await db_client.close()
             await db_client.db_delete()
 
-        self._reset_apps()
+        self._reset()

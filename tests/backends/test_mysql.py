@@ -15,7 +15,7 @@ class TestMySQL(test.SimpleTestCase):
 
     async def asyncTearDown(self) -> None:
         if Tortoise._inited:
-            await Tortoise._drop_databases()
+            await Tortoise.drop_databases()
 
     async def test_bad_charset(self):
         self.db_config["connections"]["models"]["charset"] = "terrible"

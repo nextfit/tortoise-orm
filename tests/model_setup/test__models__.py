@@ -23,7 +23,7 @@ class TestGenerateSchema(test.SimpleTestCase):
         self.engine = self.get_db_config()["connections"]["models"]["engine"]
 
     async def asyncTearDown(self) -> None:
-        Tortoise._reset_apps()
+        Tortoise._reset()
 
     async def init_for(self, module: str, safe=False) -> None:
         if self.engine != "tortoise.backends.sqlite":

@@ -13,7 +13,7 @@ class TestInitErrors(test.SimpleTestCase):
 
     async def asyncTearDown(self):
         await Tortoise.close_connections()
-        Tortoise._reset_apps()
+        Tortoise._reset()
 
     def test_basic_init(self):
         Tortoise.init(
@@ -336,7 +336,7 @@ class TestInitErrors(test.SimpleTestCase):
         with self.assertRaisesRegex(
             ConfigurationError, r"You have to call \.init\(\) first before deleting schemas"
         ):
-            await Tortoise._drop_databases()
+            await Tortoise.drop_databases()
 
     def test_bad_models(self):
         with self.assertRaisesRegex(ConfigurationError, 'Module "tests.testmodels2" not found'):

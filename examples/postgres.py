@@ -36,7 +36,7 @@ async def run():
     report_data = {"foo": "bar"}
     print(await Report.create(content=report_data))
     print(await Report.filter(content=report_data).first())
-    await Tortoise._drop_databases()
+    await Tortoise.drop_databases()
 
 
 if __name__ == "__main__":
