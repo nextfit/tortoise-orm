@@ -143,6 +143,7 @@ class TruncationTestCase(SimpleTestCase):
             query = await queue.get()
             queue.task_done()
             if query is None:
+                await Tortoise.close_connections()
                 break
 
             fut, awaitable = query
@@ -172,13 +173,12 @@ class TruncationTestCase(SimpleTestCase):
                                 await model._meta.db.execute_script(f"DELETE FROM {model._meta.db_table}")  # nosec
 
             except asyncio.CancelledError:
+                await Tortoise.close_connections()
                 raise
 
             except Exception as ex:
                 if not fut.cancelled():
                     fut.set_exception(ex)
-
-        await Tortoise.close_connections()
 
 
 class TestCase(TruncationTestCase):

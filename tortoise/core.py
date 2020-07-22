@@ -303,9 +303,9 @@ class _Tortoise:
                 for model in models_map.values():
                     model._meta.connection_name = None
 
-        self._app_models_map.clear()
-        self._current_transaction_map.clear()
-        self._db_client_map.clear()
+        self._app_models_map = {}
+        self._current_transaction_map = {}
+        self._db_client_map = {}
         self._inited = False
 
     def get_schema_sql(self, db_client, safe=True) -> str:

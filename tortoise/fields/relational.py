@@ -2,10 +2,11 @@
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import partial
-from typing import Awaitable, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING, Any
+from typing import (
+    Any, Awaitable, Dict, Generic, List, Literal, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING
+)
 
 from pypika import Criterion, Table, Field as PyPikaField
-from typing_extensions import Literal
 
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError

@@ -1,3 +1,4 @@
+
 import asyncio
 import os
 import sqlite3
@@ -15,7 +16,12 @@ from tortoise.backends.base.client import (
 )
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
-from tortoise.exceptions import IntegrityError, OperationalError, TransactionManagementError
+from tortoise.exceptions import (
+    IntegrityError,
+    OperationalError,
+    TransactionManagementError,
+    DBConnectionError
+)
 from tortoise.transactions.context import (
     LockTransactionContext,
     NestedTransactionContext,
@@ -62,42 +68,43 @@ class SqliteClient(BaseDBAsyncClient):
         self._lock = base._lock
 
     async def create_connection(self, with_db: bool) -> None:
-        if not self._connection:  # pragma: no branch
-            self._connection = aiosqlite.connect(self.filename, isolation_level=None)
-            self._connection.start()
-            await self._connection._connect()
-            self._connection._conn.row_factory = sqlite3.Row
+        if self._connection:
+            raise DBConnectionError("Called create_connection on active connection. Call close() first.")
 
-            for pragma, val in self.pragmas.items():
-                cursor = await self._connection.execute(f"PRAGMA {pragma}={val}")
-                await cursor.close()
+        self._connection = aiosqlite.connect(self.filename, isolation_level=None)
+        self._connection.start()
+        await self._connection._connect()
+        self._connection._conn.row_factory = sqlite3.Row
 
-            self._lock = asyncio.Lock()
+        for pragma, val in self.pragmas.items():
+            cursor = await self._connection.execute(f"PRAGMA {pragma}={val}")
+            await cursor.close()
 
-            self.log.debug(
-                "Created connection %s with params: filename=%s %s",
-                self._connection,
-                self.filename,
-                " ".join([f"{k}={v}" for k, v in self.pragmas.items()]),
-            )
+        self._lock = asyncio.Lock()
+
+        self.log.debug(
+            "Created connection %s with params: filename=%s %s",
+            self._connection,
+            self.filename,
+            " ".join([f"{k}={v}" for k, v in self.pragmas.items()]),
+        )
 
     async def close(self) -> None:
         if self._connection:
             await self._connection.close()
+            self._connection = None
+            self._lock = None
+
             self.log.debug(
-                "Closed connection %s with params: filename=%s %s",
-                self._connection,
+                "Closed connection with params: filename=%s %s",
                 self.filename,
                 " ".join([f"{k}={v}" for k, v in self.pragmas.items()]),
             )
-            self._connection = None
-            self._lock = None
 
     async def db_create(self) -> None:
         pass
 
     async def db_delete(self) -> None:
-        await self.close()
         try:
             os.remove(self.filename)
         except FileNotFoundError:  # pragma: nocoverage
