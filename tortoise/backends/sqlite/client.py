@@ -71,6 +71,8 @@ class SqliteClient(BaseDBAsyncClient):
         if self._connection:
             raise DBConnectionError("Called create_connection on active connection. Call close() first.")
 
+        self._lock = asyncio.Lock()
+
         self._connection = aiosqlite.connect(self.filename, isolation_level=None)
         self._connection.start()
         await self._connection._connect()
@@ -79,8 +81,6 @@ class SqliteClient(BaseDBAsyncClient):
         for pragma, val in self.pragmas.items():
             cursor = await self._connection.execute(f"PRAGMA {pragma}={val}")
             await cursor.close()
-
-        self._lock = asyncio.Lock()
 
         self.log.debug(
             "Created connection %s with params: filename=%s %s",

@@ -14,7 +14,6 @@ from tortoise.backends.base.client import (
     Capabilities,
     ConnectionWrapper,
     LockConnectionWrapper,
-    PoolConnectionWrapper,
 )
 from tortoise.backends.mysql.executor import MySQLExecutor
 from tortoise.backends.mysql.filters import MySQLFilter
@@ -158,7 +157,7 @@ class MySQLClient(BaseDBAsyncClient):
         await self.close()
 
     def acquire_connection(self) -> ConnectionWrapper:
-        return PoolConnectionWrapper(self._pool)
+        return self._pool.acquire()
 
     def in_transaction(self) -> "TransactionContext":
         return LockTransactionContext(TransactionWrapper(self))

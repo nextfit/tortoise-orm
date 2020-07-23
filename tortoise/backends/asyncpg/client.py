@@ -15,7 +15,6 @@ from tortoise.backends.base.client import (
     Capabilities,
     ConnectionWrapper,
     LockConnectionWrapper,
-    PoolConnectionWrapper,
 )
 from tortoise.exceptions import (
     DBConnectionError,
@@ -136,7 +135,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         await self.close()
 
     def acquire_connection(self) -> ConnectionWrapper:
-        return PoolConnectionWrapper(self._pool)
+        return self._pool.acquire()
 
     def in_transaction(self) -> TransactionContext:
         return LockTransactionContext(TransactionWrapper(self))

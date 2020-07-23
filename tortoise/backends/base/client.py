@@ -81,7 +81,7 @@ class LockConnectionWrapper(ConnectionWrapper):
 
     def __init__(self, connection, lock: asyncio.Lock) -> None:
         self.connection = connection
-        self.lock: asyncio.Lock = lock
+        self.lock = lock
 
     async def __aenter__(self):
         await self.lock.acquire()
@@ -89,21 +89,6 @@ class LockConnectionWrapper(ConnectionWrapper):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         self.lock.release()
-
-
-class PoolConnectionWrapper(ConnectionWrapper):
-    __slots__ = ("connection", "pool")
-
-    def __init__(self, pool) -> None:
-        self.pool = pool
-        self.connection = None
-
-    async def __aenter__(self):
-        self.connection = await self.pool.acquire()
-        return self.connection
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        await self.pool.release(self.connection)
 
 
 class BaseDBAsyncClient:
