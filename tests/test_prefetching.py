@@ -134,7 +134,7 @@ class TestPrefetching(test.TestCase):
     async def test_store_select_related(self):
         await create_store_objects()
 
-        products = await Product.all().select_related('brand', 'brand__image', 'vendor').limit(7)
+        products = await Product.all().order_by('name').select_related('brand', 'brand__image', 'vendor').limit(7)
         products_distilled = [
             {
                 'name': p.name,
@@ -153,37 +153,37 @@ class TestPrefetching(test.TestCase):
 
         self.assertEqual(products_distilled, [
             {
-                'name': 'product_1',
+                'name': 'product_01',
                 'brand': {'name': 'brand_1', 'image': {'src': 'brand_image_1'}},
                 'vendor': {'name': 'vendor_1'},
             },
             {
-                'name': 'product_2',
+                'name': 'product_02',
                 'brand': {'name': 'brand_2', 'image': {'src': 'brand_image_2'}},
                 'vendor': {'name': 'vendor_2'},
             },
             {
-                'name': 'product_3',
+                'name': 'product_03',
                 'brand': {'name': 'brand_2', 'image': {'src': 'brand_image_2'}},
                 'vendor': {'name': 'vendor_3'},
             },
             {
-                'name': 'product_4',
+                'name': 'product_04',
                 'brand': {'name': 'brand_3', 'image': {'src': 'brand_image_3'}},
                 'vendor': {'name': 'vendor_1'},
             },
             {
-                'name': 'product_5',
+                'name': 'product_05',
                 'brand': {'name': 'brand_3', 'image': {'src': 'brand_image_3'}},
                 'vendor': {'name': 'vendor_2'},
             },
             {
-                'name': 'product_6',
+                'name': 'product_06',
                 'brand': {'name': 'brand_3', 'image': {'src': 'brand_image_3'}},
                 'vendor': {'name': 'vendor_3'},
             },
             {
-                'name': 'product_7',
+                'name': 'product_07',
                 'brand': {'name': 'brand_4', 'image': {'src': 'brand_image_4'}},
                 'vendor': {'name': 'vendor_1'},
             },
@@ -212,7 +212,32 @@ class TestPrefetching(test.TestCase):
         ]
 
         self.assertEqual(products_distilled, [
-            {'name': 'product_1', 'categories': []},
+            {'name': 'product_01', 'categories': []},
+            {'name': 'product_02', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}}
+            ]},
+            {'name': 'product_03', 'categories': [
+                {'name': 'category_3', 'image': {'src': 'category_image_3'}}
+            ]},
+            {'name': 'product_04', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}}
+            ]},
+            {'name': 'product_05', 'categories': [
+                {'name': 'category_5', 'image': {'src': 'category_image_5'}}
+            ]},
+            {'name': 'product_06', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}},
+                {'name': 'category_3', 'image': {'src': 'category_image_3'}}
+            ]},
+            {'name': 'product_07', 'categories': [
+                {'name': 'category_7', 'image': {'src': 'category_image_7'}}
+            ]},
+            {'name': 'product_08', 'categories': [
+                {'name': 'category_2', 'image': {'src': 'category_image_2'}}
+            ]},
+            {'name': 'product_09', 'categories': [
+                {'name': 'category_3', 'image': {'src': 'category_image_3'}}
+            ]},
             {'name': 'product_10', 'categories': [
                 {'name': 'category_2', 'image': {'src': 'category_image_2'}},
                 {'name': 'category_5', 'image': {'src': 'category_image_5'}}
@@ -240,9 +265,6 @@ class TestPrefetching(test.TestCase):
                 {'name': 'category_3', 'image': {'src': 'category_image_3'}}
             ]},
             {'name': 'product_19', 'categories': []},
-            {'name': 'product_2', 'categories': [
-                {'name': 'category_2', 'image': {'src': 'category_image_2'}}
-            ]},
             {'name': 'product_20', 'categories': [
                 {'name': 'category_2', 'image': {'src': 'category_image_2'}},
                 {'name': 'category_5', 'image': {'src': 'category_image_5'}}
@@ -250,27 +272,5 @@ class TestPrefetching(test.TestCase):
             {'name': 'product_21', 'categories': [
                 {'name': 'category_3', 'image': {'src': 'category_image_3'}},
                 {'name': 'category_7', 'image': {'src': 'category_image_7'}}
-            ]},
-            {'name': 'product_3', 'categories': [
-                {'name': 'category_3', 'image': {'src': 'category_image_3'}}
-            ]},
-            {'name': 'product_4', 'categories': [
-                {'name': 'category_2', 'image': {'src': 'category_image_2'}}
-            ]},
-            {'name': 'product_5', 'categories': [
-                {'name': 'category_5', 'image': {'src': 'category_image_5'}}
-            ]},
-            {'name': 'product_6', 'categories': [
-                {'name': 'category_2', 'image': {'src': 'category_image_2'}},
-                {'name': 'category_3', 'image': {'src': 'category_image_3'}}
-            ]},
-            {'name': 'product_7', 'categories': [
-                {'name': 'category_7', 'image': {'src': 'category_image_7'}}
-            ]},
-            {'name': 'product_8', 'categories': [
-                {'name': 'category_2', 'image': {'src': 'category_image_2'}}
-            ]},
-            {'name': 'product_9', 'categories': [
-                {'name': 'category_3', 'image': {'src': 'category_image_3'}}
             ]},
         ])

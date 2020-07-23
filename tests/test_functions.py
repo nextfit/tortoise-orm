@@ -53,11 +53,11 @@ class TestFunctions(test.TestCase):
         products_distilled = [{'name': p.name, 'cnt': p.cnt} for p in products_fetched]
 
         self.assertEqual(products_distilled, [
-            {'name': 'product_1', 'cnt': 1},
-            {'name': 'product_10', 'cnt': 1},
-            {'name': 'product_11', 'cnt': 1},
-            {'name': 'product_12', 'cnt': 1},
-            {'name': 'product_13', 'cnt': 1}
+            {'name': 'product_01', 'cnt': 1},
+            {'name': 'product_02', 'cnt': 1},
+            {'name': 'product_03', 'cnt': 1},
+            {'name': 'product_04', 'cnt': 1},
+            {'name': 'product_05', 'cnt': 1}
         ])
 
     async def test_ordering_annotation_aggregations_m2o_values(self):
@@ -76,11 +76,11 @@ class TestFunctions(test.TestCase):
             'LIMIT 5')
 
         self.assertEqual(products_fetched, [
-            {'name': 'product_1', 'cnt': 1},
-            {'name': 'product_10', 'cnt': 1},
-            {'name': 'product_11', 'cnt': 1},
-            {'name': 'product_12', 'cnt': 1},
-            {'name': 'product_13', 'cnt': 1}
+            {'name': 'product_01', 'cnt': 1},
+            {'name': 'product_02', 'cnt': 1},
+            {'name': 'product_03', 'cnt': 1},
+            {'name': 'product_04', 'cnt': 1},
+            {'name': 'product_05', 'cnt': 1}
         ])
 
     async def test_ordering_aggregations_o2m(self):
@@ -99,32 +99,32 @@ class TestFunctions(test.TestCase):
             'ORDER BY COUNT("products"."brand_id") DESC '
             'LIMIT 20')
 
-        brands_distilled = [{'name': c.name, 'products': [p.name for p in c.products]} for c in brands_fetched]
+        brands_distilled = [{'name': c.name, 'products': {p.name for p in c.products}} for c in brands_fetched]
 
         self.assertEqual(brands_distilled, [
             {
                 'name': 'brand_6',
-                'products': ['product_16', 'product_17', 'product_18', 'product_19', 'product_20', 'product_21']
+                'products': {'product_16', 'product_17', 'product_18', 'product_19', 'product_20', 'product_21'}
             },
             {
                 'name': 'brand_5',
-                'products': ['product_11', 'product_12', 'product_13', 'product_14', 'product_15']
+                'products': {'product_11', 'product_12', 'product_13', 'product_14', 'product_15'}
             },
             {
                 'name': 'brand_4',
-                'products': ['product_7', 'product_8', 'product_9', 'product_10']
+                'products': {'product_07', 'product_08', 'product_09', 'product_10'}
             },
             {
                 'name': 'brand_3',
-                'products': ['product_4', 'product_5', 'product_6']
+                'products': {'product_04', 'product_05', 'product_06'}
             },
             {
                 'name': 'brand_2',
-                'products': ['product_2', 'product_3']
+                'products': {'product_02', 'product_03'}
             },
             {
                 'name': 'brand_1',
-                'products': ['product_1']
+                'products': {'product_01'}
             }
         ])
 
@@ -146,17 +146,17 @@ class TestFunctions(test.TestCase):
         )
 
         self.assertEqual(brands_fetched, [
-            {'name': 'brand_1', 'products__name': 'product_1'},
-            {'name': 'brand_2', 'products__name': 'product_2'},
-            {'name': 'brand_2', 'products__name': 'product_3'},
-            {'name': 'brand_3', 'products__name': 'product_4'},
-            {'name': 'brand_3', 'products__name': 'product_5'},
-            {'name': 'brand_3', 'products__name': 'product_6'},
+            {'name': 'brand_1', 'products__name': 'product_01'},
+            {'name': 'brand_2', 'products__name': 'product_02'},
+            {'name': 'brand_2', 'products__name': 'product_03'},
+            {'name': 'brand_3', 'products__name': 'product_04'},
+            {'name': 'brand_3', 'products__name': 'product_05'},
+            {'name': 'brand_3', 'products__name': 'product_06'},
+            {'name': 'brand_4', 'products__name': 'product_07'},
+            {'name': 'brand_4', 'products__name': 'product_08'},
+            {'name': 'brand_4', 'products__name': 'product_09'},
             {'name': 'brand_4', 'products__name': 'product_10'},
-            {'name': 'brand_4', 'products__name': 'product_7'},
-            {'name': 'brand_4', 'products__name': 'product_8'},
-            {'name': 'brand_4', 'products__name': 'product_9'}]
-        )
+        ])
 
     async def test_ordering_aggregations_m2m(self):
 
@@ -180,23 +180,23 @@ class TestFunctions(test.TestCase):
         self.assertEqual(cats_distilled, [
             {
                 'name': 'category_2',
-                'products': ['product_2', 'product_4', 'product_6', 'product_8', 'product_10',
+                'products': ['product_02', 'product_04', 'product_06', 'product_08', 'product_10',
                     'product_12', 'product_14', 'product_16', 'product_18', 'product_20'
                 ]
             },
             {
                 'name': 'category_3',
-                'products': ['product_3', 'product_6', 'product_9', 'product_12', 'product_15',
+                'products': ['product_03', 'product_06', 'product_09', 'product_12', 'product_15',
                     'product_18', 'product_21'
                 ]
             },
             {
                 'name': 'category_5',
-                'products': ['product_5', 'product_10', 'product_15', 'product_20']
+                'products': ['product_05', 'product_10', 'product_15', 'product_20']
             },
             {
                 'name': 'category_7',
-                'products': ['product_7', 'product_14', 'product_21']
+                'products': ['product_07', 'product_14', 'product_21']
             }
         ])
 
@@ -226,23 +226,23 @@ class TestFunctions(test.TestCase):
         self.assertEqual(cats_distilled, [
             {
                 'name': 'category_2',
-                'products': ['product_2', 'product_4', 'product_6', 'product_8', 'product_10',
+                'products': ['product_02', 'product_04', 'product_06', 'product_08', 'product_10',
                     'product_12', 'product_14', 'product_16', 'product_18', 'product_20'
                 ]
             },
             {
                 'name': 'category_3',
-                'products': ['product_3', 'product_6', 'product_9', 'product_12', 'product_15',
+                'products': ['product_03', 'product_06', 'product_09', 'product_12', 'product_15',
                     'product_18', 'product_21'
                 ]
             },
             {
                 'name': 'category_5',
-                'products': ['product_5', 'product_10', 'product_15', 'product_20']
+                'products': ['product_05', 'product_10', 'product_15', 'product_20']
             },
             {
                 'name': 'category_7',
-                'products': ['product_7', 'product_14', 'product_21']
+                'products': ['product_07', 'product_14', 'product_21']
             }
         ])
 
@@ -272,16 +272,16 @@ class TestFunctions(test.TestCase):
 
         subquery = Product.filter(brand=OuterRef('brand')).limit(3).values_list('id', flat=True)
         prefetch = Prefetch('products', queryset=Product.filter(id__in=Subquery(subquery)))
-        brands_fetched = await Brand.all().prefetch_related(prefetch)
-        brands_distilled = [{'name': b.name, 'products': [p.name for p in b.products]} for b in brands_fetched]
+        brands_fetched = await Brand.all().order_by('name').prefetch_related(prefetch)
+        brands_distilled = [{'name': b.name, 'products': {p.name for p in b.products}} for b in brands_fetched]
 
         self.assertEqual(brands_distilled, [
-            {'name': 'brand_1', 'products': ['product_1']},
-            {'name': 'brand_2', 'products': ['product_2', 'product_3']},
-            {'name': 'brand_3', 'products': ['product_4', 'product_5', 'product_6']},
-            {'name': 'brand_4', 'products': ['product_7', 'product_8', 'product_9']},
-            {'name': 'brand_5', 'products': ['product_11', 'product_12', 'product_13']},
-            {'name': 'brand_6', 'products': ['product_16', 'product_17', 'product_18']},
+            {'name': 'brand_1', 'products': {'product_01'}},
+            {'name': 'brand_2', 'products': {'product_02', 'product_03'}},
+            {'name': 'brand_3', 'products': {'product_04', 'product_05', 'product_06'}},
+            {'name': 'brand_4', 'products': {'product_07', 'product_08', 'product_09'}},
+            {'name': 'brand_5', 'products': {'product_11', 'product_12', 'product_13'}},
+            {'name': 'brand_6', 'products': {'product_16', 'product_17', 'product_18'}},
         ])
 
     async def test_brands_raw_prefetch_limited_products(self):
@@ -300,16 +300,16 @@ class TestFunctions(test.TestCase):
 
         subquery = Product.raw(raw_subquery)
         prefetch = Prefetch('products', queryset=Product.filter(id__in=Subquery(subquery)))
-        brands_fetched = await Brand.all().prefetch_related(prefetch)
-        brands_distilled = [{'name': b.name, 'products': [p.name for p in b.products]} for b in brands_fetched]
+        brands_fetched = await Brand.all().order_by('name').prefetch_related(prefetch)
+        brands_distilled = [{'name': b.name, 'products': {p.name for p in b.products}} for b in brands_fetched]
 
         self.assertEqual(brands_distilled, [
-            {'name': 'brand_1', 'products': ['product_1']},
-            {'name': 'brand_2', 'products': ['product_2', 'product_3']},
-            {'name': 'brand_3', 'products': ['product_4', 'product_5']},
-            {'name': 'brand_4', 'products': ['product_7', 'product_8']},
-            {'name': 'brand_5', 'products': ['product_11', 'product_12']},
-            {'name': 'brand_6', 'products': ['product_16', 'product_17']},
+            {'name': 'brand_1', 'products': {'product_01'}},
+            {'name': 'brand_2', 'products': {'product_02', 'product_03'}},
+            {'name': 'brand_3', 'products': {'product_04', 'product_05'}},
+            {'name': 'brand_4', 'products': {'product_07', 'product_08'}},
+            {'name': 'brand_5', 'products': {'product_11', 'product_12'}},
+            {'name': 'brand_6', 'products': {'product_16', 'product_17'}},
         ])
 
     async def test_products_prefetch_limit_images(self):
@@ -320,13 +320,13 @@ class TestFunctions(test.TestCase):
 
         subquery = Image.filter(product_set=OuterRef('product_set')).limit(4).values_list('id', flat=True)
         prefetch = Prefetch('images', queryset=Image.filter(id__in=Subquery(subquery)))
-        products_fetched = await Product.all().limit(5).prefetch_related(prefetch)
-        products_distilled = [{'name': p.name, 'images': [img.src for img in p.images]} for p in products_fetched]
+        products_fetched = await Product.all().order_by('name').limit(5).prefetch_related(prefetch)
+        products_distilled = [{'name': p.name, 'images': {img.src for img in p.images}} for p in products_fetched]
 
         self.assertEqual(products_distilled, [
-            {'name': 'product_1', 'images': ['image_16', 'image_17', 'image_18', 'image_19']},
-            {'name': 'product_2', 'images': ['image_11', 'image_12', 'image_13', 'image_14']},
-            {'name': 'product_3', 'images': ['image_7', 'image_8', 'image_9', 'image_10']},
-            {'name': 'product_4', 'images': ['image_4', 'image_5', 'image_6']},
-            {'name': 'product_5', 'images': ['image_2', 'image_3']},
+            {'name': 'product_01',  'images': {'image_16', 'image_17', 'image_18', 'image_19'}},
+            {'name': 'product_02',  'images': {'image_11', 'image_12', 'image_13', 'image_14'}},
+            {'name': 'product_03',  'images': {'image_7', 'image_8', 'image_9', 'image_10'}},
+            {'name': 'product_04',  'images': {'image_4', 'image_5', 'image_6'}},
+            {'name': 'product_05',  'images': {'image_2', 'image_3'}},
         ])

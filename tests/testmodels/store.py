@@ -103,7 +103,7 @@ async def create_store_objects() -> None:
     brands = [Brand(name='brand_{}'.format(num), image=images[num-1]) for num in range(1, 7)]
     await asyncio.gather(*[b.save() for b in brands])
 
-    products = [Product(name='product_{}'.format(num), price='$1') for num in range(1, 22)]
+    products = [Product(name='product_{:02d}'.format(num), price='$1') for num in range(1, 22)]
     brand_k, counter = 0, 0
     for p in products:
         p.brand = brands[brand_k]
