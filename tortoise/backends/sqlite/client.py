@@ -2,7 +2,6 @@
 import asyncio
 import os
 import sqlite3
-import sys
 from functools import wraps
 from typing import List, Optional, Sequence, Tuple, Any
 
