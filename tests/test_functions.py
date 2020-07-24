@@ -16,13 +16,19 @@ class TestFunctions(test.TortoiseTransactionedTestModelsTestCase):
         products = Product.all().order_by(RandomOrdering()).limit(20)
         query_string = products.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
-            'SELECT "id","name","price","brand_id","vendor_id" FROM "store_product" ORDER BY RANDOM() LIMIT 20')
+            'SELECT "id","name","price","brand_id","vendor_id" '
+            'FROM "store_product" '
+            'ORDER BY RANDOM() '
+            'LIMIT 20')
 
     async def test_ordering_functions(self):
         products = Product.all().order_by((F('id') * 7) % 143).limit(20)
         query_string = products.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
-            'SELECT "id","name","price","brand_id","vendor_id" FROM "store_product" ORDER BY MOD("id"*7,143) ASC LIMIT 20')
+            'SELECT "id","name","price","brand_id","vendor_id" '
+            'FROM "store_product" '
+            'ORDER BY MOD("id"*7,143) ASC '
+            'LIMIT 20')
 
     async def test_ordering_aggregations_m2o(self):
         products = Product.all().order_by(-Count('brand')).limit(20)
@@ -260,7 +266,9 @@ class TestFunctions(test.TortoiseTransactionedTestModelsTestCase):
         products = Product.all().annotate(new_order=F('id') * 5)
         query_string = products.query.get_sql().replace('`', '"')
         self.assertEqual(query_string,
-            'SELECT "id","name","price","brand_id","vendor_id","id"*5 "new_order" FROM "store_product" ORDER BY "id" ASC')
+            'SELECT "id","name","price","brand_id","vendor_id","id"*5 "new_order" '
+            'FROM "store_product" '
+            'ORDER BY "id" ASC')
 
     async def test_brands_prefetch_limited_products(self):
         if Product._meta.db.capabilities.dialect == "mysql":

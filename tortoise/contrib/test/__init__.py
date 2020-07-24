@@ -243,8 +243,24 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
     """
 
     def decorator(test_item):
-        if not isinstance(test_item, type):
+        if isinstance(test_item, type):
+            # A class is decorated
+            funcs = {
+                var: getattr(test_item, var)
+                for var in dir(test_item)
+                if var.startswith("test_") and callable(getattr(test_item, var))
+            }
 
+            for name, func in funcs.items():
+                setattr(
+                    test_item,
+                    name,
+                    requireCapability(connection_name=connection_name, **conditions)(func),
+                )
+
+            return test_item
+
+        else:
             @wraps(test_item)
             def skip_wrapper(*args, **kwargs):
                 db = Tortoise.get_db_client(connection_name)
@@ -254,21 +270,5 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
                 return test_item(*args, **kwargs)
 
             return skip_wrapper
-
-        # Assume a class is decorated
-        funcs = {
-            var: getattr(test_item, var)
-            for var in dir(test_item)
-            if var.startswith("test_") and callable(getattr(test_item, var))
-        }
-
-        for name, func in funcs.items():
-            setattr(
-                test_item,
-                name,
-                requireCapability(connection_name=connection_name, **conditions)(func),
-            )
-
-        return test_item
 
     return decorator
