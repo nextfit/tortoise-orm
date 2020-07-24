@@ -4,7 +4,7 @@ from tortoise.exceptions import IntegrityError, NoValuesFetched, OperationalErro
 from tortoise.query.single import SingleQuerySet
 
 
-class TestForeignKeyField(test.TestCase):
+class TestForeignKeyField(test.TortoiseTransactionedTestModelsTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.MinRelation.create()

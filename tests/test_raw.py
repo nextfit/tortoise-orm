@@ -3,7 +3,7 @@ from tests.testmodels import Event, Tournament
 from tortoise.contrib import test
 
 
-class TestRaw(test.TestCase):
+class TestRaw(test.TortoiseTransactionedTestModelsTestCase):
     async def test_raw(self):
         first = await Tournament.create(name="A - First")
         second = await Tournament.create(name="B - Second")

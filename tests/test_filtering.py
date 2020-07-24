@@ -6,7 +6,7 @@ from tortoise.exceptions import FieldError
 from tortoise.filters.q import Q
 
 
-class TestFiltering(test.TestCase):
+class TestFiltering(test.TortoiseTransactionedTestModelsTestCase):
     async def test_filtering(self):
         tournament = Tournament(name="Tournament")
         await tournament.save()

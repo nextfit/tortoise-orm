@@ -3,7 +3,7 @@ from tortoise.contrib import test
 from tortoise.exceptions import OperationalError
 
 
-class TestManyToManyUUIDField(test.TestCase):
+class TestManyToManyUUIDField(test.TortoiseTransactionedTestModelsTestCase):
     UUIDPkModel = testmodels.UUIDPkModel
     UUIDM2MRelatedModel = testmodels.UUIDM2MRelatedModel
 

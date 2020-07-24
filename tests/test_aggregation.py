@@ -6,7 +6,7 @@ from tortoise.contrib import test
 from tortoise.exceptions import NotARelationFieldError
 
 
-class TestAggregation(test.TestCase):
+class TestAggregation(test.TortoiseTransactionedTestModelsTestCase):
     async def test_aggregation(self):
         tournament = Tournament(name="New Tournament")
         await tournament.save()

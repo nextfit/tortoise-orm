@@ -3,7 +3,7 @@ from tests.testmodels import Tournament
 from tortoise.contrib import test
 
 
-class TestBasic(test.TestCase):
+class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
     async def test_basic(self):
         tournament = await Tournament.create(name="Test")
         await Tournament.filter(id=tournament.id).update(name="Updated name")

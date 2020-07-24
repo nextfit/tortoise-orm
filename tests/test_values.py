@@ -6,7 +6,7 @@ from tortoise.exceptions import FieldError, UnknownFieldError
 from tortoise.query.expressions import F
 
 
-class TestValues(test.TestCase):
+class TestValues(test.TortoiseTransactionedTestModelsTestCase):
     async def test_values_related_fk(self):
         tournament = await Tournament.create(name="New Tournament")
         await Event.create(name="Test", tournament_id=tournament.id)

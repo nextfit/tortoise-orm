@@ -5,7 +5,7 @@ from tortoise.contrib import test
 from tortoise.exceptions import FieldError
 
 
-class TestOrderBy(test.TestCase):
+class TestOrderBy(test.TortoiseTransactionedTestModelsTestCase):
     async def test_order_by(self):
         await Tournament.create(name="1")
         await Tournament.create(name="2")

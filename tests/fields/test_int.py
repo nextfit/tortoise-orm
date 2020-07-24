@@ -4,7 +4,7 @@ from tortoise.exceptions import IntegrityError
 from tortoise.query.expressions import F
 
 
-class TestIntFields(test.TestCase):
+class TestIntFields(test.TortoiseTransactionedTestModelsTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.IntFields.create()
@@ -60,7 +60,7 @@ class TestIntFields(test.TestCase):
         self.assertEqual(obj1.intnum, 2)
 
 
-class TestSmallIntFields(test.TestCase):
+class TestSmallIntFields(test.TortoiseTransactionedTestModelsTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.SmallIntFields.create()
@@ -102,7 +102,7 @@ class TestSmallIntFields(test.TestCase):
         self.assertEqual(obj1.smallintnum, 2)
 
 
-class TestBigIntFields(test.TestCase):
+class TestBigIntFields(test.TortoiseTransactionedTestModelsTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.BigIntFields.create()

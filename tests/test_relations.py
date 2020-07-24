@@ -6,7 +6,7 @@ from tortoise.contrib import test
 from tortoise.exceptions import FieldError, NoValuesFetched, NotARelationFieldError, UnknownFieldError
 
 
-class TestRelations(test.TestCase):
+class TestRelations(test.TortoiseTransactionedTestModelsTestCase):
     async def test_relations(self):
         tournament = Tournament(name="New Tournament")
         await tournament.save()
@@ -273,7 +273,7 @@ class TestRelations(test.TestCase):
         self.assertTrue(event2.reporter)
 
 
-class TestDoubleFK(test.TestCase):
+class TestDoubleFK(test.TortoiseTransactionedTestModelsTestCase):
     select_match = r'SELECT [`"]doublefk[`"].[`"]name[`"] [`"]name[`"]'
     select1_match = r'[`"]left[`"].[`"]name[`"] [`"]left__name[`"]'
     select2_match = r'[`"]right[`"].[`"]name[`"] [`"]right__name[`"]'

@@ -9,7 +9,7 @@ from tortoise.contrib import test
 from tortoise.query.expressions import F
 
 
-class StraightFieldTests(test.TestCase):
+class StraightFieldTests(test.TortoiseTransactionedTestModelsTestCase):
     def setUp(self) -> None:
         self.model = StraightFields
 

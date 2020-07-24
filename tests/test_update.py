@@ -2,7 +2,7 @@ from tests.testmodels import Event, Tournament
 from tortoise.contrib import test
 
 
-class TestUpdate(test.TestCase):
+class TestUpdate(test.TortoiseTransactionedTestModelsTestCase):
     async def test_update(self):
         await Tournament.create(name="1")
         await Tournament.create(name="3")

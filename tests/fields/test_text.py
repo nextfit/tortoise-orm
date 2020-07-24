@@ -4,7 +4,7 @@ from tortoise.exceptions import ConfigurationError, IntegrityError
 from tortoise.fields import TextField
 
 
-class TestTextFields(test.TestCase):
+class TestTextFields(test.TortoiseTransactionedTestModelsTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.TextFields.create()

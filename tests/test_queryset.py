@@ -16,7 +16,7 @@ from tortoise.query.expressions import F
 # TODO: .filter(intnum_null=None) does not work as expected
 
 
-class TestQueryset(test.TestCase):
+class TestQueryset(test.TortoiseTransactionedTestModelsTestCase):
     async def asyncSetUp(self) -> None:
         # Build large dataset
         self.intfields = [await IntFields.create(intnum=val) for val in range(10, 100, 3)]

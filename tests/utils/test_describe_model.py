@@ -19,7 +19,7 @@ from tortoise.contrib import test
 from tortoise.fields.relational import BackwardFKField, ForeignKey, ManyToManyField, OneToOneField
 
 
-class TestBasic(test.TestCase):
+class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
     maxDiff = None
 
     async def test_describe_models_all_serializable(self):

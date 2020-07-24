@@ -1,15 +1,15 @@
-from unittest import TestCase as _TestCase
 
+from unittest import TestCase
 from pypika.queries import QueryBuilder
 
 from tests.testmodels import CharFields, IntFields
-from tortoise.contrib.test import TestCase
+from tortoise.contrib.test import TortoiseTransactionedTestModelsTestCase
 from tortoise.exceptions import OperationalError
 from tortoise.filters.q import Q
 from tortoise.query.context import QueryContext
 
 
-class TestQ(_TestCase):
+class TestQ(TestCase):
     def test_q_basic(self):
         q = Q(moo="cow")
         self.assertEqual(q.children, ())
@@ -96,7 +96,7 @@ class TestQ(_TestCase):
         self.assertEqual(q.join_type, Q.OR)
 
 
-class TestQCall(TestCase):
+class TestQCall(TortoiseTransactionedTestModelsTestCase):
     class DummyQuerySet:
         def __init__(self):
             self.annotations = {}

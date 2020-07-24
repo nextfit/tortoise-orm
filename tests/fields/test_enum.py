@@ -18,7 +18,7 @@ class BadIntEnum2(IntEnum):
     system_administration = 3
 
 
-class TestIntEnumFields(test.TestCase):
+class TestIntEnumFields(test.TortoiseTransactionedTestModelsTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.EnumFields.create()
@@ -84,7 +84,7 @@ class TestIntEnumFields(test.TestCase):
         self.assertEqual(fld.description, "foo")
 
 
-class TestCharEnumFields(test.TestCase):
+class TestCharEnumFields(test.TortoiseTransactionedTestModelsTestCase):
     async def test_create(self):
         obj0 = await testmodels.EnumFields.create(service=testmodels.Service.system_administration)
         self.assertIsInstance(obj0.currency, testmodels.Currency)

@@ -3,7 +3,7 @@ from tortoise.contrib import test
 from tortoise.exceptions import OperationalError
 
 
-class TestManyToManyField(test.TestCase):
+class TestManyToManyField(test.TortoiseTransactionedTestModelsTestCase):
     async def test_empty(self):
         await testmodels.M2MOne.create()
 

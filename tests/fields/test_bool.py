@@ -3,7 +3,7 @@ from tortoise.contrib import test
 from tortoise.exceptions import IntegrityError
 
 
-class TestBooleanFields(test.TestCase):
+class TestBooleanFields(test.TortoiseTransactionedTestModelsTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.BooleanFields.create()

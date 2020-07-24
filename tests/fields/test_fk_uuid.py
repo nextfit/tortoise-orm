@@ -5,7 +5,7 @@ from tortoise.exceptions import IntegrityError, NoValuesFetched, OperationalErro
 from tortoise.query.single import SingleQuerySet
 
 
-class TestForeignKeyUUIDField(test.TestCase):
+class TestForeignKeyUUIDField(test.TortoiseTransactionedTestModelsTestCase):
     """
     Here we do the same FK tests but using UUID. The reason this is useful is:
 

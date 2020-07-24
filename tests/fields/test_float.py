@@ -6,7 +6,7 @@ from tortoise.exceptions import IntegrityError
 from tortoise.query.expressions import F
 
 
-class TestFloatFields(test.TestCase):
+class TestFloatFields(test.TortoiseTransactionedTestModelsTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.FloatFields.create()

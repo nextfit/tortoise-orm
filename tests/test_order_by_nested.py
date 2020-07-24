@@ -2,7 +2,7 @@ from tests.testmodels import Event, Tournament
 from tortoise.contrib import test
 
 
-class TestOrderByNested(test.TestCase):
+class TestOrderByNested(test.TortoiseTransactionedTestModelsTestCase):
     async def test_basic(self):
         await Event.create(
             name="Event 1", tournament=await Tournament.create(name="Tournament 1", desc="B")

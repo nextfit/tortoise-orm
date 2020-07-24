@@ -4,7 +4,7 @@ from tortoise.exceptions import ConfigurationError, IntegrityError
 from tortoise.fields import JSONField
 
 
-class TestJSONFields(test.TestCase):
+class TestJSONFields(test.TortoiseTransactionedTestModelsTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.JSONFields.create()

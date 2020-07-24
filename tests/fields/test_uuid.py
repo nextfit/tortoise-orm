@@ -5,7 +5,7 @@ from tortoise.contrib import test
 from tortoise.exceptions import IntegrityError
 
 
-class TestUUIDFields(test.TestCase):
+class TestUUIDFields(test.TortoiseTransactionedTestModelsTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.UUIDFields.create()

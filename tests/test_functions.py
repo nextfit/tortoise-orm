@@ -10,7 +10,7 @@ from tortoise.query.expressions import F
 from tortoise.query.ordering import RandomOrdering
 
 
-class TestFunctions(test.TestCase):
+class TestFunctions(test.TortoiseTransactionedTestModelsTestCase):
 
     async def test_random_ordering(self):
         products = Product.all().order_by(RandomOrdering()).limit(20)

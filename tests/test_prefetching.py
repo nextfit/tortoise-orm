@@ -7,7 +7,7 @@ from tortoise.exceptions import FieldError, UnknownFieldError
 from tortoise.query import Prefetch
 
 
-class TestPrefetching(test.TestCase):
+class TestPrefetching(test.TortoiseTransactionedTestModelsTestCase):
     async def test_prefetch(self):
         tournament = await Tournament.create(name="tournament")
         event = await Event.create(name="First", tournament=tournament)

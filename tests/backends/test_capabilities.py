@@ -2,7 +2,7 @@ from tortoise import Tortoise
 from tortoise.contrib import test
 
 
-class TestCapabilities(test.TestCase):
+class TestCapabilities(test.TortoiseTransactionedTestModelsTestCase):
     # pylint: disable=E1101
 
     def setUp(self):

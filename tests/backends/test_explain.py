@@ -2,7 +2,7 @@ from tests.testmodels import Tournament
 from tortoise.contrib import test
 
 
-class TestExplain(test.TestCase):
+class TestExplain(test.TortoiseTransactionedTestModelsTestCase):
     async def test_explain(self):
         # NOTE: we do not provide any guarantee on the format of the value
         # returned by `.explain()`, as it heavily depends on the database.

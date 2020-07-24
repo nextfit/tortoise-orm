@@ -5,7 +5,7 @@ from tortoise.contrib import test
 from tortoise.exceptions import FieldError
 
 
-class TestCharFieldFilters(test.TestCase):
+class TestCharFieldFilters(test.TortoiseTransactionedTestModelsTestCase):
     async def asyncSetUp(self) -> None:
         await CharFields.create(char="moo")
         await CharFields.create(char="baa", char_null="baa")
@@ -151,7 +151,7 @@ class TestCharFieldFilters(test.TestCase):
         )
 
 
-class TestBooleanFieldFilters(test.TestCase):
+class TestBooleanFieldFilters(test.TortoiseTransactionedTestModelsTestCase):
     async def asyncSetUp(self) -> None:
         await BooleanFields.create(boolean=True)
         await BooleanFields.create(boolean=False)
@@ -199,7 +199,7 @@ class TestBooleanFieldFilters(test.TestCase):
         )
 
 
-class TestDecimalFieldFilters(test.TestCase):
+class TestDecimalFieldFilters(test.TortoiseTransactionedTestModelsTestCase):
     async def asyncSetUp(self) -> None:
         await DecimalFields.create(decimal="1.2345", decimal_nodec=1)
         await DecimalFields.create(decimal="2.34567", decimal_nodec=1)

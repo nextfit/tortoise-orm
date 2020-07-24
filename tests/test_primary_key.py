@@ -12,7 +12,7 @@ from tests.testmodels import (
 from tortoise.contrib import test
 
 
-class TestQueryset(test.TestCase):
+class TestQueryset(test.TortoiseTransactionedTestModelsTestCase):
     async def test_implicit_pk(self):
         instance = await ImplicitPkModel.create(value="test")
         self.assertTrue(instance.id)

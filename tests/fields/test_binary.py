@@ -4,7 +4,7 @@ from tortoise.exceptions import ConfigurationError, IntegrityError
 from tortoise.fields import BinaryField
 
 
-class TestBinaryFields(test.TestCase):
+class TestBinaryFields(test.TortoiseTransactionedTestModelsTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.BinaryFields.create()

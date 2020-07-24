@@ -3,7 +3,7 @@ from tortoise.contrib import test
 from tortoise.exceptions import IntegrityError
 
 
-class TestUniqueTogether(test.TestCase):
+class TestUniqueTogether(test.TortoiseTransactionedTestModelsTestCase):
     async def test_unique_together(self):
         first_name = "first_name"
         last_name = "last_name"

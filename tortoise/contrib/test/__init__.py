@@ -13,7 +13,7 @@ logger = logging.getLogger("tortoise.test")
 
 __all__ = (
     "TortoiseBaseTestCase",
-    "TestCase",
+    "TortoiseTransactionedTestModelsTestCase",
     "TortoiseTestModelsTestCase",
     "TortoiseIsolatedTestCase",
     "requireCapability",
@@ -107,7 +107,7 @@ class TortoiseTestModelsTestCase(TortoiseBaseTestCase):
     """
     Use this when your tests contain transactions.
 
-    This is slower than ``TestCase`` but faster than ``TortoiseIsolatedTestCase``.
+    This is slower than ``TortoiseTransactionedTestModelsTestCase`` but faster than ``TortoiseIsolatedTestCase``.
     Note that usage of this does not guarantee that auto-number-pks will be reset to 1.
     """
 
@@ -204,7 +204,7 @@ class TortoiseTestModelsTestCase(TortoiseBaseTestCase):
                     fut.set_exception(ex)
 
 
-class TestCase(TortoiseTestModelsTestCase):
+class TortoiseTransactionedTestModelsTestCase(TortoiseTestModelsTestCase):
     """
     An asyncio capable test class that will ensure that each test will be run at
     separate transaction that will rollback on finish.
@@ -235,7 +235,7 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
     .. code-block:: python3
 
         @requireCapability(dialect='sqlite')
-        class TestSqlite(test.TestCase):
+        class TestSqlite(test.TortoiseTransactionedTestModelsTestCase):
             ...
 
     :param connection_name: name of the connection to retrieve capabilities from.

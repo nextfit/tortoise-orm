@@ -7,7 +7,7 @@ from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError, IntegrityError
 
 
-class TestDatetimeFields(test.TestCase):
+class TestDatetimeFields(test.TortoiseTransactionedTestModelsTestCase):
     def test_both_auto_bad(self):
         with self.assertRaisesRegex(
             ConfigurationError, "You can choose only 'auto_now' or 'auto_now_add'"
@@ -89,7 +89,7 @@ class TestDatetimeFields(test.TestCase):
         )
 
 
-class TestDateFields(test.TestCase):
+class TestDateFields(test.TortoiseTransactionedTestModelsTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.DateFields.create()
@@ -129,7 +129,7 @@ class TestDateFields(test.TestCase):
         self.assertEqual(obj.date, today)
 
 
-class TestTimeDeltaFields(test.TestCase):
+class TestTimeDeltaFields(test.TortoiseTransactionedTestModelsTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.TimeDeltaFields.create()

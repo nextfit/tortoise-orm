@@ -4,7 +4,7 @@ from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError, IntegrityError
 
 
-class TestCharFields(test.TestCase):
+class TestCharFields(test.TortoiseTransactionedTestModelsTestCase):
     def test_max_length_missing(self):
         with self.assertRaisesRegex(
             TypeError, "missing 1 required positional argument: 'max_length'"

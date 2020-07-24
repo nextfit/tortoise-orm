@@ -58,7 +58,7 @@ class TestConcurrencyIsolated(test.TortoiseIsolatedTestCase):
 
 
 @test.requireCapability(supports_transactions=True)
-class TestConcurrencyTransactioned(test.TestCase):
+class TestConcurrencyTransactioned(test.TortoiseTransactionedTestModelsTestCase):
     async def test_concurrency_read(self):
         await Tournament.create(name="Test")
         tour1 = await Tournament.first()

@@ -12,7 +12,7 @@ from tortoise.exceptions import (
 from tortoise.fields.relational import NoneAwaitable
 
 
-class TestModelCreate(test.TestCase):
+class TestModelCreate(test.TortoiseTransactionedTestModelsTestCase):
     async def test_save_generated(self):
         mdl = await Tournament.create(name="Test")
         mdl2 = await Tournament.get(id=mdl.id)
@@ -50,7 +50,7 @@ class TestModelCreate(test.TestCase):
             await UUIDFkRelatedNullModel.create(id=cid, name="Test")
 
 
-class TestModelMethods(test.TestCase):
+class TestModelMethods(test.TortoiseTransactionedTestModelsTestCase):
     async def asyncSetUp(self) -> None:
         self.mdl = await Tournament.create(name="Test")
         self.mdl2 = Tournament(name="Test")
@@ -170,7 +170,7 @@ class TestModelMethodsNoID(TestModelMethods):
         self.assertEqual(repr(self.mdl2), "<NoID>")
 
 
-class TestModelConstructor(test.TestCase):
+class TestModelConstructor(test.TortoiseTransactionedTestModelsTestCase):
     def test_null_in_nonnull_field(self):
         with self.assertRaisesRegex(ValueError, "name is non nullable field, but null was passed"):
             Event(name=None)

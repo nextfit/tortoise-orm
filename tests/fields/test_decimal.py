@@ -9,7 +9,7 @@ from tortoise.exceptions import ConfigurationError, IntegrityError
 from tortoise.query.expressions import F
 
 
-class TestDecimalFields(test.TestCase):
+class TestDecimalFields(test.TortoiseTransactionedTestModelsTestCase):
     def test_max_digits_empty(self):
         with self.assertRaisesRegex(
             TypeError,
