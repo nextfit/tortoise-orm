@@ -175,33 +175,32 @@ class TestFunctions(test.TestCase):
             'ORDER BY COUNT("store_category__productcategory"."category_id") DESC '
             'LIMIT 20')
 
-        cats_distilled = [{'name': c.name, 'products': [p.name for p in c.products]} for c in cats_fetched]
+        cats_distilled = [{'name': c.name, 'products': {p.name for p in c.products}} for c in cats_fetched]
 
         self.assertEqual(cats_distilled, [
             {
                 'name': 'category_2',
-                'products': ['product_02', 'product_04', 'product_06', 'product_08', 'product_10',
+                'products': {'product_02', 'product_04', 'product_06', 'product_08', 'product_10',
                     'product_12', 'product_14', 'product_16', 'product_18', 'product_20'
-                ]
+                }
             },
             {
                 'name': 'category_3',
-                'products': ['product_03', 'product_06', 'product_09', 'product_12', 'product_15',
+                'products': {'product_03', 'product_06', 'product_09', 'product_12', 'product_15',
                     'product_18', 'product_21'
-                ]
+                }
             },
             {
                 'name': 'category_5',
-                'products': ['product_05', 'product_10', 'product_15', 'product_20']
+                'products': {'product_05', 'product_10', 'product_15', 'product_20'}
             },
             {
                 'name': 'category_7',
-                'products': ['product_07', 'product_14', 'product_21']
+                'products': {'product_07', 'product_14', 'product_21'}
             }
         ])
 
     async def test_ordering_annotation_aggregations_m2m(self):
-
         await create_store_objects()
 
         categories = Category.annotate(cnt=Count('products')).order_by("-cnt").prefetch_related('products').limit(20)
@@ -221,31 +220,30 @@ class TestFunctions(test.TestCase):
             'ORDER BY "cnt" DESC '
             'LIMIT 20')
 
-        cats_distilled = [{'name': c.name, 'products': [p.name for p in c.products]} for c in cats_fetched]
+        cats_distilled = [{'name': c.name, 'products': {p.name for p in c.products}} for c in cats_fetched]
 
         self.assertEqual(cats_distilled, [
             {
                 'name': 'category_2',
-                'products': ['product_02', 'product_04', 'product_06', 'product_08', 'product_10',
+                'products': {'product_02', 'product_04', 'product_06', 'product_08', 'product_10',
                     'product_12', 'product_14', 'product_16', 'product_18', 'product_20'
-                ]
+                }
             },
             {
                 'name': 'category_3',
-                'products': ['product_03', 'product_06', 'product_09', 'product_12', 'product_15',
+                'products': {'product_03', 'product_06', 'product_09', 'product_12', 'product_15',
                     'product_18', 'product_21'
-                ]
+                }
             },
             {
                 'name': 'category_5',
-                'products': ['product_05', 'product_10', 'product_15', 'product_20']
+                'products': {'product_05', 'product_10', 'product_15', 'product_20'}
             },
             {
                 'name': 'category_7',
-                'products': ['product_07', 'product_14', 'product_21']
+                'products': {'product_07', 'product_14', 'product_21'}
             }
         ])
-
 
     async def test_annotation(self):
         products = Product.filter(brand_id=OuterRef('id')).limit(1).values_list('name', flat=True)
