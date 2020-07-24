@@ -2,6 +2,7 @@
 import asyncio
 import os
 import sqlite3
+import sys
 from functools import wraps
 from typing import List, Optional, Sequence, Tuple, Any
 
@@ -73,9 +74,7 @@ class SqliteClient(BaseDBAsyncClient):
 
         self._lock = asyncio.Lock()
 
-        self._connection = aiosqlite.connect(self.filename, isolation_level=None)
-        self._connection.start()
-        await self._connection._connect()
+        self._connection = await aiosqlite.connect(self.filename, isolation_level=None)
         self._connection._conn.row_factory = sqlite3.Row
 
         for pragma, val in self.pragmas.items():
@@ -91,15 +90,13 @@ class SqliteClient(BaseDBAsyncClient):
 
     async def close(self) -> None:
         if self._connection:
-            await self._connection.close()
-            self._connection = None
-            self._lock = None
-
-            self.log.debug(
-                "Closed connection with params: filename=%s %s",
-                self.filename,
-                " ".join([f"{k}={v}" for k, v in self.pragmas.items()]),
-            )
+            async with self._lock:
+                try:
+                    await self._connection.close()
+                finally:
+                    self.log.debug("Closed connection: filename=%s", self.filename)
+                    self._connection = None
+                    self._lock = None
 
     async def db_create(self) -> None:
         pass

@@ -69,15 +69,38 @@ class IsolatedTestCase(SimpleTestCase):
 
     """
 
-    def setUp(self) -> None:
+    def _callSetUp(self):
         Tortoise.init(self.get_db_config())
+        super()._callSetUp()
 
-    async def asyncSetUp(self) -> None:
-        await Tortoise.open_connections(create_db=True)
-        await Tortoise.generate_schemas(safe=False)
+    async def _asyncioLoopRunner(self, fut):
+        self._asyncioCallsQueue = queue = asyncio.Queue()
+        fut.set_result(None)
+        while True:
+            query = await queue.get()
+            queue.task_done()
+            if query is None:
+                break
 
-    async def asyncTearDown(self) -> None:
-        await Tortoise.drop_databases()
+            fut, awaitable = query
+            try:
+                if awaitable.__name__ == 'asyncSetUp':
+                    await Tortoise.open_connections(create_db=True)
+                    await Tortoise.generate_schemas(safe=False)
+
+                ret = await awaitable
+                if not fut.cancelled():
+                    fut.set_result(ret)
+
+                if awaitable.__name__ == 'asyncTearDown':
+                    await Tortoise.drop_databases()
+
+            except asyncio.CancelledError:
+                raise
+
+            except Exception as ex:
+                if not fut.cancelled():
+                    fut.set_exception(ex)
 
 
 class TruncationTestCase(SimpleTestCase):
@@ -143,7 +166,7 @@ class TruncationTestCase(SimpleTestCase):
             query = await queue.get()
             queue.task_done()
             if query is None:
-                await Tortoise.close_connections()
+                await self.tortoise_test.close_connections()
                 break
 
             fut, awaitable = query
@@ -173,7 +196,7 @@ class TruncationTestCase(SimpleTestCase):
                                 await model._meta.db.execute_script(f"DELETE FROM {model._meta.db_table}")  # nosec
 
             except asyncio.CancelledError:
-                await Tortoise.close_connections()
+                await self.tortoise_test.close_connections()
                 raise
 
             except Exception as ex:
