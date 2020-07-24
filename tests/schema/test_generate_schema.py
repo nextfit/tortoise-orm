@@ -5,7 +5,7 @@ from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 
 
-class TestGenerateSchema(test.SimpleTestCase):
+class TestGenerateSchema(test.TortoiseBaseTestCase):
 
     tortoise_test_modules = []
 

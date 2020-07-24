@@ -19,7 +19,7 @@ async def atomic_decorated_func():
 
 
 @test.requireCapability(supports_transactions=True)
-class TestTransactions(test.TruncationTestCase):
+class TestTransactions(test.TortoiseTestModelsTestCase):
     async def test_transactions(self):
         with self.assertRaises(SomeException):
             async with in_transaction():

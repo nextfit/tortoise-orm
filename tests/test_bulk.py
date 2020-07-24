@@ -7,7 +7,7 @@ from tortoise.exceptions import IntegrityError
 from tortoise.transactions import in_transaction
 
 
-class TestBulk(test.TruncationTestCase):
+class TestBulk(test.TortoiseTestModelsTestCase):
     async def test_bulk_create_and_update(self):
         await UniqueName.bulk_create([UniqueName() for _ in range(100)])
         all_ = await UniqueName.all()

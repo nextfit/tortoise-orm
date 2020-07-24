@@ -15,7 +15,7 @@ async def create_participants():
     return test1, test2, test3, test4
 
 
-class TestEnumField(test.IsolatedTestCase):
+class TestEnumField(test.TortoiseIsolatedTestCase):
     """Tests the enumeration field."""
 
     tortoise_test_modules = ["tests.fields.subclass_models"]

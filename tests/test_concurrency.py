@@ -7,7 +7,7 @@ from tortoise.contrib import test
 from tortoise.transactions import in_transaction
 
 
-class TestConcurrencyIsolated(test.IsolatedTestCase):
+class TestConcurrencyIsolated(test.TortoiseIsolatedTestCase):
     async def test_concurrency_read(self):
         await Tournament.create(name="Test")
         tour1 = await Tournament.first()

@@ -12,10 +12,10 @@ logger = logging.getLogger("tortoise.test")
 
 
 __all__ = (
-    "SimpleTestCase",
+    "TortoiseBaseTestCase",
     "TestCase",
-    "TruncationTestCase",
-    "IsolatedTestCase",
+    "TortoiseTestModelsTestCase",
+    "TortoiseIsolatedTestCase",
     "requireCapability",
     "SkipTest",
     "expectedFailure",
@@ -32,7 +32,7 @@ On success it will be marked as unexpected success.
 """
 
 
-class SimpleTestCase(IsolatedAsyncioTestCase):
+class TortoiseBaseTestCase(IsolatedAsyncioTestCase):
     """
     The Tortoise base test class.
     This will ensure that your DB environment has a test double set up for use.
@@ -60,7 +60,7 @@ class SimpleTestCase(IsolatedAsyncioTestCase):
         )
 
 
-class IsolatedTestCase(SimpleTestCase):
+class TortoiseIsolatedTestCase(TortoiseBaseTestCase):
     """
     Use this if your test needs perfect isolation.
 
@@ -103,11 +103,11 @@ class IsolatedTestCase(SimpleTestCase):
                     fut.set_exception(ex)
 
 
-class TruncationTestCase(SimpleTestCase):
+class TortoiseTestModelsTestCase(TortoiseBaseTestCase):
     """
     Use this when your tests contain transactions.
 
-    This is slower than ``TestCase`` but faster than ``IsolatedTestCase``.
+    This is slower than ``TestCase`` but faster than ``TortoiseIsolatedTestCase``.
     Note that usage of this does not guarantee that auto-number-pks will be reset to 1.
     """
 
@@ -204,7 +204,7 @@ class TruncationTestCase(SimpleTestCase):
                     fut.set_exception(ex)
 
 
-class TestCase(TruncationTestCase):
+class TestCase(TortoiseTestModelsTestCase):
     """
     An asyncio capable test class that will ensure that each test will be run at
     separate transaction that will rollback on finish.

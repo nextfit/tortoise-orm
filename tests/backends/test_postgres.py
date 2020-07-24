@@ -9,7 +9,7 @@ from tortoise.contrib import test
 from tortoise.exceptions import OperationalError
 
 
-class TestPostgreSQL(test.SimpleTestCase):
+class TestPostgreSQL(test.TortoiseBaseTestCase):
     def setUp(self):
         self.db_config = self.get_db_config()
         if self.db_config["connections"]["models"]["engine"] != "tortoise.backends.asyncpg":

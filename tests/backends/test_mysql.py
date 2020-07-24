@@ -8,7 +8,7 @@ from tortoise.contrib import test
 from tortoise.exceptions import DBConnectionError
 
 
-class TestMySQL(test.SimpleTestCase):
+class TestMySQL(test.TortoiseBaseTestCase):
     def setUp(self) -> None:
         self.db_config = self.get_db_config()
         if self.db_config["connections"]["models"]["engine"] != "tortoise.backends.mysql":

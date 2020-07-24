@@ -6,7 +6,7 @@ from tortoise.transactions import in_transaction
 
 
 @test.requireCapability(daemon=True)
-class TestReconnect(test.IsolatedTestCase):
+class TestReconnect(test.TortoiseIsolatedTestCase):
     async def test_reconnect(self):
         await Tournament.create(name="1")
 

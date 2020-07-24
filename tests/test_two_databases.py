@@ -6,7 +6,7 @@ from tortoise.exceptions import OperationalError, ParamsError
 from tortoise.transactions import in_transaction
 
 
-class TestTwoDatabases(test.SimpleTestCase):
+class TestTwoDatabases(test.TortoiseBaseTestCase):
     async def asyncSetUp(self) -> None:
         first_db_config = self.get_db_config(app_label="models")
         second_db_config = self.get_db_config(app_label="events")

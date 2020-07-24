@@ -8,7 +8,7 @@ from tortoise import Tortoise
 from tortoise.contrib import test
 
 
-class TestGenerateSchema(test.SimpleTestCase):
+class TestGenerateSchema(test.TortoiseBaseTestCase):
 
     tortoise_test_modules = []
 
