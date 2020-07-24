@@ -1,5 +1,5 @@
+
 import asyncio
-from functools import wraps
 from typing import Optional, SupportsInt, Tuple, Sequence, Any, List
 
 import asyncpg
@@ -21,6 +21,7 @@ from tortoise.exceptions import (
     IntegrityError,
     OperationalError,
     TransactionManagementError,
+    translate_exceptions,
 )
 from tortoise.transactions.context import (
     LockTransactionContext,
@@ -29,19 +30,14 @@ from tortoise.transactions.context import (
 )
 
 
-def translate_exceptions(func):
-    @wraps(func)
-    async def translate_exceptions_(self, *args):
-        try:
-            return await func(self, *args)
-        except asyncpg.SyntaxOrAccessError as exc:
-            raise OperationalError(exc)
-        except asyncpg.IntegrityConstraintViolationError as exc:
-            raise IntegrityError(exc)
-        except asyncpg.InvalidTransactionStateError as exc:  # pragma: nocoverage
-            raise TransactionManagementError(exc)
+_pg_exc_map = {
+    asyncpg.SyntaxOrAccessError: OperationalError,
+    asyncpg.IntegrityConstraintViolationError: IntegrityError,
+    asyncpg.InvalidTransactionStateError: TransactionManagementError
+}
 
-    return translate_exceptions_
+
+translate_pg_exceptions = translate_exceptions(_pg_exc_map)
 
 
 class AsyncpgDBClient(BaseDBAsyncClient):
@@ -140,14 +136,14 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     def in_transaction(self) -> TransactionContext:
         return LockTransactionContext(TransactionWrapper(self))
 
-    @translate_exceptions
+    @translate_pg_exceptions
     async def execute_insert(self, query: str, values: list) -> Optional[asyncpg.Record]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             # TODO: Cache prepared statement
             return await connection.fetchrow(query, *values)
 
-    @translate_exceptions
+    @translate_pg_exceptions
     async def execute_many(self, query: str, values: list) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
@@ -162,7 +158,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             else:
                 await transaction.commit()
 
-    @translate_exceptions
+    @translate_pg_exceptions
     async def execute_query(
         self, query: str, values: Optional[list] = None
     ) -> Tuple[int, List[str], Sequence[Sequence[Any]]]:
@@ -184,7 +180,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
                 rows = await connection.fetch(*params)
                 return len(rows), list(rows[0].keys()) if len(rows) > 0 else [], rows
 
-    @translate_exceptions
+    @translate_pg_exceptions
     async def execute_script(self, query: str) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug(query)
@@ -205,7 +201,7 @@ class TransactionWrapper(AsyncpgDBClient, AsyncDbClientTransactionMixin):
     def acquire_connection(self) -> ConnectionWrapper:
         return LockConnectionWrapper(self._connection, self._lock)
 
-    @translate_exceptions
+    @translate_pg_exceptions
     async def execute_many(self, query: str, values: list) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
@@ -223,7 +219,7 @@ class TransactionWrapper(AsyncpgDBClient, AsyncDbClientTransactionMixin):
             await self._pool.release(self._connection)
             self._connection = None
 
-    @translate_exceptions
+    @translate_pg_exceptions
     async def start(self) -> None:
         if self._connection:
             self._transaction = self._connection.transaction()

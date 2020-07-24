@@ -1,8 +1,28 @@
 
+from functools import wraps
 from typing import Type, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from tortoise.models import Model
+
+
+def translate_exceptions(exc_map):
+    """decorator to translate exceptions to tortoise exceptions"""
+    def translation_func(func):
+        @wraps(func)
+        async def func_with_new_exceptions(self, *args, **kwargs):
+            try:
+                return await func(self, *args, **kwargs)
+            except Exception as exc:
+                for clazz in exc.__class__.__mro__:
+                    if clazz in exc_map:
+                        raise exc_map[clazz](exc)
+
+                raise exc
+
+        return func_with_new_exceptions
+
+    return translation_func
 
 
 class BaseORMException(Exception):

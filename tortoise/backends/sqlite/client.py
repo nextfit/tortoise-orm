@@ -2,7 +2,6 @@
 import asyncio
 import os
 import sqlite3
-from functools import wraps
 from typing import List, Optional, Sequence, Tuple, Any
 
 import aiosqlite
@@ -20,7 +19,8 @@ from tortoise.exceptions import (
     IntegrityError,
     OperationalError,
     TransactionManagementError,
-    DBConnectionError
+    DBConnectionError,
+    translate_exceptions
 )
 from tortoise.transactions.context import (
     LockTransactionContext,
@@ -29,17 +29,13 @@ from tortoise.transactions.context import (
 )
 
 
-def translate_exceptions(func):
-    @wraps(func)
-    async def translate_exceptions_(self, query, *args):
-        try:
-            return await func(self, query, *args)
-        except sqlite3.OperationalError as exc:
-            raise OperationalError(exc)
-        except sqlite3.IntegrityError as exc:
-            raise IntegrityError(exc)
+_sqlite3_exc_map = {
+    sqlite3.OperationalError: OperationalError,
+    sqlite3.IntegrityError: IntegrityError
+}
 
-    return translate_exceptions_
+
+translate_sqlite_exceptions = translate_exceptions(_sqlite3_exc_map)
 
 
 class SqliteClient(BaseDBAsyncClient):
@@ -112,13 +108,13 @@ class SqliteClient(BaseDBAsyncClient):
     def in_transaction(self) -> "TransactionContext":
         return LockTransactionContext(TransactionWrapper(self))
 
-    @translate_exceptions
+    @translate_sqlite_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             return (await connection.execute_insert(query, values))[0]
 
-    @translate_exceptions
+    @translate_sqlite_exceptions
     async def execute_many(self, query: str, values: List[list]) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
@@ -132,7 +128,7 @@ class SqliteClient(BaseDBAsyncClient):
             else:
                 await connection.commit()
 
-    @translate_exceptions
+    @translate_sqlite_exceptions
     async def execute_query(
         self, query: str, values: Optional[list] = None
     ) -> Tuple[int, List[str], Sequence[Sequence[Any]]]:
@@ -143,7 +139,7 @@ class SqliteClient(BaseDBAsyncClient):
             num_affected_rows = (connection.total_changes - start) or len(rows)
             return num_affected_rows, list(rows[0].keys()) if len(rows) > 0 else [], rows
 
-    @translate_exceptions
+    @translate_sqlite_exceptions
     async def execute_script(self, query: str) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug(query)
@@ -160,7 +156,7 @@ class TransactionWrapper(SqliteClient, AsyncDbClientTransactionMixin):
     def in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(self)
 
-    @translate_exceptions
+    @translate_sqlite_exceptions
     async def execute_many(self, query: str, values: List[list]) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)

@@ -1,6 +1,5 @@
 
 import asyncio
-from functools import wraps
 from typing import List, Optional, SupportsInt, Tuple, Sequence, Any
 
 import aiomysql
@@ -23,6 +22,7 @@ from tortoise.exceptions import (
     IntegrityError,
     OperationalError,
     TransactionManagementError,
+    translate_exceptions,
 )
 from tortoise.transactions.context import (
     LockTransactionContext,
@@ -30,24 +30,17 @@ from tortoise.transactions.context import (
     TransactionContext,
 )
 
+_mysql_exc_map = {
+    pymysql.err.OperationalError: OperationalError,
+    pymysql.err.ProgrammingError: OperationalError,
+    pymysql.err.DataError: OperationalError,
+    pymysql.err.InternalError: OperationalError,
+    pymysql.err.NotSupportedError: OperationalError,
+    pymysql.err.IntegrityError: IntegrityError
+}
 
-def translate_exceptions(func):
-    @wraps(func)
-    async def translate_exceptions_(self, *args):
-        try:
-            return await func(self, *args)
-        except (
-            pymysql.err.OperationalError,
-            pymysql.err.ProgrammingError,
-            pymysql.err.DataError,
-            pymysql.err.InternalError,
-            pymysql.err.NotSupportedError,
-        ) as exc:
-            raise OperationalError(exc)
-        except pymysql.err.IntegrityError as exc:
-            raise IntegrityError(exc)
 
-    return translate_exceptions_
+translate_mysql_exceptions = translate_exceptions(_mysql_exc_map)
 
 
 class MySQLClient(BaseDBAsyncClient):
@@ -162,7 +155,7 @@ class MySQLClient(BaseDBAsyncClient):
     def in_transaction(self) -> "TransactionContext":
         return LockTransactionContext(TransactionWrapper(self))
 
-    @translate_exceptions
+    @translate_mysql_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
@@ -170,7 +163,7 @@ class MySQLClient(BaseDBAsyncClient):
                 await cursor.execute(query, values)
                 return cursor.lastrowid  # return auto-generated id
 
-    @translate_exceptions
+    @translate_mysql_exceptions
     async def execute_many(self, query: str, values: list) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
@@ -187,7 +180,7 @@ class MySQLClient(BaseDBAsyncClient):
                 else:
                     await cursor.executemany(query, values)
 
-    @translate_exceptions
+    @translate_mysql_exceptions
     async def execute_query(
         self, query: str, values: Optional[list] = None
     ) -> Tuple[int, List[str], Sequence[Sequence[Any]]]:
@@ -199,7 +192,7 @@ class MySQLClient(BaseDBAsyncClient):
                 rows = await cursor.fetchall()
                 return cursor.rowcount, [f.name for f in cursor._result.fields] if rows else [], rows
 
-    @translate_exceptions
+    @translate_mysql_exceptions
     async def execute_script(self, query: str) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug(query)
@@ -221,7 +214,7 @@ class TransactionWrapper(MySQLClient, AsyncDbClientTransactionMixin):
     def acquire_connection(self) -> ConnectionWrapper:
         return LockConnectionWrapper(self._connection, self._lock)
 
-    @translate_exceptions
+    @translate_mysql_exceptions
     async def execute_many(self, query: str, values: list) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
@@ -239,7 +232,7 @@ class TransactionWrapper(MySQLClient, AsyncDbClientTransactionMixin):
             await self._pool.release(self._connection)
             self._connection = None
 
-    @translate_exceptions
+    @translate_mysql_exceptions
     async def start(self) -> None:
         if self._connection:
             await self._connection.begin()
