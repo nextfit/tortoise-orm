@@ -47,19 +47,19 @@ endif
 	python setup.py check -mrs
 
 test: deps
-	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: py.test --cov=tortoise
+	$(py_warn) TORTOISE_TEST_DB="sqlite://test_\{\}.sqlite3" pytest --cov=tortoise
 
 test_sqlite:
-	$(py_warn) TORTOISE_TEST_DB="sqlite://test_\{\}.sqlite3" py.test --cov=tortoise --cov-report=
+	$(py_warn) TORTOISE_TEST_DB="sqlite://test_\{\}.sqlite3" pytest --cov=tortoise --cov-report=
 
 test_postgres:
-	python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB="postgres://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}" py.test --cov=tortoise --cov-append --cov-report=
+	python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB="postgres://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}" pytest --cov=tortoise --cov-append --cov-report=
 
 test_mysql_myisam:
-	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}?storage_engine=MYISAM" py.test --cov=tortoise --cov-append --cov-report=
+	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}?storage_engine=MYISAM" pytest --cov=tortoise --cov-append --cov-report=
 
 test_mysql:
-	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}" py.test --cov=tortoise --cov-append --cov-report=
+	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}" pytest --cov=tortoise --cov-append --cov-report=
 
 test_dbs: test_sqlite test_postgres test_mysql_myisam test_mysql
 
