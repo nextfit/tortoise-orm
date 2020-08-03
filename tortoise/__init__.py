@@ -17,10 +17,11 @@ def run_async(coro: Coroutine) -> None:
         from tortoise import Tortoise, run_async
 
         async def do_stuff():
-            await Tortoise.init(
+            Tortoise.init(
                 db_url='sqlite://db.sqlite3',
                 models={'models': ['app.models']}
             )
+            await Tortoise.open_connections()
 
             ...
 
