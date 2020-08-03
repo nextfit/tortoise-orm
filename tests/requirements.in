@@ -32,6 +32,7 @@ pytest
 nose2
 pytest-xdist
 pytest-cov
+pytest-asyncio
 
 # Pypi
 twine<2.0

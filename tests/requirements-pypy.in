@@ -12,4 +12,5 @@ aiomysql
 pytest
 pytest-xdist
 pytest-cov
+pytest-asyncio
 coveralls
