@@ -2,12 +2,14 @@
 import operator
 from typing import Callable, Dict, Tuple, Union, TYPE_CHECKING, Type
 
+from pypika.terms import Term
+
 from tortoise.constants import LOOKUP_SEP
 from tortoise.exceptions import FieldError, OperationalError, UnknownFieldError, BaseFieldError
 from tortoise.fields.relational import ForeignKey, OneToOneField, RelationField
 from tortoise.filters import FieldFilter
 from tortoise.filters.clause import QueryClauses
-from tortoise.query.annotations import OuterRef, Subquery
+from tortoise.query.annotations import OuterRef, Subquery, Annotation, TermAnnotation
 from tortoise.query.context import QueryContext
 
 
@@ -96,7 +98,12 @@ class Q:
         if isinstance(value, OuterRef):
             return value.get_field(context, queryset.annotations)
 
-        if isinstance(value, Subquery):
+        if isinstance(value, Term):
+            value = TermAnnotation(value)
+            value.resolve_into(queryset, context)
+            return value.field
+
+        if isinstance(value, Annotation):
             value.resolve_into(queryset, context)
             return value.field
 

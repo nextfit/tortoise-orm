@@ -4,6 +4,7 @@ from tests.testmodels import Event, IntFields, Reporter, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError
 from tortoise.filters.q import Q
+from tortoise.query.expressions import F
 
 
 class TestFiltering(test.TortoiseTransactionedTestModelsTestCase):
@@ -146,6 +147,15 @@ class TestFiltering(test.TortoiseTransactionedTestModelsTestCase):
         tournaments = await Tournament.filter(Q(name="1") | ~Q(name="2"))
         self.assertEqual(len(tournaments), 2)
         self.assertSetEqual({t.name for t in tournaments}, {"0", "1"})
+
+    async def test_filter_with_f_expression(self):
+        await IntFields.create(intnum=1, intnum_null=1)
+        await IntFields.create(intnum=2, intnum_null=1)
+        self.assertEqual(await IntFields.filter(intnum=F("intnum_null")).count(), 1)
+        self.assertEqual(await IntFields.filter(intnum__gte=F("intnum_null")).count(), 2)
+        self.assertEqual(
+            await IntFields.filter(intnum=F("intnum_null") + F("intnum_null")).count(), 1
+        )
 
     async def test_filter_by_aggregation_field(self):
         tournament = await Tournament.create(name="0")
