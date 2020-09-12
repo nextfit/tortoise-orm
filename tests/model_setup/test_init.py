@@ -50,7 +50,8 @@ class TestInitErrors(IsolatedAsyncioTestCase):
 
     def test_dup1_init(self):
         with self.assertRaisesRegex(
-            ConfigurationError, 'backward relation "events" duplicates in model Tournament'
+            ConfigurationError,
+            "backward relation 'events' duplicates in model <class 'tests.model_setup.models_dup1.Tournament'>"
         ):
             Tortoise.init(
                 {
@@ -71,7 +72,8 @@ class TestInitErrors(IsolatedAsyncioTestCase):
 
     def test_dup2_init(self):
         with self.assertRaisesRegex(
-            ConfigurationError, 'backward relation "events" duplicates in model Team'
+            ConfigurationError,
+            "backward relation 'events' duplicates in model <class 'tests.model_setup.models_dup2.Team'>"
         ):
             Tortoise.init(
                 {
@@ -92,7 +94,8 @@ class TestInitErrors(IsolatedAsyncioTestCase):
 
     def test_dup3_init(self):
         with self.assertRaisesRegex(
-            ConfigurationError, 'backward relation "event" duplicates in model Tournament'
+            ConfigurationError,
+            "backward relation 'event' duplicates in model <class 'tests.model_setup.models_dup3.Tournament'>"
         ):
             Tortoise.init(
                 {

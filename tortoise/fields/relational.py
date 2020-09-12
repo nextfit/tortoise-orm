@@ -573,10 +573,9 @@ class ForeignKey(RelationField):
                 backward_relation_name = "{}_set".format(self.model.__name__.lower())
 
             if backward_relation_name in remote_model._meta.fields_map:
-                remote_app_name, remote_model_name = self.model_name.split(".")
                 raise ConfigurationError(
-                    f'backward relation "{backward_relation_name}" duplicates in'
-                    f" model {remote_model_name}"
+                    f"backward relation '{backward_relation_name}' duplicates in"
+                    f" model {remote_model}"
                 )
 
             backward_relation_field = self.backward_relation_class(
@@ -774,7 +773,6 @@ class ManyToManyField(RelationField):
 
             self.backward_key = backward_key
 
-        remote_app_name, remote_model_name = self.model_name.split(".")
         remote_model = tortoise.get_model(self.model_name)
         self.remote_model = remote_model
 
@@ -792,8 +790,8 @@ class ManyToManyField(RelationField):
 
             if backward_relation_name in remote_model._meta.fields_map:
                 raise ConfigurationError(
-                    f'backward relation "{backward_relation_name}" duplicates in'
-                    f" model {remote_model_name}"
+                    f"backward relation '{backward_relation_name}' duplicates in"
+                    f" model {remote_model}"
                 )
 
             m2m_relation = ManyToManyField(
