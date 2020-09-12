@@ -35,7 +35,7 @@ class MetaInfo:
         "_inited",
 
         "_model",
-        "app",
+        "app_label",
         "connection_name",
         "db_table",
         "table_description",
@@ -56,7 +56,7 @@ class MetaInfo:
     def __init__(self, meta) -> None:
         self.abstract: bool = getattr(meta, "abstract", False)
         self.ordering: List[Tuple[str, Order]] = getattr(meta, "ordering", None)
-        self.app: Optional[str] = getattr(meta, "app", None)
+        self.app_label: Optional[str] = getattr(meta, "app_label", None)
         self.unique_together: Tuple[Tuple[str, ...], ...] = self.__get_unique_together(meta)
         self.indexes: Tuple[Tuple[str, ...], ...] = self.__get_indexes(meta)
         self.table_description: str = getattr(meta, "table_description", "")
@@ -661,7 +661,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def full_name(cls) -> str:
-        return f"{cls._meta.app}.{cls.__name__}"
+        return f"{cls._meta.app_label}.{cls.__name__}"
 
     @classmethod
     def describe(cls, serializable: bool = True) -> dict:
@@ -682,8 +682,8 @@ class Model(metaclass=ModelMeta):
 
                 {
                     "name":                 str     # Qualified model name
-                    "app":                  str     # 'App' namespace
-                    "db_table":                str  # DB table name
+                    "app_label":            str     # 'App' namespace
+                    "db_table":             str     # DB table name
                     "abstract":             bool    # Is the model Abstract?
                     "description":          str     # Description of table (nullable)
                     "unique_together":      [...]   # List of List containing field names that
@@ -731,7 +731,7 @@ class Model(metaclass=ModelMeta):
 
         return {
             "name": cls.full_name(),
-            "app": _meta.app,
+            "app_label": _meta.app_label,
             "db_table": _meta.db_table,
             "abstract": _meta.abstract,
             "description": _meta.table_description or None,

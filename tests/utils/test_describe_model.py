@@ -48,7 +48,7 @@ class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
             val,
             {
                 "name": "models.StraightFields",
-                "app": "models",
+                "app_label": "models",
                 "db_table": "straightfields",
                 "abstract": False,
                 "description": "Straight auto-mapped fields",
@@ -209,7 +209,7 @@ class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
             val,
             {
                 "name": "models.StraightFields",
-                "app": "models",
+                "app_label": "models",
                 "db_table": "straightfields",
                 "abstract": False,
                 "description": "Straight auto-mapped fields",
@@ -370,7 +370,7 @@ class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
             val,
             {
                 "name": "models.SourceFields",
-                "app": "models",
+                "app_label": "models",
                 "db_table": "sometable",
                 "abstract": False,
                 "description": "Source mapped fields",
@@ -531,7 +531,7 @@ class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
             val,
             {
                 "name": "models.SourceFields",
-                "app": "models",
+                "app_label": "models",
                 "db_table": "sometable",
                 "abstract": False,
                 "description": "Source mapped fields",
@@ -692,7 +692,7 @@ class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
             val,
             {
                 "name": "models.UUIDPkModel",
-                "app": "models",
+                "app_label": "models",
                 "db_table": "uuidpkmodel",
                 "abstract": False,
                 "description": None,
@@ -747,7 +747,7 @@ class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
             val,
             {
                 "name": "models.UUIDPkModel",
-                "app": "models",
+                "app_label": "models",
                 "db_table": "uuidpkmodel",
                 "abstract": False,
                 "description": None,
@@ -802,7 +802,7 @@ class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
             val,
             {
                 "abstract": False,
-                "app": "models",
+                "app_label": "models",
                 "fields": [
                     {
                         "db_column": "name",
@@ -901,7 +901,7 @@ class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
             val,
             {
                 "name": "models.JSONFields",
-                "app": "models",
+                "app_label": "models",
                 "db_table": "jsonfields",
                 "abstract": False,
                 "description": None,
@@ -974,7 +974,7 @@ class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
             val,
             {
                 "name": "models.JSONFields",
-                "app": "models",
+                "app_label": "models",
                 "db_table": "jsonfields",
                 "abstract": False,
                 "description": None,

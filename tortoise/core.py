@@ -140,8 +140,8 @@ class _Tortoise:
         discovered_models = []
         for model in possible_models:
             if isclass(model) and issubclass(model, Model) and not model._meta.abstract:
-                if not model._meta.app or model._meta.app == app_label:
-                    model._meta.app = app_label
+                if not model._meta.app_label or model._meta.app_label == app_label:
+                    model._meta.app_label = app_label
                     discovered_models.append(model)
 
         if not discovered_models:

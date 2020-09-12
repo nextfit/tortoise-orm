@@ -93,7 +93,7 @@ class EventTwo(Model):
     participants: fields.ManyToManyRelation["TeamTwo"] = fields.ManyToManyField("events.TeamTwo")
 
     class Meta:
-        app = "events"
+        app_label = "events"
 
     def __str__(self):
         return self.name
@@ -106,7 +106,7 @@ class TeamTwo(Model):
     eventtwo_through: fields.ManyToManyRelation[EventTwo]
 
     class Meta:
-        app = "events"
+        app_label = "events"
 
     def __str__(self):
         return self.name

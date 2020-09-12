@@ -21,7 +21,7 @@ class Tournament(Model):
         return self.name
 
     class Meta:
-        app = "tournaments"
+        app_label = "tournaments"
 
 
 class Event(Model):
@@ -37,7 +37,7 @@ class Event(Model):
         return self.name
 
     class Meta:
-        app = "events"
+        app_label = "events"
 
 
 class Team(Model):
@@ -50,7 +50,7 @@ class Team(Model):
         return self.name
 
     class Meta:
-        app = "events"
+        app_label = "events"
 
 
 async def run():
