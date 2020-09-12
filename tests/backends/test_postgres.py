@@ -48,7 +48,7 @@ class TestPostgreSQL(test.TortoiseBaseTestCase):
 
         conn = Tortoise.get_db_client("models")
         _, db_columns, res = await conn.execute_query(
-            "SELECT id, name FROM mytestschema.tournament WHERE name='Test' LIMIT 1"
+            "SELECT id, name FROM mytestschema.models_tournament WHERE name='Test' LIMIT 1"
         )
 
         self.assertEqual(len(res), 1)
