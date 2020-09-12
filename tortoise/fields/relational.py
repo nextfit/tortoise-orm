@@ -311,10 +311,10 @@ class JoinData:
 class RelationField(Field, Generic[MODEL]):
     has_db_column = False
 
-    def __init__(self, remote_model: Type[MODEL], related_name: str, *args, **kwargs) -> None:
+    def __init__(self, remote_model: Union[Type[MODEL], str], related_name: str, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.remote_model: Type[MODEL] = remote_model
-        self.related_name: str = related_name
+        self.remote_model = remote_model
+        self.related_name = related_name
 
     def attribute_property(self) -> property:
         raise NotImplementedError()
@@ -440,8 +440,12 @@ class ForeignKey(RelationField):
 
     You must provide the following:
 
-    ``model_name``:
-        The name of the related model in a :samp:`'{app}.{model}'` format.
+    ``remote_model``:
+        One of:
+            - The related model class
+            - The name of the related model in a :samp:`'{app}.{model}'` format.
+            - The name of the related model in a :samp:`'{model}'` format if the related model
+              is in the same app as the current model
 
     The following is optional:
 
@@ -466,7 +470,7 @@ class ForeignKey(RelationField):
 
     def __init__(
         self,
-        model_name: str,
+        remote_model: Union[Type[MODEL], str],
         primary_key: bool = False,
         unique: bool = False,
         related_name: Union[Optional[str], Literal[False]] = None,
@@ -475,7 +479,7 @@ class ForeignKey(RelationField):
     ) -> None:
 
         super().__init__(
-            remote_model=None,
+            remote_model=remote_model,
             related_name=related_name,
             primary_key=primary_key,
             unique=unique,
@@ -486,10 +490,6 @@ class ForeignKey(RelationField):
         if primary_key and not unique:
             raise ConfigurationError(f"{self.__class__.__name__} cannot be a primary key if not unique")
 
-        if len(model_name.split(".")) != 2:
-            raise ConfigurationError(f'{self.__class__.__name__} accepts model name in format "app.Model"')
-
-        self.model_name = model_name
         if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
             raise ConfigurationError("on_delete can only be CASCADE, RESTRICT or SET_NULL")
 
@@ -544,7 +544,7 @@ class ForeignKey(RelationField):
         return instance_list
 
     def create_relation(self, tortoise) -> None:
-        remote_model = tortoise.get_model(self.model_name)
+        remote_model = tortoise.get_model(self.remote_model, self.model)
 
         self.id_field_name = f"{self.model_field_name}_id"
 
@@ -653,8 +653,12 @@ class OneToOneField(ForeignKey):
 
     You must provide the following:
 
-    ``model_name``:
-        The name of the related model in a :samp:`'{app}.{model}'` format.
+    ``remote_model``:
+        One of:
+            - The related model class
+            - The name of the related model in a :samp:`'{app}.{model}'` format.
+            - The name of the related model in a :samp:`'{model}'` format if the related model
+              is in the same app as the current model
 
     The following is optional:
 
@@ -679,7 +683,7 @@ class OneToOneField(ForeignKey):
 
     def __init__(
         self,
-        model_name: str,
+        remote_model: Union[Type[MODEL], str],
         primary_key: bool = False,
         related_name: Union[Optional[str], Literal[False]] = None,
         on_delete=CASCADE,
@@ -688,7 +692,7 @@ class OneToOneField(ForeignKey):
     ) -> None:
         kwargs.pop("unique", None)
         super().__init__(
-            model_name=model_name,
+            remote_model=remote_model,
             primary_key=primary_key,
             unique=True,
             related_name=related_name,
@@ -706,13 +710,19 @@ class ManyToManyField(RelationField):
 
     You must provide the following:
 
-    ``model_name``:
-        The name of the related model in a :samp:`'{app}.{model}'` format.
+    ``remote_model``:
+        One of:
+            - The related model class
+            - The name of the related model in a :samp:`'{app}.{model}'` format.
+            - The name of the related model in a :samp:`'{model}'` format if the related model
+              is in the same app as the current model
 
     The following is optional:
 
     ``through``:
-        The DB table that represents the trough table.
+        The DB table that represents the trough table. like remote_demo, it could be
+        an actual class, related model in the form of :samp:`'{app}.{model}'`
+        or :samp:`'{model}'` or an actual table name in the DB.
         The default is normally safe.
     ``forward_key``:
         The forward lookup key on the through table.
@@ -726,21 +736,23 @@ class ManyToManyField(RelationField):
 
     def __init__(
         self,
-        model_name: str,
-        through: Optional[str] = None,
+        remote_model: Union[Type[MODEL], str],
+        through: Optional[Union[Type[MODEL], str]] = None,
         forward_key: Optional[str] = None,
         backward_key: Optional[str] = None,
         related_name: Union[Optional[str], Literal[False]] = None,
         **kwargs,
     ) -> None:
 
-        super().__init__(remote_model=None, related_name=related_name, **kwargs)
+        super().__init__(remote_model=remote_model, related_name=related_name, **kwargs)
 
-        if len(model_name.split(".")) != 2:
-            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
+        if not forward_key:
+            remote_model_name = remote_model.split('.')[-1] \
+                if isinstance(remote_model, str) else remote_model.__name__
 
-        self.model_name: str = model_name
-        self.forward_key: str = forward_key or f"{model_name.split('.')[1].lower()}_id"
+            forward_key = f"{remote_model_name.lower()}_id"
+
+        self.forward_key: str = forward_key
         self.backward_key: str = backward_key
         self.through: str = through
 
@@ -773,15 +785,24 @@ class ManyToManyField(RelationField):
 
             self.backward_key = backward_key
 
-        remote_model = tortoise.get_model(self.model_name)
+        remote_model = tortoise.get_model(self.remote_model, self.model)
         self.remote_model = remote_model
 
-        if not self.through:
-            self.through = "{}_{}".format(model_name_lower, remote_model.__name__.lower())
+        if self.through:
+            #
+            # Try to translate through parameter into a db table
+            # if not successful, we just assume initial string is the name
+            # of DB table.
+            #
+            try:
+                through_model = tortoise.get_model(self.through, self.model)
+                self.through = through_model._meta.db_table
 
-        if "." in self.through:
-            through_model = tortoise.get_model(self.through)
-            self.through = through_model._meta.db_table
+            except ConfigurationError:
+                pass
+
+        else:
+            self.through = "{}_{}".format(model_name_lower, remote_model.__name__.lower())
 
         backward_relation_name = self.related_name
         if backward_relation_name is not False:

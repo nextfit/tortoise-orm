@@ -23,7 +23,7 @@ class Brand(models.Model):
 
     id = fields.IntegerField(primary_key=True)
     name = fields.CharField(max_length=255)
-    image = fields.ForeignKey('models.Image', on_delete=fields.CASCADE, null=True)
+    image = fields.ForeignKey(Image, on_delete=fields.CASCADE, null=True)
 
     def __str__(self):
         return self.name
@@ -36,7 +36,7 @@ class Category(models.Model):
 
     id = fields.IntegerField(primary_key=True)
     name = fields.CharField(max_length=255)
-    image = fields.ForeignKey('models.Image', on_delete=fields.CASCADE, null=True)
+    image = fields.ForeignKey(Image, on_delete=fields.CASCADE, null=True)
 
     def __str__(self):
         return self.name
@@ -51,21 +51,21 @@ class Product(models.Model):
     name = fields.CharField(max_length=255)
     price = fields.CharField(max_length=16)
 
-    images = fields.ManyToManyField('models.Image', through='models.ProductImage',)
+    images = fields.ManyToManyField(Image, through='ProductImage',)
 
-    categories = fields.ManyToManyField('models.Category',
-        through='models.ProductCategory',
+    categories = fields.ManyToManyField(Category,
+        through='ProductCategory',
         related_name='products'
     )
 
-    brand = fields.ForeignKey('models.Brand',
+    brand = fields.ForeignKey(Brand,
         on_delete=fields.CASCADE,
         null=True,
         default=None,
         related_name='products'
     )
 
-    vendor = fields.ForeignKey('models.Vendor',
+    vendor = fields.ForeignKey(Vendor,
         on_delete=fields.CASCADE,
         null=True,
         default=None,
@@ -81,8 +81,8 @@ class ProductImage(models.Model):
         db_table = "store_productimage"
         unique_together = ('product', 'image')
 
-    product = fields.ForeignKey('models.Product', on_delete=fields.CASCADE)
-    image = fields.ForeignKey('models.Image', on_delete=fields.CASCADE)
+    product = fields.ForeignKey(Product, on_delete=fields.CASCADE)
+    image = fields.ForeignKey(Image, on_delete=fields.CASCADE)
 
 
 class ProductCategory(models.Model):
@@ -90,8 +90,8 @@ class ProductCategory(models.Model):
         db_table = "store_productcategory"
         unique_together = ('product', 'category')
 
-    product = fields.ForeignKey('models.Product', on_delete=fields.CASCADE)
-    category = fields.ForeignKey('models.Category', on_delete=fields.CASCADE)
+    product = fields.ForeignKey(Product, on_delete=fields.CASCADE)
+    category = fields.ForeignKey(Category, on_delete=fields.CASCADE)
 
 
 async def create_store_objects() -> None:

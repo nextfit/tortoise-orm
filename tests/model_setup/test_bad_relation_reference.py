@@ -46,30 +46,9 @@ class TestBadRelationReferenceErrors(IsolatedAsyncioTestCase):
                 }
             )
 
-    def test_no_app_in_reference_init(self):
-        with self.assertRaisesRegex(
-            ConfigurationError, 'ForeignKey accepts model name in format "app.Model"'
-        ):
-            Tortoise.init(
-                {
-                    "connections": {
-                        "default": {
-                            "engine": "tortoise.backends.sqlite",
-                            "file_path": ":memory:",
-                        }
-                    },
-                    "apps": {
-                        "models": {
-                            "models": ["tests.model_setup.model_bad_rel3"],
-                            "default_connection": "default",
-                        }
-                    },
-                }
-            )
-
     def test_more_than_two_dots_in_reference_init(self):
         with self.assertRaisesRegex(
-            ConfigurationError, 'ForeignKey accepts model name in format "app.Model"'
+            ConfigurationError, 'Model name needs to be in format "app.Model" or "Model"'
         ):
             Tortoise.init(
                 {
@@ -82,27 +61,6 @@ class TestBadRelationReferenceErrors(IsolatedAsyncioTestCase):
                     "apps": {
                         "models": {
                             "models": ["tests.model_setup.model_bad_rel4"],
-                            "default_connection": "default",
-                        }
-                    },
-                }
-            )
-
-    def test_no_app_in_o2o_reference_init(self):
-        with self.assertRaisesRegex(
-            ConfigurationError, 'OneToOneField accepts model name in format "app.Model"'
-        ):
-            Tortoise.init(
-                {
-                    "connections": {
-                        "default": {
-                            "engine": "tortoise.backends.sqlite",
-                            "file_path": ":memory:",
-                        }
-                    },
-                    "apps": {
-                        "models": {
-                            "models": ["tests.model_setup.model_bad_rel5"],
                             "default_connection": "default",
                         }
                     },

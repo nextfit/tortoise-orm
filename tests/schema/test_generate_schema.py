@@ -85,7 +85,7 @@ class TestGenerateSchema(test.TortoiseBaseTestCase):
 
     def test_fk_bad_model_name(self):
         with self.assertRaisesRegex(
-            ConfigurationError, 'ForeignKey accepts model name in format "app.Model"'
+            ConfigurationError, "No model with name 'moo' registered in app 'models'."
         ):
             self.init_for("tests.schema.models_fk_1")
 
@@ -115,7 +115,7 @@ class TestGenerateSchema(test.TortoiseBaseTestCase):
 
     def test_m2m_bad_model_name(self):
         with self.assertRaisesRegex(
-            ConfigurationError, 'Foreign key accepts model name in format "app.Model"'
+            ConfigurationError, "No model with name 'Two' registered in app 'models'."
         ):
             self.init_for("tests.schema.models_m2m_1")
 

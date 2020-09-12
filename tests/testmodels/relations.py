@@ -12,7 +12,7 @@ class CharPkModel(Model):
 
 
 class CharFkRelatedModel(Model):
-    model = fields.ForeignKey("models.CharPkModel", related_name="children")
+    model = fields.ForeignKey(CharPkModel, related_name="children")
 
 
 class CharM2MRelatedModel(Model):
@@ -23,7 +23,7 @@ class CharM2MRelatedModel(Model):
 class DoubleFK(Model):
     name = fields.CharField(max_length=50)
     left = fields.ForeignKey("models.DoubleFK", null=True, related_name="left_rel")
-    right = fields.ForeignKey("models.DoubleFK", null=True, related_name="right_rel")
+    right = fields.ForeignKey("DoubleFK", null=True, related_name="right_rel")
 
 
 class M2MOne(Model):

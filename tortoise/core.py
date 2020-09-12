@@ -1,12 +1,13 @@
 
 import importlib
+import inspect
 import json
 import logging
 import os
 import warnings
 from contextvars import ContextVar
 from inspect import isclass
-from typing import Dict, List, Optional, Type, Any
+from typing import Dict, List, Optional, Type, Any, Union
 
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config, obscure_password
@@ -49,25 +50,38 @@ class _Tortoise:
     def get_connection_names(self) -> List[str]:
         return list(self._db_client_map.keys())
 
-    def get_model(self, full_name: str):
+    def get_model(self, full_name: Union[Type[Model], str], reference_model: Type[Model]):
         """
         Test, if app and model really exist. Throws a ConfigurationError with a hopefully
         helpful message. If successful, returns the requested model.
         """
-        if len(full_name.split(".")) != 2:
-            raise ConfigurationError('Model name needs to be in format "app.Model"')
+        if isinstance(full_name, str):
+            name_parts = full_name.split(".")
+            if len(name_parts) != 2 and len(name_parts) != 1:
+                raise ConfigurationError('Model name needs to be in format "app.Model" or "Model"')
 
-        app_name, model_name = full_name.split(".")
-        if app_name not in self._app_models_map:
-            raise ConfigurationError(f"No app with name '{app_name}' registered.")
+            if len(name_parts) == 2:
+                app_name, model_name = name_parts
+            else:
+                model_name = name_parts[0]
+                app_name = reference_model._meta.app_label
 
-        related_app = self._app_models_map[app_name]
-        if model_name not in related_app:
-            raise ConfigurationError(
-                f"No model with name '{model_name}' registered in app '{app_name}'."
-            )
+            if app_name not in self._app_models_map:
+                raise ConfigurationError(f"No app with name '{app_name}' registered.")
 
-        return related_app[model_name]
+            related_app = self._app_models_map[app_name]
+            if model_name not in related_app:
+                raise ConfigurationError(
+                    f"No model with name '{model_name}' registered in app '{app_name}'."
+                )
+
+            return related_app[model_name]
+
+        elif inspect.isclass(full_name) and issubclass(full_name, Model):
+            return full_name
+
+        else:
+            raise TypeError(f"Cannot get model from {full_name}. Invalid type.")
 
     def describe_models(self,
         models: Optional[List[Type[Model]]] = None, serializable: bool = True) -> Dict[str, dict]:
