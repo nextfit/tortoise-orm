@@ -802,7 +802,11 @@ class ManyToManyField(RelationField):
                 pass
 
         else:
-            self.through = "{}_{}".format(model_name_lower, remote_model.__name__.lower())
+            self.through = "{}_{}_{}".format(
+                self.model._meta.app_label,
+                model_name_lower,
+                remote_model.__name__.lower()
+            )
 
         backward_relation_name = self.related_name
         if backward_relation_name is not False:

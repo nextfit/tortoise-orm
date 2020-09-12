@@ -49,7 +49,7 @@ class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
             {
                 "name": "models.StraightFields",
                 "app_label": "models",
-                "db_table": "straightfields",
+                "db_table": "models_straightfields",
                 "abstract": False,
                 "description": "Straight auto-mapped fields",
                 "unique_together": [["chars", "blip"]],
@@ -210,7 +210,7 @@ class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
             {
                 "name": "models.StraightFields",
                 "app_label": "models",
-                "db_table": "straightfields",
+                "db_table": "models_straightfields",
                 "abstract": False,
                 "description": "Straight auto-mapped fields",
                 "unique_together": [["chars", "blip"]],
@@ -693,7 +693,7 @@ class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
             {
                 "name": "models.UUIDPkModel",
                 "app_label": "models",
-                "db_table": "uuidpkmodel",
+                "db_table": "models_uuidpkmodel",
                 "abstract": False,
                 "description": None,
                 "unique_together": [],
@@ -748,7 +748,7 @@ class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
             {
                 "name": "models.UUIDPkModel",
                 "app_label": "models",
-                "db_table": "uuidpkmodel",
+                "db_table": "models_uuidpkmodel",
                 "abstract": False,
                 "description": None,
                 "unique_together": [],
@@ -889,7 +889,7 @@ class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
                     "python_type": "uuid.UUID",
                     "unique": True,
                 },
-                "db_table": "uuidfkrelatednullmodel",
+                "db_table": "models_uuidfkrelatednullmodel",
                 "unique_together": [],
             },
         )
@@ -902,7 +902,7 @@ class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
             {
                 "name": "models.JSONFields",
                 "app_label": "models",
-                "db_table": "jsonfields",
+                "db_table": "models_jsonfields",
                 "abstract": False,
                 "description": None,
                 "unique_together": [],
@@ -975,7 +975,7 @@ class TestBasic(test.TortoiseTransactionedTestModelsTestCase):
             {
                 "name": "models.JSONFields",
                 "app_label": "models",
-                "db_table": "jsonfields",
+                "db_table": "models_jsonfields",
                 "abstract": False,
                 "description": None,
                 "unique_together": [],

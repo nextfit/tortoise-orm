@@ -37,7 +37,7 @@ class MetaInfo:
         "_model",
         "app_label",
         "connection_name",
-        "db_table",
+        "_db_table",
         "table_description",
 
         "ordering",
@@ -60,12 +60,12 @@ class MetaInfo:
         self.unique_together: Tuple[Tuple[str, ...], ...] = self.__get_unique_together(meta)
         self.indexes: Tuple[Tuple[str, ...], ...] = self.__get_indexes(meta)
         self.table_description: str = getattr(meta, "table_description", "")
+        self._db_table = getattr(meta, "db_table", None)
 
         self.connection_name: Optional[str] = None
         self._inited: bool = False
 
         self._model: Type["Model"]
-        self.db_table: str
 
         self.fields_map: Dict[str, Field]
         self.field_to_db_column_name_map: Dict[str, str]
@@ -125,6 +125,10 @@ class MetaInfo:
             return Tortoise.get_transaction_db_client(self.connection_name)
         except KeyError:
             raise ConfigurationError("No DB associated to model")
+
+    @property
+    def db_table(self) -> str:
+        return self._db_table or "{}_{}".format(self.app_label, self._model.__name__.lower())
 
     def __create_filter(self, key: str) -> Optional[FieldFilter]:
         (field_name, sep, comparison) = key.partition(LOOKUP_SEP)
@@ -281,7 +285,6 @@ class ModelMeta(type):
             meta.abstract = True
 
         new_class = super().__new__(mcs, name, bases, attrs)
-        meta.db_table = getattr(meta_class, "db_table", new_class.__name__.lower())
         for field in meta.fields_map.values():
             field.model = new_class
 

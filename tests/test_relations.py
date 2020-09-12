@@ -274,16 +274,16 @@ class TestRelations(test.TortoiseTransactionedTestModelsTestCase):
 
 
 class TestDoubleFK(test.TortoiseTransactionedTestModelsTestCase):
-    select_match = r'SELECT [`"]doublefk[`"].[`"]name[`"] [`"]name[`"]'
+    select_match = r'SELECT [`"]models_doublefk[`"].[`"]name[`"] [`"]name[`"]'
     select1_match = r'[`"]left[`"].[`"]name[`"] [`"]left__name[`"]'
     select2_match = r'[`"]right[`"].[`"]name[`"] [`"]right__name[`"]'
     join1_match = (
-        r'LEFT OUTER JOIN [`"]doublefk[`"] [`"]left[`"] ON '
-        r'[`"]left[`"].[`"]id[`"]=[`"]doublefk[`"].[`"]left_id[`"]'
+        r'LEFT OUTER JOIN [`"]models_doublefk[`"] [`"]left[`"] ON '
+        r'[`"]left[`"].[`"]id[`"]=[`"]models_doublefk[`"].[`"]left_id[`"]'
     )
     join2_match = (
-        r'LEFT OUTER JOIN [`"]doublefk[`"] [`"]right[`"] ON '
-        r'[`"]right[`"].[`"]id[`"]=[`"]doublefk[`"].[`"]right_id[`"]'
+        r'LEFT OUTER JOIN [`"]models_doublefk[`"] [`"]right[`"] ON '
+        r'[`"]right[`"].[`"]id[`"]=[`"]models_doublefk[`"].[`"]right_id[`"]'
     )
 
     async def asyncSetUp(self) -> None:

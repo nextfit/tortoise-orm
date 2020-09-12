@@ -41,24 +41,24 @@ class TestGenerateSchema(test.TortoiseBaseTestCase):
 
     def test_noid(self):
         self.init_for("tests.testmodels")
-        sql = self.get_sql('"noid"')
+        sql = self.get_sql('"models_noid"')
         self.assertIn('"name" VARCHAR(255)', sql)
         self.assertIn('"id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL', sql)
 
     def test_minrelation(self):
         self.init_for("tests.testmodels")
-        sql = self.get_sql('"minrelation"')
+        sql = self.get_sql('"models_minrelation"')
         self.assertIn(
-            '"tournament_id" SMALLINT NOT NULL REFERENCES "tournament" ("id") ON DELETE CASCADE',
+            '"tournament_id" SMALLINT NOT NULL REFERENCES "models_tournament" ("id") ON DELETE CASCADE',
             sql,
         )
         self.assertNotIn("participants", sql)
 
-        sql = self.get_sql('"minrelation_team"')
+        sql = self.get_sql('"models_minrelation_team"')
         self.assertIn(
-            '"minrelation_id" INT NOT NULL REFERENCES "minrelation" ("id") ON DELETE CASCADE', sql
+            '"minrelation_id" INT NOT NULL REFERENCES "models_minrelation" ("id") ON DELETE CASCADE', sql
         )
-        self.assertIn('"team_id" INT NOT NULL REFERENCES "team" ("id") ON DELETE CASCADE', sql)
+        self.assertIn('"team_id" INT NOT NULL REFERENCES "models_team" ("id") ON DELETE CASCADE', sql)
 
     def test_safe_generation(self):
         """Assert that the IF NOT EXISTS clause is included when safely generating schema."""
@@ -81,7 +81,7 @@ class TestGenerateSchema(test.TortoiseBaseTestCase):
     def test_create_index(self):
         self.init_for("tests.testmodels")
         sql = self.get_sql("CREATE INDEX")
-        self.assertIsNotNone(re.search(r"idx_tournament_created_\w+", sql))
+        self.assertIsNotNone(re.search(r"idx_models_tour_created_\w+", sql))
 
     def test_fk_bad_model_name(self):
         with self.assertRaisesRegex(
@@ -133,28 +133,28 @@ class TestGenerateSchema(test.TortoiseBaseTestCase):
         self.assertEqual(
             sql.strip(),
             """
-CREATE TABLE "defaultpk" (
+CREATE TABLE "models_defaultpk" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "val" INT NOT NULL
 );
-CREATE TABLE "tournament" (
+CREATE TABLE "models_tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(100) NOT NULL  /* Tournament name */,
     "created" TIMESTAMP NOT NULL  /* Created *\\/'`\\/* datetime */
 ) /* What Tournaments *\\/'`\\/* we have */;
-CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
-CREATE TABLE "event" (
+CREATE INDEX "idx_models_tour_name_67cf9d" ON "models_tournament" ("name");
+CREATE TABLE "models_event" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL /* Event ID */,
     "name" TEXT NOT NULL,
     "modified" TIMESTAMP NOT NULL,
     "prize" VARCHAR(40),
     "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
     "key" VARCHAR(100) NOT NULL,
-    "tournament_id" SMALLINT NOT NULL REFERENCES "tournament" ("tid") ON DELETE CASCADE /* FK to tournament */,
-    CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
-    CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
+    "tournament_id" SMALLINT NOT NULL REFERENCES "models_tournament" ("tid") ON DELETE CASCADE /* FK to tournament */,
+    CONSTRAINT "uid_models_even_name_bb6540" UNIQUE ("name", "prize"),
+    CONSTRAINT "uid_models_even_tournam_8ac3b2" UNIQUE ("tournament_id", "key")
 ) /* This table contains a list of all the events */;
-CREATE TABLE "inheritedmodel" (
+CREATE TABLE "models_inheritedmodel" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "zero" INT NOT NULL,
     "one" VARCHAR(40),
@@ -168,37 +168,37 @@ CREATE TABLE "sometable" (
     "fk_sometable" INT REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
 );
 CREATE INDEX "idx_sometable_some_ch_3d69eb" ON "sometable" ("some_chars_table");
-CREATE TABLE "team" (
+CREATE TABLE "models_team" (
     "name" VARCHAR(50) NOT NULL  PRIMARY KEY /* The TEAM name (and PK) */,
     "key" INT NOT NULL,
-    "manager_id" VARCHAR(50) REFERENCES "team" ("name") ON DELETE CASCADE
+    "manager_id" VARCHAR(50) REFERENCES "models_team" ("name") ON DELETE CASCADE
 ) /* The TEAMS! */;
-CREATE INDEX "idx_team_manager_676134" ON "team" ("manager_id", "key");
-CREATE INDEX "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
-CREATE TABLE "teamaddress" (
+CREATE INDEX "idx_models_team_manager_34eaef" ON "models_team" ("manager_id", "key");
+CREATE INDEX "idx_models_team_manager_c571ed" ON "models_team" ("manager_id", "name");
+CREATE TABLE "models_teamaddress" (
     "city" VARCHAR(50) NOT NULL  /* City */,
     "country" VARCHAR(50) NOT NULL  /* Country */,
     "street" VARCHAR(128) NOT NULL  /* Street Address */,
-    "team_id" VARCHAR(50) NOT NULL  PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
+    "team_id" VARCHAR(50) NOT NULL  PRIMARY KEY REFERENCES "models_team" ("name") ON DELETE CASCADE
 );
-CREATE TABLE "venueinformation" (
+CREATE TABLE "models_venueinformation" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(128) NOT NULL,
     "capacity" INT NOT NULL,
     "rent" REAL NOT NULL,
-    "team_id" VARCHAR(50)  UNIQUE REFERENCES "team" ("name") ON DELETE SET NULL
+    "team_id" VARCHAR(50)  UNIQUE REFERENCES "models_team" ("name") ON DELETE SET NULL
 );
 CREATE TABLE "teamevents" (
-    "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE CASCADE,
-    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
+    "event_id" BIGINT NOT NULL REFERENCES "models_event" ("id") ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "models_team" ("name") ON DELETE CASCADE
 ) /* How participants relate */;
 CREATE TABLE "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
     "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
 );
-CREATE TABLE "team_team" (
-    "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE,
-    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
+CREATE TABLE "models_team_team" (
+    "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "models_team" ("name") ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "models_team" ("name") ON DELETE CASCADE
 );
 """.strip(),
         )
@@ -210,28 +210,28 @@ CREATE TABLE "team_team" (
         self.assertEqual(
             sql.strip(),
             """
-CREATE TABLE IF NOT EXISTS "defaultpk" (
+CREATE TABLE IF NOT EXISTS "models_defaultpk" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "val" INT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS "tournament" (
+CREATE TABLE IF NOT EXISTS "models_tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(100) NOT NULL  /* Tournament name */,
     "created" TIMESTAMP NOT NULL  /* Created *\\/'`\\/* datetime */
 ) /* What Tournaments *\\/'`\\/* we have */;
-CREATE INDEX IF NOT EXISTS "idx_tournament_name_6fe200" ON "tournament" ("name");
-CREATE TABLE IF NOT EXISTS "event" (
+CREATE INDEX IF NOT EXISTS "idx_models_tour_name_67cf9d" ON "models_tournament" ("name");
+CREATE TABLE IF NOT EXISTS "models_event" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL /* Event ID */,
     "name" TEXT NOT NULL,
     "modified" TIMESTAMP NOT NULL,
     "prize" VARCHAR(40),
     "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
     "key" VARCHAR(100) NOT NULL,
-    "tournament_id" SMALLINT NOT NULL REFERENCES "tournament" ("tid") ON DELETE CASCADE /* FK to tournament */,
-    CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
-    CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
+    "tournament_id" SMALLINT NOT NULL REFERENCES "models_tournament" ("tid") ON DELETE CASCADE /* FK to tournament */,
+    CONSTRAINT "uid_models_even_name_bb6540" UNIQUE ("name", "prize"),
+    CONSTRAINT "uid_models_even_tournam_8ac3b2" UNIQUE ("tournament_id", "key")
 ) /* This table contains a list of all the events */;
-CREATE TABLE IF NOT EXISTS "inheritedmodel" (
+CREATE TABLE IF NOT EXISTS "models_inheritedmodel" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "zero" INT NOT NULL,
     "one" VARCHAR(40),
@@ -245,37 +245,37 @@ CREATE TABLE IF NOT EXISTS "sometable" (
     "fk_sometable" INT REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS "idx_sometable_some_ch_3d69eb" ON "sometable" ("some_chars_table");
-CREATE TABLE IF NOT EXISTS "team" (
+CREATE TABLE IF NOT EXISTS "models_team" (
     "name" VARCHAR(50) NOT NULL  PRIMARY KEY /* The TEAM name (and PK) */,
     "key" INT NOT NULL,
-    "manager_id" VARCHAR(50) REFERENCES "team" ("name") ON DELETE CASCADE
+    "manager_id" VARCHAR(50) REFERENCES "models_team" ("name") ON DELETE CASCADE
 ) /* The TEAMS! */;
-CREATE INDEX IF NOT EXISTS "idx_team_manager_676134" ON "team" ("manager_id", "key");
-CREATE INDEX IF NOT EXISTS "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
-CREATE TABLE IF NOT EXISTS "teamaddress" (
+CREATE INDEX IF NOT EXISTS "idx_models_team_manager_34eaef" ON "models_team" ("manager_id", "key");
+CREATE INDEX IF NOT EXISTS "idx_models_team_manager_c571ed" ON "models_team" ("manager_id", "name");
+CREATE TABLE IF NOT EXISTS "models_teamaddress" (
     "city" VARCHAR(50) NOT NULL  /* City */,
     "country" VARCHAR(50) NOT NULL  /* Country */,
     "street" VARCHAR(128) NOT NULL  /* Street Address */,
-    "team_id" VARCHAR(50) NOT NULL  PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
+    "team_id" VARCHAR(50) NOT NULL  PRIMARY KEY REFERENCES "models_team" ("name") ON DELETE CASCADE
 );
-CREATE TABLE IF NOT EXISTS "venueinformation" (
+CREATE TABLE IF NOT EXISTS "models_venueinformation" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(128) NOT NULL,
     "capacity" INT NOT NULL,
     "rent" REAL NOT NULL,
-    "team_id" VARCHAR(50)  UNIQUE REFERENCES "team" ("name") ON DELETE SET NULL
+    "team_id" VARCHAR(50)  UNIQUE REFERENCES "models_team" ("name") ON DELETE SET NULL
 );
 CREATE TABLE IF NOT EXISTS "teamevents" (
-    "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE CASCADE,
-    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
+    "event_id" BIGINT NOT NULL REFERENCES "models_event" ("id") ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "models_team" ("name") ON DELETE CASCADE
 ) /* How participants relate */;
 CREATE TABLE IF NOT EXISTS "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
     "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
 );
-CREATE TABLE IF NOT EXISTS "team_team" (
-    "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE,
-    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS "models_team_team" (
+    "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "models_team" ("name") ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "models_team" ("name") ON DELETE CASCADE
 );
 """.strip(),
         )
@@ -304,31 +304,31 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
 
     def test_noid(self):
         self.init_for("tests.testmodels")
-        sql = self.get_sql("`noid`")
+        sql = self.get_sql("`models_noid`")
         self.assertIn("`name` VARCHAR(255)", sql)
         self.assertIn("`id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT", sql)
 
     def test_create_index(self):
         self.init_for("tests.testmodels")
         sql = self.get_sql("KEY")
-        self.assertIsNotNone(re.search(r"idx_tournament_created_\w+", sql))
+        self.assertIsNotNone(re.search(r"idx_models_tour_created_\w+", sql))
 
     def test_minrelation(self):
         self.init_for("tests.testmodels")
-        sql = self.get_sql("`minrelation`")
+        sql = self.get_sql("`models_minrelation`")
         self.assertIn("`tournament_id` SMALLINT NOT NULL,", sql)
         self.assertIn(
-            "FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`id`) ON DELETE CASCADE", sql
+            "FOREIGN KEY (`tournament_id`) REFERENCES `models_tournament` (`id`) ON DELETE CASCADE", sql
         )
         self.assertNotIn("participants", sql)
 
-        sql = self.get_sql("`minrelation_team`")
+        sql = self.get_sql("`models_minrelation_team`")
         self.assertIn("`minrelation_id` INT NOT NULL", sql)
         self.assertIn(
-            "FOREIGN KEY (`minrelation_id`) REFERENCES `minrelation` (`id`) ON DELETE CASCADE", sql
+            "FOREIGN KEY (`minrelation_id`) REFERENCES `models_minrelation` (`id`) ON DELETE CASCADE", sql
         )
         self.assertIn("`team_id` INT NOT NULL", sql)
-        self.assertIn("FOREIGN KEY (`team_id`) REFERENCES `team` (`id`) ON DELETE CASCADE", sql)
+        self.assertIn("FOREIGN KEY (`team_id`) REFERENCES `models_team` (`id`) ON DELETE CASCADE", sql)
 
     def test_table_and_row_comment_generation(self):
         self.init_for("tests.testmodels")
@@ -345,17 +345,17 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
         self.assertEqual(
             sql.strip(),
             """
-CREATE TABLE `defaultpk` (
+CREATE TABLE `models_defaultpk` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `val` INT NOT NULL
 ) CHARACTER SET utf8mb4;
-CREATE TABLE `tournament` (
+CREATE TABLE `models_tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(100) NOT NULL  COMMENT 'Tournament name',
     `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime',
-    KEY `idx_tournament_name_6fe200` (`name`)
+    KEY `idx_models_tour_name_67cf9d` (`name`)
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
-CREATE TABLE `event` (
+CREATE TABLE `models_event` (
     `id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
     `name` LONGTEXT NOT NULL,
     `modified` DATETIME(6) NOT NULL,
@@ -363,11 +363,11 @@ CREATE TABLE `event` (
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
     `key` VARCHAR(100) NOT NULL,
     `tournament_id` SMALLINT NOT NULL COMMENT 'FK to tournament',
-    UNIQUE KEY `uid_event_name_c6f89f` (`name`, `prize`),
-    UNIQUE KEY `uid_event_tournam_a5b730` (`tournament_id`, `key`),
-    CONSTRAINT `fk_event_tourname_51c2b82d` FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`tid`) ON DELETE CASCADE
+    UNIQUE KEY `uid_models_even_name_bb6540` (`name`, `prize`),
+    UNIQUE KEY `uid_models_even_tournam_8ac3b2` (`tournament_id`, `key`),
+    CONSTRAINT `fk_models_e_models_t_6d548004` FOREIGN KEY (`tournament_id`) REFERENCES `models_tournament` (`tid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
-CREATE TABLE `inheritedmodel` (
+CREATE TABLE `models_inheritedmodel` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `zero` INT NOT NULL,
     `one` VARCHAR(40),
@@ -382,34 +382,34 @@ CREATE TABLE `sometable` (
     CONSTRAINT `fk_sometabl_sometabl_6efae9bd` FOREIGN KEY (`fk_sometable`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
     KEY `idx_sometable_some_ch_3d69eb` (`some_chars_table`)
 ) CHARACTER SET utf8mb4;
-CREATE TABLE `team` (
+CREATE TABLE `models_team` (
     `name` VARCHAR(50) NOT NULL  PRIMARY KEY COMMENT 'The TEAM name (and PK)',
     `key` INT NOT NULL,
     `manager_id` VARCHAR(50),
-    CONSTRAINT `fk_team_team_9c77cd8f` FOREIGN KEY (`manager_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
-    KEY `idx_team_manager_676134` (`manager_id`, `key`),
-    KEY `idx_team_manager_ef8f69` (`manager_id`, `name`)
+    CONSTRAINT `fk_models_t_models_t_ed161113` FOREIGN KEY (`manager_id`) REFERENCES `models_team` (`name`) ON DELETE CASCADE,
+    KEY `idx_models_team_manager_34eaef` (`manager_id`, `key`),
+    KEY `idx_models_team_manager_c571ed` (`manager_id`, `name`)
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
-CREATE TABLE `teamaddress` (
+CREATE TABLE `models_teamaddress` (
     `city` VARCHAR(50) NOT NULL  COMMENT 'City',
     `country` VARCHAR(50) NOT NULL  COMMENT 'Country',
     `street` VARCHAR(128) NOT NULL  COMMENT 'Street Address',
     `team_id` VARCHAR(50) NOT NULL  PRIMARY KEY,
-    CONSTRAINT `fk_teamaddr_team_1c78d737` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
+    CONSTRAINT `fk_models_t_models_t_9e656881` FOREIGN KEY (`team_id`) REFERENCES `models_team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
-CREATE TABLE `venueinformation` (
+CREATE TABLE `models_venueinformation` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(128) NOT NULL,
     `capacity` INT NOT NULL,
     `rent` DOUBLE NOT NULL,
     `team_id` VARCHAR(50)  UNIQUE,
-    CONSTRAINT `fk_venueinf_team_198af929` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE SET NULL
+    CONSTRAINT `fk_models_v_models_t_cf93f20c` FOREIGN KEY (`team_id`) REFERENCES `models_team` (`name`) ON DELETE SET NULL
 ) CHARACTER SET utf8mb4;
 CREATE TABLE `teamevents` (
     `event_id` BIGINT NOT NULL,
     `team_id` VARCHAR(50) NOT NULL,
-    FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
+    FOREIGN KEY (`event_id`) REFERENCES `models_event` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`team_id`) REFERENCES `models_team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
 CREATE TABLE `sometable_self` (
     `backward_sts` INT NOT NULL,
@@ -417,11 +417,11 @@ CREATE TABLE `sometable_self` (
     FOREIGN KEY (`backward_sts`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
     FOREIGN KEY (`sts_forward`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
-CREATE TABLE `team_team` (
+CREATE TABLE `models_team_team` (
     `team_rel_id` VARCHAR(50) NOT NULL,
     `team_id` VARCHAR(50) NOT NULL,
-    FOREIGN KEY (`team_rel_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
-    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
+    FOREIGN KEY (`team_rel_id`) REFERENCES `models_team` (`name`) ON DELETE CASCADE,
+    FOREIGN KEY (`team_id`) REFERENCES `models_team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 """.strip(),
         )
@@ -434,17 +434,17 @@ CREATE TABLE `team_team` (
         self.assertEqual(
             sql.strip(),
             """
-CREATE TABLE IF NOT EXISTS `defaultpk` (
+CREATE TABLE IF NOT EXISTS `models_defaultpk` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `val` INT NOT NULL
 ) CHARACTER SET utf8mb4;
-CREATE TABLE IF NOT EXISTS `tournament` (
+CREATE TABLE IF NOT EXISTS `models_tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(100) NOT NULL  COMMENT 'Tournament name',
     `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime',
-    KEY `idx_tournament_name_6fe200` (`name`)
+    KEY `idx_models_tour_name_67cf9d` (`name`)
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
-CREATE TABLE IF NOT EXISTS `event` (
+CREATE TABLE IF NOT EXISTS `models_event` (
     `id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
     `name` LONGTEXT NOT NULL,
     `modified` DATETIME(6) NOT NULL,
@@ -452,11 +452,11 @@ CREATE TABLE IF NOT EXISTS `event` (
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
     `key` VARCHAR(100) NOT NULL,
     `tournament_id` SMALLINT NOT NULL COMMENT 'FK to tournament',
-    UNIQUE KEY `uid_event_name_c6f89f` (`name`, `prize`),
-    UNIQUE KEY `uid_event_tournam_a5b730` (`tournament_id`, `key`),
-    CONSTRAINT `fk_event_tourname_51c2b82d` FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`tid`) ON DELETE CASCADE
+    UNIQUE KEY `uid_models_even_name_bb6540` (`name`, `prize`),
+    UNIQUE KEY `uid_models_even_tournam_8ac3b2` (`tournament_id`, `key`),
+    CONSTRAINT `fk_models_e_models_t_6d548004` FOREIGN KEY (`tournament_id`) REFERENCES `models_tournament` (`tid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
-CREATE TABLE IF NOT EXISTS `inheritedmodel` (
+CREATE TABLE IF NOT EXISTS `models_inheritedmodel` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `zero` INT NOT NULL,
     `one` VARCHAR(40),
@@ -471,34 +471,34 @@ CREATE TABLE IF NOT EXISTS `sometable` (
     CONSTRAINT `fk_sometabl_sometabl_6efae9bd` FOREIGN KEY (`fk_sometable`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
     KEY `idx_sometable_some_ch_3d69eb` (`some_chars_table`)
 ) CHARACTER SET utf8mb4;
-CREATE TABLE IF NOT EXISTS `team` (
+CREATE TABLE IF NOT EXISTS `models_team` (
     `name` VARCHAR(50) NOT NULL  PRIMARY KEY COMMENT 'The TEAM name (and PK)',
     `key` INT NOT NULL,
     `manager_id` VARCHAR(50),
-    CONSTRAINT `fk_team_team_9c77cd8f` FOREIGN KEY (`manager_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
-    KEY `idx_team_manager_676134` (`manager_id`, `key`),
-    KEY `idx_team_manager_ef8f69` (`manager_id`, `name`)
+    CONSTRAINT `fk_models_t_models_t_ed161113` FOREIGN KEY (`manager_id`) REFERENCES `models_team` (`name`) ON DELETE CASCADE,
+    KEY `idx_models_team_manager_34eaef` (`manager_id`, `key`),
+    KEY `idx_models_team_manager_c571ed` (`manager_id`, `name`)
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
-CREATE TABLE IF NOT EXISTS `teamaddress` (
+CREATE TABLE IF NOT EXISTS `models_teamaddress` (
     `city` VARCHAR(50) NOT NULL  COMMENT 'City',
     `country` VARCHAR(50) NOT NULL  COMMENT 'Country',
     `street` VARCHAR(128) NOT NULL  COMMENT 'Street Address',
     `team_id` VARCHAR(50) NOT NULL  PRIMARY KEY,
-    CONSTRAINT `fk_teamaddr_team_1c78d737` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
+    CONSTRAINT `fk_models_t_models_t_9e656881` FOREIGN KEY (`team_id`) REFERENCES `models_team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
-CREATE TABLE IF NOT EXISTS `venueinformation` (
+CREATE TABLE IF NOT EXISTS `models_venueinformation` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(128) NOT NULL,
     `capacity` INT NOT NULL,
     `rent` DOUBLE NOT NULL,
     `team_id` VARCHAR(50)  UNIQUE,
-    CONSTRAINT `fk_venueinf_team_198af929` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE SET NULL
+    CONSTRAINT `fk_models_v_models_t_cf93f20c` FOREIGN KEY (`team_id`) REFERENCES `models_team` (`name`) ON DELETE SET NULL
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `teamevents` (
     `event_id` BIGINT NOT NULL,
     `team_id` VARCHAR(50) NOT NULL,
-    FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
+    FOREIGN KEY (`event_id`) REFERENCES `models_event` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`team_id`) REFERENCES `models_team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
 CREATE TABLE IF NOT EXISTS `sometable_self` (
     `backward_sts` INT NOT NULL,
@@ -506,11 +506,11 @@ CREATE TABLE IF NOT EXISTS `sometable_self` (
     FOREIGN KEY (`backward_sts`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
     FOREIGN KEY (`sts_forward`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
-CREATE TABLE IF NOT EXISTS `team_team` (
+CREATE TABLE IF NOT EXISTS `models_team_team` (
     `team_rel_id` VARCHAR(50) NOT NULL,
     `team_id` VARCHAR(50) NOT NULL,
-    FOREIGN KEY (`team_rel_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
-    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
+    FOREIGN KEY (`team_rel_id`) REFERENCES `models_team` (`name`) ON DELETE CASCADE,
+    FOREIGN KEY (`team_id`) REFERENCES `models_team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 """.strip(),
         )
@@ -537,7 +537,7 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
 
     def test_noid(self):
         self.init_for("tests.testmodels")
-        sql = self.get_sql('"noid"')
+        sql = self.get_sql('"models_noid"')
         self.assertIn('"name" VARCHAR(255)', sql)
         self.assertIn('"id" SERIAL NOT NULL PRIMARY KEY', sql)
 
@@ -561,35 +561,35 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
         self.assertEqual(
             sql.strip(),
             """
-CREATE TABLE "defaultpk" (
+CREATE TABLE "models_defaultpk" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "val" INT NOT NULL
 );
-CREATE TABLE "tournament" (
+CREATE TABLE "models_tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
     "created" TIMESTAMP NOT NULL
 );
-CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
-COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
-COMMENT ON COLUMN "tournament"."created" IS 'Created */''`/* datetime';
-COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
-CREATE TABLE "event" (
+CREATE INDEX "idx_models_tour_name_67cf9d" ON "models_tournament" ("name");
+COMMENT ON COLUMN "models_tournament"."name" IS 'Tournament name';
+COMMENT ON COLUMN "models_tournament"."created" IS 'Created */''`/* datetime';
+COMMENT ON TABLE "models_tournament" IS 'What Tournaments */''`/* we have';
+CREATE TABLE "models_event" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "modified" TIMESTAMP NOT NULL,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
     "key" VARCHAR(100) NOT NULL,
-    "tournament_id" SMALLINT NOT NULL REFERENCES "tournament" ("tid") ON DELETE CASCADE,
-    CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
-    CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
+    "tournament_id" SMALLINT NOT NULL REFERENCES "models_tournament" ("tid") ON DELETE CASCADE,
+    CONSTRAINT "uid_models_even_name_bb6540" UNIQUE ("name", "prize"),
+    CONSTRAINT "uid_models_even_tournam_8ac3b2" UNIQUE ("tournament_id", "key")
 );
-COMMENT ON COLUMN "event"."id" IS 'Event ID';
-COMMENT ON COLUMN "event"."token" IS 'Unique token';
-COMMENT ON COLUMN "event"."tournament_id" IS 'FK to tournament';
-COMMENT ON TABLE "event" IS 'This table contains a list of all the events';
-CREATE TABLE "inheritedmodel" (
+COMMENT ON COLUMN "models_event"."id" IS 'Event ID';
+COMMENT ON COLUMN "models_event"."token" IS 'Unique token';
+COMMENT ON COLUMN "models_event"."tournament_id" IS 'FK to tournament';
+COMMENT ON TABLE "models_event" IS 'This table contains a list of all the events';
+CREATE TABLE "models_inheritedmodel" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "zero" INT NOT NULL,
     "one" VARCHAR(40),
@@ -603,43 +603,43 @@ CREATE TABLE "sometable" (
     "fk_sometable" INT REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
 );
 CREATE INDEX "idx_sometable_some_ch_3d69eb" ON "sometable" ("some_chars_table");
-CREATE TABLE "team" (
+CREATE TABLE "models_team" (
     "name" VARCHAR(50) NOT NULL  PRIMARY KEY,
     "key" INT NOT NULL,
-    "manager_id" VARCHAR(50) REFERENCES "team" ("name") ON DELETE CASCADE
+    "manager_id" VARCHAR(50) REFERENCES "models_team" ("name") ON DELETE CASCADE
 );
-CREATE INDEX "idx_team_manager_676134" ON "team" ("manager_id", "key");
-CREATE INDEX "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
-COMMENT ON COLUMN "team"."name" IS 'The TEAM name (and PK)';
-COMMENT ON TABLE "team" IS 'The TEAMS!';
-CREATE TABLE "teamaddress" (
+CREATE INDEX "idx_models_team_manager_34eaef" ON "models_team" ("manager_id", "key");
+CREATE INDEX "idx_models_team_manager_c571ed" ON "models_team" ("manager_id", "name");
+COMMENT ON COLUMN "models_team"."name" IS 'The TEAM name (and PK)';
+COMMENT ON TABLE "models_team" IS 'The TEAMS!';
+CREATE TABLE "models_teamaddress" (
     "city" VARCHAR(50) NOT NULL,
     "country" VARCHAR(50) NOT NULL,
     "street" VARCHAR(128) NOT NULL,
-    "team_id" VARCHAR(50) NOT NULL  PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
+    "team_id" VARCHAR(50) NOT NULL  PRIMARY KEY REFERENCES "models_team" ("name") ON DELETE CASCADE
 );
-COMMENT ON COLUMN "teamaddress"."city" IS 'City';
-COMMENT ON COLUMN "teamaddress"."country" IS 'Country';
-COMMENT ON COLUMN "teamaddress"."street" IS 'Street Address';
-CREATE TABLE "venueinformation" (
+COMMENT ON COLUMN "models_teamaddress"."city" IS 'City';
+COMMENT ON COLUMN "models_teamaddress"."country" IS 'Country';
+COMMENT ON COLUMN "models_teamaddress"."street" IS 'Street Address';
+CREATE TABLE "models_venueinformation" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(128) NOT NULL,
     "capacity" INT NOT NULL,
     "rent" DOUBLE PRECISION NOT NULL,
-    "team_id" VARCHAR(50)  UNIQUE REFERENCES "team" ("name") ON DELETE SET NULL
+    "team_id" VARCHAR(50)  UNIQUE REFERENCES "models_team" ("name") ON DELETE SET NULL
 );
 CREATE TABLE "teamevents" (
-    "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE CASCADE,
-    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
+    "event_id" BIGINT NOT NULL REFERENCES "models_event" ("id") ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "models_team" ("name") ON DELETE CASCADE
 );
 COMMENT ON TABLE "teamevents" IS 'How participants relate';
 CREATE TABLE "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
     "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
 );
-CREATE TABLE "team_team" (
-    "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE,
-    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
+CREATE TABLE "models_team_team" (
+    "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "models_team" ("name") ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "models_team" ("name") ON DELETE CASCADE
 );
 """.strip(),
         )
@@ -651,35 +651,35 @@ CREATE TABLE "team_team" (
         self.assertEqual(
             sql.strip(),
             """
-CREATE TABLE IF NOT EXISTS "defaultpk" (
+CREATE TABLE IF NOT EXISTS "models_defaultpk" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "val" INT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS "tournament" (
+CREATE TABLE IF NOT EXISTS "models_tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
     "created" TIMESTAMP NOT NULL
 );
-CREATE INDEX IF NOT EXISTS "idx_tournament_name_6fe200" ON "tournament" ("name");
-COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
-COMMENT ON COLUMN "tournament"."created" IS 'Created */''`/* datetime';
-COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
-CREATE TABLE IF NOT EXISTS "event" (
+CREATE INDEX IF NOT EXISTS "idx_models_tour_name_67cf9d" ON "models_tournament" ("name");
+COMMENT ON COLUMN "models_tournament"."name" IS 'Tournament name';
+COMMENT ON COLUMN "models_tournament"."created" IS 'Created */''`/* datetime';
+COMMENT ON TABLE "models_tournament" IS 'What Tournaments */''`/* we have';
+CREATE TABLE IF NOT EXISTS "models_event" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "modified" TIMESTAMP NOT NULL,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
     "key" VARCHAR(100) NOT NULL,
-    "tournament_id" SMALLINT NOT NULL REFERENCES "tournament" ("tid") ON DELETE CASCADE,
-    CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
-    CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
+    "tournament_id" SMALLINT NOT NULL REFERENCES "models_tournament" ("tid") ON DELETE CASCADE,
+    CONSTRAINT "uid_models_even_name_bb6540" UNIQUE ("name", "prize"),
+    CONSTRAINT "uid_models_even_tournam_8ac3b2" UNIQUE ("tournament_id", "key")
 );
-COMMENT ON COLUMN "event"."id" IS 'Event ID';
-COMMENT ON COLUMN "event"."token" IS 'Unique token';
-COMMENT ON COLUMN "event"."tournament_id" IS 'FK to tournament';
-COMMENT ON TABLE "event" IS 'This table contains a list of all the events';
-CREATE TABLE IF NOT EXISTS "inheritedmodel" (
+COMMENT ON COLUMN "models_event"."id" IS 'Event ID';
+COMMENT ON COLUMN "models_event"."token" IS 'Unique token';
+COMMENT ON COLUMN "models_event"."tournament_id" IS 'FK to tournament';
+COMMENT ON TABLE "models_event" IS 'This table contains a list of all the events';
+CREATE TABLE IF NOT EXISTS "models_inheritedmodel" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "zero" INT NOT NULL,
     "one" VARCHAR(40),
@@ -693,43 +693,43 @@ CREATE TABLE IF NOT EXISTS "sometable" (
     "fk_sometable" INT REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS "idx_sometable_some_ch_3d69eb" ON "sometable" ("some_chars_table");
-CREATE TABLE IF NOT EXISTS "team" (
+CREATE TABLE IF NOT EXISTS "models_team" (
     "name" VARCHAR(50) NOT NULL  PRIMARY KEY,
     "key" INT NOT NULL,
-    "manager_id" VARCHAR(50) REFERENCES "team" ("name") ON DELETE CASCADE
+    "manager_id" VARCHAR(50) REFERENCES "models_team" ("name") ON DELETE CASCADE
 );
-CREATE INDEX IF NOT EXISTS "idx_team_manager_676134" ON "team" ("manager_id", "key");
-CREATE INDEX IF NOT EXISTS "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
-COMMENT ON COLUMN "team"."name" IS 'The TEAM name (and PK)';
-COMMENT ON TABLE "team" IS 'The TEAMS!';
-CREATE TABLE IF NOT EXISTS "teamaddress" (
+CREATE INDEX IF NOT EXISTS "idx_models_team_manager_34eaef" ON "models_team" ("manager_id", "key");
+CREATE INDEX IF NOT EXISTS "idx_models_team_manager_c571ed" ON "models_team" ("manager_id", "name");
+COMMENT ON COLUMN "models_team"."name" IS 'The TEAM name (and PK)';
+COMMENT ON TABLE "models_team" IS 'The TEAMS!';
+CREATE TABLE IF NOT EXISTS "models_teamaddress" (
     "city" VARCHAR(50) NOT NULL,
     "country" VARCHAR(50) NOT NULL,
     "street" VARCHAR(128) NOT NULL,
-    "team_id" VARCHAR(50) NOT NULL  PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
+    "team_id" VARCHAR(50) NOT NULL  PRIMARY KEY REFERENCES "models_team" ("name") ON DELETE CASCADE
 );
-COMMENT ON COLUMN "teamaddress"."city" IS 'City';
-COMMENT ON COLUMN "teamaddress"."country" IS 'Country';
-COMMENT ON COLUMN "teamaddress"."street" IS 'Street Address';
-CREATE TABLE IF NOT EXISTS "venueinformation" (
+COMMENT ON COLUMN "models_teamaddress"."city" IS 'City';
+COMMENT ON COLUMN "models_teamaddress"."country" IS 'Country';
+COMMENT ON COLUMN "models_teamaddress"."street" IS 'Street Address';
+CREATE TABLE IF NOT EXISTS "models_venueinformation" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(128) NOT NULL,
     "capacity" INT NOT NULL,
     "rent" DOUBLE PRECISION NOT NULL,
-    "team_id" VARCHAR(50)  UNIQUE REFERENCES "team" ("name") ON DELETE SET NULL
+    "team_id" VARCHAR(50)  UNIQUE REFERENCES "models_team" ("name") ON DELETE SET NULL
 );
 CREATE TABLE IF NOT EXISTS "teamevents" (
-    "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE CASCADE,
-    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
+    "event_id" BIGINT NOT NULL REFERENCES "models_event" ("id") ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "models_team" ("name") ON DELETE CASCADE
 );
 COMMENT ON TABLE "teamevents" IS 'How participants relate';
 CREATE TABLE IF NOT EXISTS "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
     "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
 );
-CREATE TABLE IF NOT EXISTS "team_team" (
-    "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE,
-    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS "models_team_team" (
+    "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "models_team" ("name") ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "models_team" ("name") ON DELETE CASCADE
 );
 """.strip(),
         )

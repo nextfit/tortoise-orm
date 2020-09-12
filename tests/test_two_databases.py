@@ -30,9 +30,9 @@ class TestTwoDatabases(test.TortoiseBaseTestCase):
         await EventTwo.create(name="Event", tournament_id=tournament.id)
 
         with self.assertRaises(OperationalError):
-            await self.db.execute_query("SELECT * FROM eventtwo")
+            await self.db.execute_query("SELECT * FROM events_eventtwo")
 
-        _, db_columns, results = await self.second_db.execute_query("SELECT * FROM eventtwo")
+        _, db_columns, results = await self.second_db.execute_query("SELECT * FROM events_eventtwo")
         self.assertEqual(dict(zip(db_columns, results[0])), {"id": 1, "name": "Event", "tournament_id": 1})
 
     async def test_two_databases_relation(self):
@@ -40,9 +40,9 @@ class TestTwoDatabases(test.TortoiseBaseTestCase):
         event = await EventTwo.create(name="Event", tournament_id=tournament.id)
 
         with self.assertRaises(OperationalError):
-            await self.db.execute_query("SELECT * FROM eventtwo")
+            await self.db.execute_query("SELECT * FROM events_eventtwo")
 
-        _, db_columns, results = await self.second_db.execute_query("SELECT * FROM eventtwo")
+        _, db_columns, results = await self.second_db.execute_query("SELECT * FROM events_eventtwo")
         self.assertEqual(dict(zip(db_columns, results[0])), {"id": 1, "name": "Event", "tournament_id": 1})
 
         teams = []
