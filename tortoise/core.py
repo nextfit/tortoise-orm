@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Type, Any, Union
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config, obscure_password
 from tortoise.exceptions import ConfigurationError, ParamsError
-from tortoise.fields.relational import RelationField
+from tortoise.fields.relational import RelationField, ManyToManyField
 from tortoise.models import Model
 
 
@@ -182,19 +182,28 @@ class _Tortoise:
             self._app_models_map[app_name] = {model.__name__: model for model in app_models}
 
     def _init_models(self) -> None:
-        models_list = []
+        models_list = set()
+        many_to_many_fields = []
+        relation_fields = []
         for app_name, _app_models_map in self._app_models_map.items():
             for model in _app_models_map.values():
-                if not model._meta._inited:
-                    field_objects = list(model._meta.fields_map.values())
-                    for field in field_objects:
+                if not model._meta._inited and model not in models_list:
+                    models_list.add(model)
+                    for field in model._meta.fields_map.values():
                         if isinstance(field, RelationField) and not field.auto_created:
-                            field.create_relation(self)
+                            if isinstance(field, ManyToManyField):
+                                many_to_many_fields.append(field)
+                            else:
+                                relation_fields.append(field)
 
-                    model._meta._inited = True
-                    models_list.append(model)
+        for field in relation_fields:
+            field.create_relation(self)
+
+        for field in many_to_many_fields:
+            field.create_relation(self)
 
         for model in models_list:
+            model._meta._inited = True
             model._meta.finalize_model()
 
     def _get_config_from_config_file(self, config_file: str) -> dict:

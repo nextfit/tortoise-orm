@@ -1,4 +1,5 @@
 
+from collections import defaultdict
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import partial
@@ -768,23 +769,11 @@ class ManyToManyField(RelationField):
 
     def create_relation(self, tortoise) -> None:
 
-        if not self.forward_key:
-            remote_model_name = self.remote_model.split('.')[-1] \
-                if isinstance(self.remote_model, str) else self.remote_model.__name__
-
-            self.forward_key = f"{remote_model_name.lower()}_id"
-
         model_name_lower = self.model.__name__.lower()
-
-        if not self.backward_key:
-            self.backward_key = "{}_id".format(model_name_lower)
-
-            if self.backward_key == self.forward_key:
-                self.backward_key = "{}_rel_id".format(model_name_lower)
-
         remote_model = tortoise.get_model(self.remote_model, self.model)
         self.remote_model = remote_model
 
+        through_model = None
         if self.through:
             #
             # Try to translate through parameter into a db table
@@ -804,6 +793,57 @@ class ManyToManyField(RelationField):
                 model_name_lower,
                 remote_model.__name__.lower()
             )
+
+        if through_model:
+            through_fields_map = defaultdict(list)
+            for field in through_model._meta.fields_map.values():
+                if isinstance(field, ForeignKey):
+                    through_fields_map[field.remote_model].append(field)
+
+            if self.model not in through_fields_map:
+                raise ConfigurationError(f"through model {through_model} must have a relation to model {self.model}")
+
+            if remote_model not in through_fields_map:
+                raise ConfigurationError(f"through model {through_model} must have a relation to model {remote_model}")
+
+        if not self.forward_key:
+            if through_model:
+                if len(through_fields_map[remote_model]) > 1:
+                    raise ConfigurationError(
+                        f"through model {through_model} has more than one field pointing to {remote_model}."
+                        f" specify `forward_key` in {self.model}.{self.model_field_name}")
+
+                through_forward_field = through_fields_map[remote_model][0]
+                if not through_forward_field.db_column:
+                    raise ConfigurationError(f"field {through_forward_field} has not been initialized yet.")
+
+                self.forward_key = through_forward_field.db_column
+
+            else:
+                remote_model_name = remote_model.split('.')[-1] \
+                    if isinstance(remote_model, str) else remote_model.__name__
+
+                self.forward_key = f"{remote_model_name.lower()}_id"
+
+        if not self.backward_key:
+            if through_model:
+                if len(through_fields_map[self.model]) > 1:
+                    raise ConfigurationError(
+                        f"through model {through_model} has more than one field pointing to {self.model}."
+                        f" specify `backward_key` in {self.model}.{self.model_field_name}"
+                    )
+
+                through_backward_field = through_fields_map[self.model][0]
+                if not through_backward_field.db_column:
+                    raise ConfigurationError(f"field {through_backward_field} has not been initialized yet.")
+
+                self.backward_key = through_backward_field.db_column
+
+            else:
+                self.backward_key = "{}_id".format(model_name_lower)
+
+                if self.backward_key == self.forward_key:
+                    self.backward_key = "{}_rel_id".format(model_name_lower)
 
         backward_relation_name = self.related_name
         if backward_relation_name is not False:
