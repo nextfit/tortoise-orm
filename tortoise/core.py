@@ -7,6 +7,7 @@ import os
 import warnings
 from contextvars import ContextVar
 from inspect import isclass
+from itertools import chain, filterfalse
 from typing import Dict, List, Optional, Type, Any, Union
 
 from tortoise.backends.base.client import BaseDBAsyncClient
@@ -183,7 +184,6 @@ class _Tortoise:
 
     def _init_models(self) -> None:
         models_list = set()
-        many_to_many_fields = []
         relation_fields = []
         for app_name, _app_models_map in self._app_models_map.items():
             for model in _app_models_map.values():
@@ -191,15 +191,10 @@ class _Tortoise:
                     models_list.add(model)
                     for field in model._meta.fields_map.values():
                         if isinstance(field, RelationField) and not field.auto_created:
-                            if isinstance(field, ManyToManyField):
-                                many_to_many_fields.append(field)
-                            else:
-                                relation_fields.append(field)
+                            relation_fields.append(field)
 
-        for field in relation_fields:
-            field.create_relation(self)
-
-        for field in many_to_many_fields:
+        is_m2m = lambda f: isinstance(f, ManyToManyField)
+        for field in chain(filterfalse(is_m2m, relation_fields), filter(is_m2m, relation_fields)):
             field.create_relation(self)
 
         for model in models_list:
