@@ -746,12 +746,6 @@ class ManyToManyField(RelationField):
 
         super().__init__(remote_model=remote_model, related_name=related_name, **kwargs)
 
-        if not forward_key:
-            remote_model_name = remote_model.split('.')[-1] \
-                if isinstance(remote_model, str) else remote_model.__name__
-
-            forward_key = f"{remote_model_name.lower()}_id"
-
         self.forward_key: str = forward_key
         self.backward_key: str = backward_key
         self.through: str = through
@@ -774,16 +768,19 @@ class ManyToManyField(RelationField):
 
     def create_relation(self, tortoise) -> None:
 
-        backward_key = self.backward_key
+        if not self.forward_key:
+            remote_model_name = self.remote_model.split('.')[-1] \
+                if isinstance(self.remote_model, str) else self.remote_model.__name__
+
+            self.forward_key = f"{remote_model_name.lower()}_id"
+
         model_name_lower = self.model.__name__.lower()
 
-        if not backward_key:
-            backward_key = "{}_id".format(model_name_lower)
+        if not self.backward_key:
+            self.backward_key = "{}_id".format(model_name_lower)
 
-            if backward_key == self.forward_key:
-                backward_key = "{}_rel_id".format(model_name_lower)
-
-            self.backward_key = backward_key
+            if self.backward_key == self.forward_key:
+                self.backward_key = "{}_rel_id".format(model_name_lower)
 
         remote_model = tortoise.get_model(self.remote_model, self.model)
         self.remote_model = remote_model
