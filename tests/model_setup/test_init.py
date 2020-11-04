@@ -114,6 +114,50 @@ class TestInitErrors(IsolatedAsyncioTestCase):
                 }
             )
 
+    def test_m2m_dup_init(self):
+        with self.assertRaisesRegex(
+            ConfigurationError,
+            "through model <class 'tests.model_setup.models_m2m_dup.TeamEvent'> has more than one field pointing to <class 'tests.model_setup.models_m2m_dup.Team'>. specify `forward_key` in <class 'tests.model_setup.models_m2m_dup.Event'>.participants"
+        ):
+            Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.sqlite",
+                            "file_path": ":memory:",
+                        }
+                    },
+                    "apps": {
+                        "models": {
+                            "models": ["tests.model_setup.models_m2m_dup"],
+                            "default_connection": "default",
+                        }
+                    },
+                }
+            )
+
+    def test_m2m_missing_init(self):
+        with self.assertRaisesRegex(
+            ConfigurationError,
+            "through model <class 'tests.model_setup.models_m2m_missing.TeamEvent'> must have a ForeignKey relation to model <class 'tests.model_setup.models_m2m_missing.Event'>"
+        ):
+            Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.sqlite",
+                            "file_path": ":memory:",
+                        }
+                    },
+                    "apps": {
+                        "models": {
+                            "models": ["tests.model_setup.models_m2m_missing"],
+                            "default_connection": "default",
+                        }
+                    },
+                }
+            )
+
     def test_generated_nonint(self):
         with self.assertRaisesRegex(
             ConfigurationError, "Field 'val' \\(CharField\\) can't be DB-generated"

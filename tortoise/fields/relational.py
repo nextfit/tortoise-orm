@@ -801,10 +801,10 @@ class ManyToManyField(RelationField):
                     through_fields_map[field.remote_model].append(field)
 
             if self.model not in through_fields_map:
-                raise ConfigurationError(f"through model {through_model} must have a relation to model {self.model}")
+                raise ConfigurationError(f"through model {through_model} must have a ForeignKey relation to model {self.model}")
 
             if remote_model not in through_fields_map:
-                raise ConfigurationError(f"through model {through_model} must have a relation to model {remote_model}")
+                raise ConfigurationError(f"through model {through_model} must have a ForeignKey relation to model {remote_model}")
 
         if not self.forward_key:
             if through_model:
