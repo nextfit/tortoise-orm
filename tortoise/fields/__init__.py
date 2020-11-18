@@ -1,5 +1,5 @@
 
-from tortoise.fields.base import CASCADE, RESTRICT, SET_DEFAULT, SET_NULL, Field
+from tortoise.fields.base import CASCADE, RESTRICT, SET_DEFAULT, SET_NULL, DO_NOTHING, NO_ACTION, Field
 from tortoise.fields.data import (
     BigIntegerField,
     BinaryField,
