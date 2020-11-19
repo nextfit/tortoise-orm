@@ -51,32 +51,47 @@ class _Tortoise:
     def get_connection_names(self) -> List[str]:
         return list(self._db_client_map.keys())
 
+    def get_app_model(self, app_label: str, model_name: str):
+        """
+        Get model object for the given app_label, model_name if exists. Throws ConfigurationError
+        if the app_label is not registered or the model_name is not registered within the app.
+
+        :param app_label: the app label
+        :param model_name: the model name
+        :return: the model object
+        """
+
+        if app_label not in self._app_models_map:
+            raise ConfigurationError(f"No app with name '{app_label}' registered.")
+
+        related_app = self._app_models_map[app_label]
+        if model_name not in related_app:
+            raise ConfigurationError(
+                f"No model with name '{model_name}' registered in app '{app_label}'."
+            )
+
+        return related_app[model_name]
+
     def get_model(self, full_name: Union[Type[Model], str], reference_model: Type[Model]):
         """
-        Test, if app and model really exist. Throws a ConfigurationError with a hopefully
-        helpful message. If successful, returns the requested model.
+        Get the model object from the specified model. Throws ConfigurationError
+        if the app_label is not registered or the model_name is not registered within the app.
+
+        :param full_name: model full name in the form of <APP_LABEL>.<MODEL_NAME> or <MODEL_NAME>
+        :param reference_model: use the app_label from reference model, if app_label is not specified in full_name
+        :return: the model object
         """
+
         if isinstance(full_name, str):
             name_parts = full_name.split(".")
-            if len(name_parts) != 2 and len(name_parts) != 1:
-                raise ConfigurationError('Model name needs to be in format "app.Model" or "Model"')
+            if len(name_parts) == 1:
+                return self.get_app_model(reference_model._meta.app_label, full_name)
 
-            if len(name_parts) == 2:
-                app_name, model_name = name_parts
+            elif len(name_parts) == 2:
+                return self.get_app_model(*name_parts)
+
             else:
-                model_name = name_parts[0]
-                app_name = reference_model._meta.app_label
-
-            if app_name not in self._app_models_map:
-                raise ConfigurationError(f"No app with name '{app_name}' registered.")
-
-            related_app = self._app_models_map[app_name]
-            if model_name not in related_app:
-                raise ConfigurationError(
-                    f"No model with name '{model_name}' registered in app '{app_name}'."
-                )
-
-            return related_app[model_name]
+                raise ConfigurationError('Model name needs to be in format "app.Model" or "Model"')
 
         elif inspect.isclass(full_name) and issubclass(full_name, Model):
             return full_name
